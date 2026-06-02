@@ -36,14 +36,16 @@ export async function getMentions(userId: string, sinceId?: string) {
 export async function searchTweets(query: string, maxResults = 10) {
   const results = await xRO.v2.search(query, {
     max_results: maxResults,
-    "tweet.fields": ["author_id", "created_at", "public_metrics"],
+    "tweet.fields": ["author_id", "created_at", "public_metrics", "reply_settings"],
     "user.fields": ["username", "name"],
     expansions: ["author_id"],
   });
   const tweets = results.data?.data ?? [];
   const users: Array<{ id: string; username: string }> = (results.data?.includes?.users as Array<{ id: string; username: string }>) ?? [];
   const userMap = new Map(users.map(u => [u.id, u.username]));
-  return tweets.map(t => ({ ...t, author_username: userMap.get(t.author_id ?? "") ?? "" }));
+  return tweets
+    .filter(t => !t.reply_settings || t.reply_settings === "everyone")
+    .map(t => ({ ...t, author_username: userMap.get(t.author_id ?? "") ?? "" }));
 }
 
 export async function getMyProfile() {
@@ -51,4 +53,13 @@ export async function getMyProfile() {
     "user.fields": ["public_metrics", "description"],
   });
   return me.data;
+}
+
+export async function getMyTweets(userId: string, maxResults = 20) {
+  const timeline = await xRO.v2.userTimeline(userId, {
+    max_results: maxResults,
+    "tweet.fields": ["created_at", "text", "public_metrics"],
+    exclude: ["retweets", "replies"],
+  });
+  return timeline.data?.data ?? [];
 }

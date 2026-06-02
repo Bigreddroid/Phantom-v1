@@ -32,12 +32,18 @@ export async function requestApproval(
       : ""
   }\n\n_ID: \`${approvalId}\`_`;
 
+  const id = metadata.id ?? approvalId;
   await send(text, {
-    inline_keyboard: [[
-      { text: "✅ Approve", callback_data: `approve:${metadata.id ?? approvalId}` },
-      { text: "✏️ Edit", callback_data: `edit:${metadata.id ?? approvalId}` },
-      { text: "❌ Reject", callback_data: `reject:${metadata.id ?? approvalId}` },
-    ]],
+    inline_keyboard: [
+      [
+        { text: "✅ Approve", callback_data: `approve:${id}` },
+        { text: "✏️ Edit",    callback_data: `edit:${id}` },
+        { text: "❌ Reject",  callback_data: `reject:${id}` },
+      ],
+      [
+        { text: "📤 Post to X + LinkedIn", callback_data: `approve_xl:${id}` },
+      ],
+    ],
   });
 
   return approvalId;

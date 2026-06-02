@@ -159,6 +159,14 @@ not growth-hacker tips. Each point should make someone think, not just nod.`,
   );
 }
 
+export async function generateQuoteTweet(originalText: string) {
+  return generate(
+    `You're quote-tweeting your own old post to resurface it with fresh context:\n\n"${originalText}"\n\nWrite a 1–2 sentence quote-tweet comment that adds new insight, a update, or a punchy observation. Don't just repeat the original. Under 200 characters. No "back to this" or "still relevant" openers.`,
+    VOICE_SYSTEM_PROMPT,
+    200
+  );
+}
+
 export async function generateDM(recipientUsername: string, context: string) {
   return generate(
     `Write a cold DM to @${recipientUsername}.

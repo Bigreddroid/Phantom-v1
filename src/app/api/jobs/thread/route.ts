@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { generateThread } from "@/lib/claude/generate";
-import { postThread } from "@/lib/x/post";
 import { prisma } from "@/lib/db";
-import { notifyPosted } from "@/lib/telegram/notify";
+import { requestApproval } from "@/lib/telegram/notify";
 import { THREAD_TOPICS } from "@/lib/config";
 
 export async function POST(req: Request) {
@@ -12,24 +11,19 @@ export async function POST(req: Request) {
 
     const pillar = THREAD_TOPICS[Math.floor(Math.random() * THREAD_TOPICS.length)];
     const tweets = await generateThread(pillar, 5);
-    const posted = await postThread(tweets, imageMode);
+    const content = tweets.join("\n---\n");
 
-    const hasImages = posted.some(p => p.hasImage);
-
-    await prisma.activity.create({
-      data: {
-        action: `Thread posted (${tweets.length} tweets)`,
-        detail: tweets[0].slice(0, 80),
-        icon: hasImages ? "🖼️" : "🧵",
-      },
+    const item = await prisma.queueItem.create({
+      data: { type: "Thread", content, metadata: { imageMode } },
     });
 
-    await notifyPosted(
-      `Thread posted — ${tweets.length} tweets${imageMode !== "none" ? " · with images" : ""}`,
-      `*${pillar}*\n\n${tweets[0].slice(0, 200)}...`
+    await requestApproval(
+      `Thread — ${tweets.length} tweets${imageMode !== "none" ? ` · ${imageMode === "first" ? "image on #1" : "images on all"}` : ""}`,
+      `*${pillar}*\n\n${tweets[0]}\n\n[+ ${tweets.length - 1} more tweets]`,
+      { id: item.id }
     );
 
-    return NextResponse.json({ ok: true, count: posted.length, pillar, hasImages });
+    return NextResponse.json({ ok: true, queued: true, id: item.id, count: tweets.length });
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }

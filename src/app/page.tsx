@@ -197,10 +197,11 @@ function platformBadge(icon?: string) {
 }
 
 const X_JOBS = [
-  { label: "Tweet",          endpoint: "/api/jobs/tweet",    icon: "🐦" },
-  { label: "Thread",         endpoint: "/api/jobs/thread",   icon: "🧵" },
-  { label: "Engage",         endpoint: "/api/jobs/engage",   icon: "⚡" },
-  { label: "Check Mentions", endpoint: "/api/jobs/mentions", icon: "💬" },
+  { label: "Queue Tweet",    endpoint: "/api/jobs/tweet",     icon: "🐦", note: "preview first" },
+  { label: "Queue Thread",   endpoint: "/api/jobs/thread",    icon: "🧵", note: "preview first" },
+  { label: "Engage",         endpoint: "/api/jobs/engage",    icon: "⚡", note: null },
+  { label: "Check Mentions", endpoint: "/api/jobs/mentions",  icon: "💬", note: null },
+  { label: "Resurface",      endpoint: "/api/jobs/resurface", icon: "🔁", note: "old tweet" },
 ];
 
 const LI_JOBS = [
@@ -529,7 +530,10 @@ export default function Dashboard() {
                   ) : (
                     <>
                       <span className="text-base leading-none">{job.icon}</span>
-                      {job.label}
+                      <span>
+                        {job.label}
+                        {job.note && <span className="block text-[10px] opacity-40 font-normal leading-none mt-0.5">{job.note}</span>}
+                      </span>
                     </>
                   )}
                 </button>
@@ -697,6 +701,8 @@ export default function Dashboard() {
                 { job: "Follow",         emoji: "🤝", times: "9:30am · 3:30pm · 8:30pm IST",         freq: "3× / day",   note: "Follow + like + reply to niche accounts",       color: "text-pink-400",    platform: "x"  },
                 { job: "Mentions",       emoji: "💬", times: "Every 30 minutes",                     freq: "48× / day",  note: "Auto-replies instantly",                        color: "text-emerald-400", platform: "x"  },
                 { job: "LinkedIn",       emoji: "💼", times: "Tue–Fri · 8:30am IST",                 freq: "4× / week",  note: "Original post · 10% skip",                      color: "text-blue-400",    platform: "li" },
+                { job: "Resurface",       emoji: "🔁", times: "Daily · 10:30am IST",                   freq: "1× / day",   note: "Quote-tweet old content · 20% skip · preview first", color: "text-teal-400",  platform: "x"  },
+                { job: "Niche RT",       emoji: "🔁", times: "Daily · 4:30pm IST",                    freq: "1× / day",   note: "Retweet or quote niche post · 30% skip · preview first", color: "text-pink-400", platform: "x"  },
                 { job: "Daily summary",  emoji: "📊", times: "11:30pm IST",                          freq: "1× / day",   note: "Telegram report with follower gain",            color: "text-white/35",    platform: "x"  },
               ].map((s, i, arr) => (
                 <div key={s.job} className={`flex items-center gap-4 px-5 py-4 ${i !== arr.length - 1 ? "border-b border-white/[0.05]" : ""} hover:bg-white/[0.02] transition-colors`}>

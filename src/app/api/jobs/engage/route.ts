@@ -10,11 +10,13 @@ import { NICHE_KEYWORDS } from "@/lib/config";
 
 export const maxDuration = 60;
 
-export async function POST() {
+export async function POST(req: Request) {
   try {
+    const body = await req.json().catch(() => ({}));
     const isBlocked = await loadBlocklist();
     const me = await getMyProfile();
-    const keyword = NICHE_KEYWORDS[Math.floor(Math.random() * NICHE_KEYWORDS.length)];
+    const keyword = (body.keyword as string | undefined)?.trim()
+      || NICHE_KEYWORDS[Math.floor(Math.random() * NICHE_KEYWORDS.length)];
 
     // 10:1 verified:non-verified ratio, cap at 6 total to stay under function timeout
     const [verifiedTweets, normalTweets] = await Promise.all([
@@ -27,15 +29,25 @@ export async function POST() {
       ...normalTweets.slice(0, Math.max(1, Math.floor(verifiedTweets.length / 10))),
     ];
 
-    // Deduplicate authors and filter blocked/self
+    // Deduplicate authors and filter blocked/self, then rank by traction
     const seen = new Set<string>();
-    const tweets = candidates.filter(t => {
-      if (!t.author_id || t.author_id === me.id) return false;
-      if (seen.has(t.author_id)) return false;
-      if (isBlocked(t.author_id, t.author_username)) return false;
-      seen.add(t.author_id);
-      return true;
-    }).slice(0, 6); // hard cap — keeps total runtime well under 60s
+    const tweets = candidates
+      .filter(t => {
+        if (!t.author_id || t.author_id === me.id) return false;
+        if (seen.has(t.author_id)) return false;
+        if (isBlocked(t.author_id, t.author_username)) return false;
+        seen.add(t.author_id);
+        return true;
+      })
+      .map(t => ({
+        ...t,
+        score: (t.public_metrics?.like_count ?? 0)
+          + (t.public_metrics?.retweet_count ?? 0) * 3
+          + (t.public_metrics?.reply_count ?? 0),
+      }))
+      .filter(t => t.score >= 5)             // only engage with posts that have some traction
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 6); // hard cap — keeps total runtime well under 60s
 
     // ── Phase 1: like all tweets quickly ────────────────────────────────────
     let liked = 0;

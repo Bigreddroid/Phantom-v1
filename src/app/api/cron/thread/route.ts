@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { generateThread } from "@/lib/claude/generate";
-import { postThread } from "@/lib/x/post";
 import { prisma } from "@/lib/db";
-import { notifyPosted, notifyError } from "@/lib/telegram/notify";
+import { requestApproval, notifyError } from "@/lib/telegram/notify";
 import { isActiveHour, shouldSkip, humanPause } from "@/lib/scheduler/humanize";
 import { THREAD_TOPICS } from "@/lib/config";
 
@@ -24,23 +23,19 @@ export async function GET(req: Request) {
   try {
     const pillar = THREAD_TOPICS[Math.floor(Math.random() * THREAD_TOPICS.length)];
     const tweets = await generateThread(pillar, 5);
+    const content = tweets.join("\n---\n");
 
-    const posted = await postThread(tweets);
-
-    await prisma.activity.create({
-      data: {
-        action: `Thread posted (${tweets.length} tweets)`,
-        detail: tweets[0].slice(0, 80),
-        icon: "🧵",
-      },
+    const item = await prisma.queueItem.create({
+      data: { type: "Thread", content, metadata: { imageMode: "none", cron: true } },
     });
 
-    await notifyPosted(
-      `Thread posted — ${tweets.length} tweets`,
-      `*${pillar}*\n\n${tweets[0].slice(0, 200)}...`
+    await requestApproval(
+      `Scheduled thread — ${tweets.length} tweets`,
+      `*${pillar}*\n\n${tweets[0]}\n\n[+ ${tweets.length - 1} more tweets]`,
+      { id: item.id }
     );
 
-    return NextResponse.json({ ok: true, count: posted.length, pillar });
+    return NextResponse.json({ ok: true, queued: true, id: item.id, pillar });
   } catch (e) {
     await notifyError("Thread cron", String(e));
     return NextResponse.json({ error: String(e) }, { status: 500 });

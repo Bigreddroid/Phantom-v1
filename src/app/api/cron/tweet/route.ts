@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { generateTweet } from "@/lib/claude/generate";
-import { postTweet, postTweetWithImage } from "@/lib/x/post";
 import { prisma } from "@/lib/db";
-import { notifyPosted, notifyError } from "@/lib/telegram/notify";
+import { requestApproval, notifyError } from "@/lib/telegram/notify";
 import { shouldSkip, humanPause } from "@/lib/scheduler/humanize";
 import { CONTENT_TOPICS } from "@/lib/config";
 
@@ -24,27 +23,19 @@ export async function GET(req: Request) {
   try {
     const pillar = CONTENT_TOPICS[Math.floor(Math.random() * CONTENT_TOPICS.length)];
     const content = await generateTweet(pillar);
-
-    // 30% chance to attach a branded image
     const withImage = Math.random() < 0.3;
-    const result = withImage
-      ? await postTweetWithImage(content)
-      : await postTweet(content);
 
-    await prisma.activity.create({
-      data: {
-        action: "Tweet posted",
-        detail: content.slice(0, 80),
-        icon: withImage && (result as { hasImage?: boolean }).hasImage ? "🖼️" : "🐦",
-      },
+    const item = await prisma.queueItem.create({
+      data: { type: "Tweet", content, metadata: { withImage, cron: true } },
     });
 
-    await notifyPosted(
-      withImage ? "Tweet posted with image" : "Tweet posted",
-      content
+    await requestApproval(
+      withImage ? "Scheduled tweet + image" : "Scheduled tweet",
+      content,
+      { id: item.id }
     );
 
-    return NextResponse.json({ ok: true, id: result.id });
+    return NextResponse.json({ ok: true, queued: true, id: item.id });
   } catch (e) {
     await notifyError("Tweet cron", String(e));
     return NextResponse.json({ error: String(e) }, { status: 500 });
