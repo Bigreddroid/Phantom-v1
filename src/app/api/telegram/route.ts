@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { postTweet, postThread } from "@/lib/x/post";
+import { searchTweets, followUser, getMyProfile } from "@/lib/x/engage";
 import { notifyPosted, sendMessage } from "@/lib/telegram/notify";
+import { randomDelay } from "@/lib/scheduler/humanize";
 
 const TELEGRAM_API = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
 const ALLOWED_CHAT = process.env.TELEGRAM_CHAT_ID!;
@@ -88,6 +90,8 @@ export async function POST(req: NextRequest) {
       `*/thread* — generate a thread now\n` +
       `*/engage* — run engagement now\n` +
       `*/mentions* — check mentions now\n` +
+      `*/follow* — follow 5 niche accounts\n` +
+      `*/follow 10* — follow N accounts (max 20)\n` +
       `*/pause* — pause all automation\n` +
       `*/resume* — resume automation\n`
     );
@@ -176,6 +180,52 @@ export async function POST(req: NextRequest) {
   else if (cmd === "/resume") {
     await prisma.activity.create({ data: { action: "Automation resumed", icon: "▶️" } });
     await reply(chatId, "▶️ Automation resumed.");
+  }
+
+  else if (cmd.startsWith("/follow")) {
+    const parts = cmd.split(" ");
+    const count = Math.min(parseInt(parts[1] ?? "5", 10) || 5, 20);
+
+    await reply(chatId, `🔍 Finding ${count} relevant accounts to follow...`);
+
+    const KEYWORDS = [
+      "founder personal brand",
+      "building in public",
+      "solopreneur automation",
+      "AI tools for creators",
+      "indiehacker",
+    ];
+
+    try {
+      const me = await getMyProfile();
+      const seen = new Set<string>();
+      let followed = 0;
+
+      for (const keyword of KEYWORDS) {
+        if (followed >= count) break;
+        const tweets = await searchTweets(`${keyword} -is:retweet lang:en`, 10);
+
+        for (const tweet of tweets) {
+          if (followed >= count) break;
+          if (!tweet.author_id || tweet.author_id === me.id || seen.has(tweet.author_id)) continue;
+          seen.add(tweet.author_id);
+
+          try {
+            await followUser(tweet.author_id, me.id);
+            followed++;
+            await randomDelay(1500, 3500);
+          } catch { /* already following or rate limited */ }
+        }
+      }
+
+      await prisma.activity.create({
+        data: { action: `Followed ${followed} accounts`, detail: "Via Telegram /follow command", icon: "👤" },
+      });
+
+      await reply(chatId, `✅ Followed *${followed}* relevant accounts from your niche.\n\nUse \`/follow 10\` to follow more at once.`);
+    } catch (e) {
+      await reply(chatId, `❌ Error: ${String(e).slice(0, 100)}`);
+    }
   }
 
   return NextResponse.json({ ok: true });
