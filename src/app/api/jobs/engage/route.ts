@@ -3,7 +3,7 @@ import { searchTweets, likeTweet, followUser, getMyProfile } from "@/lib/x/engag
 import { replyToTweet } from "@/lib/x/post";
 import { generateReply } from "@/lib/claude/generate";
 import { prisma } from "@/lib/db";
-import { requestApproval, notifyPosted } from "@/lib/telegram/notify";
+import { notifyPosted } from "@/lib/telegram/notify";
 import { randomDelay, shouldSkip } from "@/lib/scheduler/humanize";
 
 const KEYWORDS = [
@@ -20,15 +20,23 @@ export async function POST() {
   try {
     const me = await getMyProfile();
     const keyword = KEYWORDS[Math.floor(Math.random() * KEYWORDS.length)];
-    const tweets = await searchTweets(`${keyword} -is:retweet lang:en`, 10);
 
-    let liked = 0, followed = 0, replied = 0, queued = 0;
+    // 10:1 verified:non-verified ratio
+    const verifiedTweets = await searchTweets(`${keyword} -is:retweet lang:en is:verified`, 10);
+    const normalTweets = await searchTweets(`${keyword} -is:retweet lang:en -is:verified`, 10);
+    const tweets = [
+      ...verifiedTweets,
+      ...normalTweets.slice(0, Math.max(1, Math.floor(verifiedTweets.length / 10))),
+    ];
+
+    let liked = 0, followed = 0, replied = 0;
+    const seen = new Set<string>();
 
     for (const tweet of tweets) {
-      if (!tweet.author_id || tweet.author_id === me.id) continue;
+      if (!tweet.author_id || tweet.author_id === me.id || seen.has(tweet.author_id)) continue;
+      seen.add(tweet.author_id);
 
-      await likeTweet(tweet.id, me.id);
-      liked++;
+      try { await likeTweet(tweet.id, me.id); liked++; } catch { /* skip */ }
       await randomDelay(800, 2000);
 
       if (!shouldSkip(0.8)) {
@@ -41,26 +49,28 @@ export async function POST() {
           const reply = await generateReply(tweet.text, tweet.author_id);
           await replyToTweet(tweet.id, reply);
           replied++;
-          await prisma.activity.create({ data: { action: "Replied to tweet", detail: reply.slice(0, 80), icon: "💬" } });
+          await prisma.activity.create({
+            data: { action: "Replied to tweet", detail: reply.slice(0, 80), icon: "💬" },
+          });
           await randomDelay(2000, 5000);
         } catch { /* skip */ }
-      } else if (!shouldSkip(0.85)) {
-        const reply = await generateReply(tweet.text, tweet.author_id);
-        const item = await prisma.queueItem.create({
-          data: { type: "Reply", content: reply, metadata: { tweetId: tweet.id, original: tweet.text.slice(0, 100) } },
-        });
-        await requestApproval("Reply to similar account", reply, { original: tweet.text.slice(0, 80), id: item.id });
-        queued++;
       }
     }
 
     await prisma.activity.create({
-      data: { action: `Liked ${liked} tweets`, detail: `Followed ${followed} · Replied ${replied} · Queued ${queued} · "${keyword}"`, icon: "❤️" },
+      data: {
+        action: `Engagement run (10:1 ratio)`,
+        detail: `❤️ ${liked} · 👤 ${followed} · 💬 ${replied} · "${keyword}"`,
+        icon: "⚡",
+      },
     });
 
-    await notifyPosted("Engagement run", `❤️ ${liked} · 👤 ${followed} follows · 💬 ${replied} replies · 📋 ${queued} queued`);
+    await notifyPosted(
+      "Engagement complete",
+      `❤️ ${liked} likes · 👤 ${followed} follows · 💬 ${replied} replies\nTopic: "${keyword}"`
+    );
 
-    return NextResponse.json({ ok: true, liked, followed, replied, queued, keyword });
+    return NextResponse.json({ ok: true, liked, followed, replied, keyword });
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }

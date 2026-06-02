@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { generateTweet } from "@/lib/claude/generate";
+import { postTweet, postTweetWithImage } from "@/lib/x/post";
 import { prisma } from "@/lib/db";
-import { requestApproval } from "@/lib/telegram/notify";
+import { notifyPosted, notifyError } from "@/lib/telegram/notify";
 import { isActiveHour, shouldSkip, humanPause } from "@/lib/scheduler/humanize";
 
 const PILLARS = [
@@ -12,10 +13,11 @@ const PILLARS = [
   "the intersection of tech and personal branding",
   "why consistency beats virality",
   "what I'm learning building Phantom",
+  "how to turn expertise into authority online",
+  "the compounding effect of daily content",
 ];
 
 export async function GET(req: Request) {
-  // Verify cron secret so only Vercel can trigger this
   const auth = req.headers.get("authorization");
   if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -25,21 +27,38 @@ export async function GET(req: Request) {
     return NextResponse.json({ skipped: true, reason: "outside active hours" });
   }
 
-  // 15% chance to skip — humans don't post every single day
   if (shouldSkip(0.15)) {
     return NextResponse.json({ skipped: true, reason: "random skip" });
   }
 
   await humanPause();
 
-  const pillar = PILLARS[Math.floor(Math.random() * PILLARS.length)];
-  const content = await generateTweet(pillar);
+  try {
+    const pillar = PILLARS[Math.floor(Math.random() * PILLARS.length)];
+    const content = await generateTweet(pillar);
 
-  const item = await prisma.queueItem.create({
-    data: { type: "Tweet", content, metadata: { pillar, source: "cron" } },
-  });
+    // 30% chance to attach a branded image
+    const withImage = Math.random() < 0.3;
+    const result = withImage
+      ? await postTweetWithImage(content)
+      : await postTweet(content);
 
-  await requestApproval("Post Tweet", content, { pillar, id: item.id });
+    await prisma.activity.create({
+      data: {
+        action: "Tweet posted",
+        detail: content.slice(0, 80),
+        icon: withImage && (result as { hasImage?: boolean }).hasImage ? "🖼️" : "🐦",
+      },
+    });
 
-  return NextResponse.json({ ok: true, id: item.id });
+    await notifyPosted(
+      withImage ? "Tweet posted with image" : "Tweet posted",
+      content
+    );
+
+    return NextResponse.json({ ok: true, id: result.id });
+  } catch (e) {
+    await notifyError("Tweet cron", String(e));
+    return NextResponse.json({ error: String(e) }, { status: 500 });
+  }
 }

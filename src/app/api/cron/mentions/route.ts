@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { getMentions, getMyProfile } from "@/lib/x/engage";
+import { replyToTweet } from "@/lib/x/post";
 import { generateReply } from "@/lib/claude/generate";
 import { prisma } from "@/lib/db";
-import { requestApproval } from "@/lib/telegram/notify";
-import { humanPause } from "@/lib/scheduler/humanize";
+import { notifyPosted } from "@/lib/telegram/notify";
+import { humanPause, randomDelay } from "@/lib/scheduler/humanize";
 
 export async function GET(req: Request) {
   const auth = req.headers.get("authorization");
@@ -11,35 +12,41 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const me = await getMyProfile();
-  const mentions = await getMentions(me.id);
+  try {
+    const me = await getMyProfile();
+    const mentions = await getMentions(me.id);
 
-  if (!mentions.length) {
-    return NextResponse.json({ ok: true, mentions: 0 });
+    if (!mentions.length) {
+      return NextResponse.json({ ok: true, mentions: 0 });
+    }
+
+    let replied = 0;
+    for (const mention of mentions) {
+      await humanPause();
+
+      const reply = await generateReply(mention.text, mention.author_id ?? "user");
+
+      await replyToTweet(mention.id, reply);
+      replied++;
+
+      await prisma.activity.create({
+        data: {
+          action: "Replied to mention",
+          detail: reply.slice(0, 80),
+          icon: "💬",
+        },
+      });
+
+      await randomDelay(2000, 5000);
+    }
+
+    await notifyPosted(
+      `Replied to ${replied} mention${replied > 1 ? "s" : ""}`,
+      mentions.map(m => `• ${m.text.slice(0, 60)}`).join("\n")
+    );
+
+    return NextResponse.json({ ok: true, mentions: replied });
+  } catch (e) {
+    return NextResponse.json({ error: String(e) }, { status: 500 });
   }
-
-  for (const mention of mentions) {
-    await humanPause();
-
-    const reply = await generateReply(mention.text, mention.author_id ?? "user");
-
-    const item = await prisma.queueItem.create({
-      data: {
-        type: "Reply",
-        content: reply,
-        metadata: { tweetId: mention.id, original: mention.text.slice(0, 100) },
-      },
-    });
-
-    await requestApproval("Reply to Mention", reply, {
-      original: mention.text.slice(0, 80),
-      id: item.id,
-    });
-  }
-
-  await prisma.activity.create({
-    data: { action: `${mentions.length} mention${mentions.length > 1 ? "s" : ""} queued for reply`, icon: "💬" },
-  });
-
-  return NextResponse.json({ ok: true, mentions: mentions.length });
 }

@@ -3,7 +3,7 @@ import { searchTweets, likeTweet, followUser, getMyProfile } from "@/lib/x/engag
 import { replyToTweet } from "@/lib/x/post";
 import { generateReply } from "@/lib/claude/generate";
 import { prisma } from "@/lib/db";
-import { requestApproval, notifyPosted } from "@/lib/telegram/notify";
+import { notifyPosted } from "@/lib/telegram/notify";
 import { isActiveHour, randomDelay, shouldSkip } from "@/lib/scheduler/humanize";
 
 const KEYWORDS = [
@@ -13,8 +13,8 @@ const KEYWORDS = [
   "AI tools for creators",
   "indiehacker",
   "personal brand tips",
+  "indie founder growth",
   "content creator tools",
-  "indie founder",
 ];
 
 export async function GET(req: Request) {
@@ -27,85 +27,68 @@ export async function GET(req: Request) {
     return NextResponse.json({ skipped: true, reason: "outside active hours" });
   }
 
-  const me = await getMyProfile();
-  const keyword = KEYWORDS[Math.floor(Math.random() * KEYWORDS.length)];
-  const tweets = await searchTweets(`${keyword} -is:retweet lang:en`, 10);
+  try {
+    const me = await getMyProfile();
+    const keyword = KEYWORDS[Math.floor(Math.random() * KEYWORDS.length)];
 
-  let liked = 0;
-  let followed = 0;
-  let replied = 0;
-  let queued = 0;
+    // 10:1 verified:non-verified ratio
+    const verifiedTweets = await searchTweets(`${keyword} -is:retweet lang:en is:verified`, 10);
+    const normalTweets = await searchTweets(`${keyword} -is:retweet lang:en -is:verified`, 10);
 
-  for (const tweet of tweets) {
-    if (!tweet.author_id || tweet.author_id === me.id) continue;
+    // 10 verified + 1 non-verified
+    const tweets = [
+      ...verifiedTweets,
+      ...normalTweets.slice(0, Math.max(1, Math.floor(verifiedTweets.length / 10))),
+    ];
 
-    // Always like
-    await likeTweet(tweet.id, me.id);
-    liked++;
-    await randomDelay(800, 2000);
+    let liked = 0, followed = 0, replied = 0;
+    const seen = new Set<string>();
 
-    // 20% chance to follow the author
-    if (!shouldSkip(0.8)) {
-      try {
-        await followUser(tweet.author_id, me.id);
-        followed++;
+    for (const tweet of tweets) {
+      if (!tweet.author_id || tweet.author_id === me.id || seen.has(tweet.author_id)) continue;
+      seen.add(tweet.author_id);
+
+      // Always like
+      try { await likeTweet(tweet.id, me.id); liked++; } catch { /* skip */ }
+      await randomDelay(800, 2000);
+
+      // 20% chance to follow
+      if (!shouldSkip(0.8)) {
+        try { await followUser(tweet.author_id, me.id); followed++; } catch { /* skip */ }
         await randomDelay(500, 1500);
-      } catch { /* already following */ }
+      }
+
+      // 25% chance to auto-reply
+      if (!shouldSkip(0.75)) {
+        try {
+          const reply = await generateReply(tweet.text, tweet.author_id);
+          await replyToTweet(tweet.id, reply);
+          replied++;
+          await prisma.activity.create({
+            data: { action: "Replied to tweet", detail: reply.slice(0, 80), icon: "💬" },
+          });
+          await randomDelay(2000, 5000);
+        } catch { /* skip */ }
+      }
     }
 
-    // 25% chance to reply automatically (low-stakes replies go straight to X)
-    if (!shouldSkip(0.75)) {
-      try {
-        const reply = await generateReply(tweet.text, tweet.author_id);
+    await prisma.activity.create({
+      data: {
+        action: `Engagement run (10:1 ratio)`,
+        detail: `❤️ ${liked} · 👤 ${followed} · 💬 ${replied} · "${keyword}"`,
+        icon: "⚡",
+      },
+    });
 
-        // Auto-post reply directly
-        await replyToTweet(tweet.id, reply);
-        replied++;
-
-        await prisma.activity.create({
-          data: {
-            action: "Replied to tweet",
-            detail: reply.slice(0, 80),
-            icon: "💬",
-          },
-        });
-
-        await randomDelay(2000, 5000);
-      } catch { /* skip on error */ }
+    if (liked > 0) {
+      await notifyPosted(
+        "Engagement complete",
+        `❤️ ${liked} likes · 👤 ${followed} follows · 💬 ${replied} replies\nTopic: "${keyword}"\n_10:1 verified ratio_`
+      );
     }
-    // Another 15% chance — queue for approval instead
-    else if (!shouldSkip(0.85)) {
-      const reply = await generateReply(tweet.text, tweet.author_id);
-      const item = await prisma.queueItem.create({
-        data: {
-          type: "Reply",
-          content: reply,
-          metadata: { tweetId: tweet.id, original: tweet.text.slice(0, 100), source: "engage" },
-        },
-      });
-      await requestApproval("Reply to similar account", reply, {
-        original: tweet.text.slice(0, 80),
-        keyword,
-        id: item.id,
-      });
-      queued++;
-    }
+
+    return NextResponse.json({ ok: true, liked, followed, replied, keyword });
+  } catch (e) {
+    return NextResponse.json({ error: String(e) }, { status: 500 });
   }
-
-  await prisma.activity.create({
-    data: {
-      action: `Liked ${liked} tweets`,
-      detail: `Followed ${followed} · Replied ${replied} · Queued ${queued} · Topic: "${keyword}"`,
-      icon: "❤️",
-    },
-  });
-
-  if (followed > 0 || replied > 0) {
-    await notifyPosted(
-      "Engagement run",
-      `❤️ ${liked} likes · 👤 ${followed} follows · 💬 ${replied} replies · 📋 ${queued} queued\nTopic: "${keyword}"`
-    );
-  }
-
-  return NextResponse.json({ ok: true, liked, followed, replied, queued, keyword });
 }

@@ -1,203 +1,236 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { postTweet, postThread } from "@/lib/x/post";
+import { postTweet, postTweetWithImage, postThread } from "@/lib/x/post";
 import { searchTweets, followUser, getMyProfile, likeTweet } from "@/lib/x/engage";
-import { requestApproval, notifyPosted, sendMessage } from "@/lib/telegram/notify";
-import { generateReply } from "@/lib/claude/generate";
+import { generateTweet, generateThread, generateReply } from "@/lib/claude/generate";
+import { notifyPosted } from "@/lib/telegram/notify";
 import { randomDelay } from "@/lib/scheduler/humanize";
 
-const TELEGRAM_API = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
-const ALLOWED_CHAT = process.env.TELEGRAM_CHAT_ID!;
+const BOT = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
+const CHAT = process.env.TELEGRAM_CHAT_ID!;
+const APP = process.env.NEXTAUTH_URL!;
 
-async function reply(chatId: string, text: string, markup?: object) {
-  await fetch(`${TELEGRAM_API}/sendMessage`, {
+async function send(chatId: string, text: string, extra?: object) {
+  await fetch(`${BOT}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      chat_id: chatId,
-      text,
-      parse_mode: "Markdown",
-      ...(markup ? { reply_markup: markup } : {}),
-    }),
+    body: JSON.stringify({ chat_id: chatId, text, parse_mode: "Markdown", ...extra }),
   });
 }
+
+async function answerCallback(id: string) {
+  await fetch(`${BOT}/answerCallbackQuery`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ callback_query_id: id }),
+  });
+}
+
+const KEYWORDS = [
+  "founder personal brand", "building in public", "solopreneur automation",
+  "AI tools for creators", "indiehacker", "personal brand tips",
+];
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
 
-  // Handle inline button callbacks (approve/reject)
+  // ── Inline button callbacks ──────────────────────────────────────────────
   if (body.callback_query) {
-    const { data, from, message } = body.callback_query;
+    const { data, from, id: cbId } = body.callback_query;
     const chatId = String(from.id);
+    if (chatId !== CHAT) return NextResponse.json({ ok: true });
 
-    if (chatId !== ALLOWED_CHAT) return NextResponse.json({ ok: true });
+    await answerCallback(cbId);
 
-    const [action, id] = data.split(":");
+    const [action, param] = data.split(":");
 
-    if (action === "approve") {
-      const item = await prisma.queueItem.findUnique({ where: { id } });
-      if (!item) {
-        await reply(chatId, "❌ Item not found or already processed.");
-        return NextResponse.json({ ok: true });
-      }
+    if (action === "tweet_plain") {
+      await send(chatId, "⚙️ Generating & posting tweet...");
       try {
-        if (item.type === "Thread") {
-          const tweets = item.content.split("---").map((t: string) => t.trim()).filter(Boolean);
-          await postThread(tweets);
-        } else {
-          await postTweet(item.content);
-        }
-        await prisma.queueItem.update({ where: { id }, data: { status: "POSTED" } });
-        await prisma.activity.create({
-          data: { action: `${item.type} posted`, detail: item.content.slice(0, 80), icon: "🐦" },
-        });
-        await reply(chatId, `✅ *Posted to X*\n\n${item.content.slice(0, 200)}`);
-      } catch (e) {
-        await reply(chatId, `❌ Failed to post: ${String(e).slice(0, 100)}`);
-      }
+        const res = await fetch(`${APP}/api/jobs/tweet`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: false }) });
+        const r = await res.json();
+        await send(chatId, `✅ *Posted*\n\n${r.content}`);
+      } catch (e) { await send(chatId, `❌ ${String(e).slice(0, 100)}`); }
     }
 
-    if (action === "reject") {
-      await prisma.queueItem.update({ where: { id }, data: { status: "REJECTED" } });
-      await reply(chatId, "❌ Rejected and removed from queue.");
+    if (action === "tweet_image") {
+      await send(chatId, "🖼️ Generating tweet with image...");
+      try {
+        const res = await fetch(`${APP}/api/jobs/tweet`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: true }) });
+        const r = await res.json();
+        await send(chatId, `✅ *Posted ${r.hasImage ? "with image" : "(text-only fallback)"}*\n\n${r.content}`);
+      } catch (e) { await send(chatId, `❌ ${String(e).slice(0, 100)}`); }
     }
 
-    // Answer callback to remove loading state
-    await fetch(`${TELEGRAM_API}/answerCallbackQuery`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ callback_query_id: body.callback_query.id }),
-    });
+    if (action === "thread_post") {
+      await send(chatId, "🧵 Generating & posting thread...");
+      try {
+        await fetch(`${APP}/api/jobs/thread`, { method: "POST" });
+        await send(chatId, `✅ Thread posted — check your X profile.`);
+      } catch (e) { await send(chatId, `❌ ${String(e).slice(0, 100)}`); }
+    }
 
     return NextResponse.json({ ok: true });
   }
 
-  // Handle text commands
+  // ── Text commands ────────────────────────────────────────────────────────
   const msg = body.message;
   if (!msg?.text) return NextResponse.json({ ok: true });
 
   const chatId = String(msg.chat.id);
-  if (chatId !== ALLOWED_CHAT) return NextResponse.json({ ok: true });
+  if (chatId !== CHAT) return NextResponse.json({ ok: true });
 
-  const cmd = msg.text.trim().toLowerCase();
+  const raw = msg.text.trim();
+  const cmd = raw.toLowerCase().split(" ")[0];
+  const args = raw.slice(cmd.length).trim();
 
+  // ── /start | /help ───────────────────────────────────────────────────────
   if (cmd === "/start" || cmd === "/help") {
-    await reply(chatId,
-      `*🤖 Phantom Commands*\n\n` +
-      `*/status* — live stats\n` +
-      `*/queue* — pending approvals\n` +
-      `*/schedule* — automation schedule\n` +
-      `*/tweet* — generate a tweet now\n` +
-      `*/thread* — generate a thread now\n` +
-      `*/engage* — run engagement now\n` +
-      `*/mentions* — check mentions now\n` +
-      `*/follow* — follow + like + AI-reply to 5 niche accounts\n` +
-      `*/follow 10* — same but N accounts (max 15)\n` +
-      `*/pause* — pause all automation\n` +
-      `*/resume* — resume automation\n`
+    await send(chatId,
+      `*🤖 Phantom — AI Brand Secretary*\n\n` +
+      `Everything runs automatically. Use these to control it:\n\n` +
+      `*Content*\n` +
+      `/tweet — generate & post tweet now\n` +
+      `/thread — generate & post thread now\n` +
+      `/post <text> — post your own tweet instantly\n\n` +
+      `*Engagement*\n` +
+      `/engage — run engagement (like/follow/reply)\n` +
+      `/follow [n] — follow + like + reply to n accounts\n` +
+      `/mentions — check & auto-reply to mentions\n\n` +
+      `*Dashboard*\n` +
+      `/status — live stats\n` +
+      `/activity — last 10 actions\n` +
+      `/schedule — automation schedule\n\n` +
+      `*Control*\n` +
+      `/pause — pause automation\n` +
+      `/resume — resume automation\n\n` +
+      `_Phantom posts autonomously. You'll get notified after every action._`
     );
   }
 
+  // ── /status ──────────────────────────────────────────────────────────────
   else if (cmd === "/status") {
-    const [followers, queued, posted] = await Promise.all([
-      fetch(`${process.env.NEXTAUTH_URL}/api/stats`).then(r => r.json()).catch(() => ({})),
-      prisma.queueItem.count({ where: { status: "PENDING" } }),
-      prisma.activity.count({ where: { icon: "🐦" } }),
-    ]);
-    await reply(chatId,
-      `*📊 Phantom Status*\n\n` +
-      `*Followers:* ${followers.followers ?? "—"}\n` +
-      `*Tweets posted:* ${followers.tweets ?? "—"}\n` +
-      `*Queue pending:* ${queued}\n` +
-      `*Total posted:* ${posted}\n` +
-      `*Engagements:* ${followers.engagements ?? "—"}\n\n` +
-      `_Phantom is running._`
-    );
+    try {
+      const [statsRes, recentActivity, totalPosted, totalReplied] = await Promise.all([
+        fetch(`${APP}/api/stats`).then(r => r.json()).catch(() => ({})),
+        prisma.activity.findMany({ orderBy: { createdAt: "desc" }, take: 3 }),
+        prisma.activity.count({ where: { icon: { in: ["🐦", "🧵", "🖼️"] } } }),
+        prisma.activity.count({ where: { icon: "💬" } }),
+      ]);
+
+      const lastAct = recentActivity[0];
+      const lastTime = lastAct
+        ? new Date(lastAct.createdAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit" })
+        : "—";
+
+      await send(chatId,
+        `*📊 Phantom Dashboard*\n\n` +
+        `*X Account (@BigRedDr0id)*\n` +
+        `👥 Followers: ${statsRes.followers ?? "—"}\n` +
+        `👤 Following: ${statsRes.following ?? "—"}\n` +
+        `🐦 Tweets: ${statsRes.tweets ?? "—"}\n\n` +
+        `*Automation Stats*\n` +
+        `📮 Posts sent: ${totalPosted}\n` +
+        `💬 Replies sent: ${totalReplied}\n` +
+        `⚡ Engagements: ${statsRes.engagements ?? "—"}\n\n` +
+        `*Last action:* ${lastAct ? `${lastAct.icon} ${lastAct.action}` : "None"} at ${lastTime}\n\n` +
+        `_All systems running on autopilot._`
+      );
+    } catch (e) {
+      await send(chatId, `❌ Error fetching status: ${String(e).slice(0, 100)}`);
+    }
   }
 
-  else if (cmd === "/queue") {
-    const items = await prisma.queueItem.findMany({
-      where: { status: "PENDING" },
+  // ── /activity ─────────────────────────────────────────────────────────────
+  else if (cmd === "/activity") {
+    const items = await prisma.activity.findMany({
       orderBy: { createdAt: "desc" },
-      take: 5,
+      take: 10,
     });
     if (!items.length) {
-      await reply(chatId, "✅ Queue is empty — nothing pending.");
+      await send(chatId, "No activity yet.");
     } else {
-      for (const item of items) {
-        await reply(chatId,
-          `*${item.type}*\n\n${item.content.slice(0, 300)}`,
-          {
-            inline_keyboard: [[
-              { text: "✅ Approve", callback_data: `approve:${item.id}` },
-              { text: "❌ Reject", callback_data: `reject:${item.id}` },
-            ]],
-          }
-        );
+      const lines = items.map(a => {
+        const t = new Date(a.createdAt).toLocaleString("en-IN", {
+          timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit",
+        });
+        return `${a.icon ?? "•"} *${a.action}* (${t})\n   ${a.detail ?? ""}`;
+      });
+      await send(chatId, `*📋 Recent Activity*\n\n${lines.join("\n\n")}`);
+    }
+  }
+
+  // ── /tweet ────────────────────────────────────────────────────────────────
+  else if (cmd === "/tweet") {
+    await send(chatId,
+      `*Post a tweet:*`,
+      {
+        reply_markup: {
+          inline_keyboard: [[
+            { text: "📝 Text only", callback_data: "tweet_plain:" },
+            { text: "🖼️ With image", callback_data: "tweet_image:" },
+          ]],
+        },
+      }
+    );
+  }
+
+  // ── /thread ───────────────────────────────────────────────────────────────
+  else if (cmd === "/thread") {
+    await send(chatId,
+      `*Post a thread?*`,
+      {
+        reply_markup: {
+          inline_keyboard: [[
+            { text: "🧵 Post 5-tweet thread", callback_data: "thread_post:" },
+          ]],
+        },
+      }
+    );
+  }
+
+  // ── /post <custom text> ───────────────────────────────────────────────────
+  else if (cmd === "/post") {
+    if (!args) {
+      await send(chatId, "Usage: `/post Your tweet text here`");
+    } else {
+      await send(chatId, "⚡ Posting now...");
+      try {
+        const result = await postTweet(args);
+        await prisma.activity.create({
+          data: { action: "Manual tweet posted", detail: args.slice(0, 80), icon: "🐦" },
+        });
+        await send(chatId, `✅ *Posted!*\n\n${args}`);
+        void notifyPosted("Manual tweet", args);
+      } catch (e) {
+        await send(chatId, `❌ Failed: ${String(e).slice(0, 120)}`);
       }
     }
   }
 
-  else if (cmd === "/schedule") {
-    await reply(chatId,
-      `*⏰ Automation Schedule (IST)*\n\n` +
-      `*Tweets* — 7:30am · 12:30pm · 6:30pm\n_3x/day · 15% skip chance_\n\n` +
-      `*Threads* — Mon & Thu 2:30pm\n_2x/week · 20% skip chance_\n\n` +
-      `*Engagement* — Every 2h, 7am–10pm\n_Likes + replies to niche accounts_\n\n` +
-      `*Mentions* — Every 30 minutes\n_Replies queued for approval_\n\n` +
-      `*Daily summary* — 11:30pm\n_Telegram report_`
-    );
-  }
-
-  else if (cmd === "/tweet") {
-    await reply(chatId, "⚙️ Generating tweet...");
-    await fetch(`${process.env.NEXTAUTH_URL}/api/jobs/tweet`, { method: "POST" });
-    await reply(chatId, "✅ Tweet generated — check your approval queue.");
-  }
-
-  else if (cmd === "/thread") {
-    await reply(chatId, "⚙️ Generating thread...");
-    await fetch(`${process.env.NEXTAUTH_URL}/api/jobs/thread`, { method: "POST" });
-    await reply(chatId, "✅ Thread generated — check your approval queue.");
-  }
-
+  // ── /engage ───────────────────────────────────────────────────────────────
   else if (cmd === "/engage") {
-    await reply(chatId, "⚙️ Running engagement...");
-    await fetch(`${process.env.NEXTAUTH_URL}/api/jobs/engage`, { method: "POST" });
-    await reply(chatId, "✅ Engagement run complete — check activity log.");
+    await send(chatId, "⚡ Running engagement (10:1 verified ratio)...");
+    try {
+      const res = await fetch(`${APP}/api/jobs/engage`, { method: "POST" });
+      const r = await res.json();
+      await send(chatId,
+        `✅ *Engagement complete*\n\n` +
+        `❤️ Liked: ${r.liked}\n` +
+        `👤 Followed: ${r.followed}\n` +
+        `💬 Replied: ${r.replied}\n` +
+        `🎯 Topic: "${r.keyword}"\n` +
+        `_10:1 verified:non-verified ratio applied_`
+      );
+    } catch (e) {
+      await send(chatId, `❌ Error: ${String(e).slice(0, 100)}`);
+    }
   }
 
-  else if (cmd === "/mentions") {
-    await reply(chatId, "⚙️ Checking mentions...");
-    await fetch(`${process.env.NEXTAUTH_URL}/api/jobs/mentions`, { method: "POST" });
-    await reply(chatId, "✅ Mentions checked — replies queued if any.");
-  }
-
-  else if (cmd === "/pause") {
-    await prisma.activity.create({ data: { action: "Automation paused", icon: "⏸️" } });
-    await reply(chatId, "⏸️ Automation paused. Send /resume to restart.");
-  }
-
-  else if (cmd === "/resume") {
-    await prisma.activity.create({ data: { action: "Automation resumed", icon: "▶️" } });
-    await reply(chatId, "▶️ Automation resumed.");
-  }
-
-  else if (cmd.startsWith("/follow")) {
-    const parts = cmd.split(" ");
-    const count = Math.min(parseInt(parts[1] ?? "5", 10) || 5, 15);
-
-    await reply(chatId, `🧠 Scanning niche for ${count} accounts to follow, like & engage...`);
-
-    const KEYWORDS = [
-      "founder personal brand",
-      "building in public",
-      "solopreneur automation",
-      "AI tools for creators",
-      "indiehacker",
-      "personal brand tips",
-      "indie founder growth",
-    ];
+  // ── /follow [n] ───────────────────────────────────────────────────────────
+  else if (cmd === "/follow") {
+    const count = Math.min(parseInt(args || "5", 10) || 5, 15);
+    await send(chatId, `🧠 Finding ${count} niche accounts to follow, like & engage...`);
 
     try {
       const me = await getMyProfile();
@@ -214,49 +247,89 @@ export async function POST(req: NextRequest) {
           seen.add(tweet.author_id);
 
           try {
-            // Follow
             await followUser(tweet.author_id, me.id);
             followed++;
             await randomDelay(800, 2000);
+          } catch { /* already following */ }
 
-            // Like the tweet
-            try { await likeTweet(tweet.id, me.id); liked++; } catch { /* skip */ }
-            await randomDelay(500, 1500);
+          try { await likeTweet(tweet.id, me.id); liked++; } catch { /* skip */ }
+          await randomDelay(500, 1500);
 
-            // 40% chance: reply with AI-generated contextual comment
-            if (Math.random() < 0.4) {
-              try {
-                const replyText = await generateReply(tweet.text, tweet.author_id);
-                const item = await prisma.queueItem.create({
-                  data: {
-                    type: "Reply",
-                    content: replyText,
-                    metadata: { tweetId: tweet.id, original: tweet.text.slice(0, 100), source: "follow-engage" },
-                  },
-                });
-                await requestApproval("Reply to new follow", replyText, { original: tweet.text.slice(0, 80), id: item.id });
-                replied++;
-              } catch { /* skip */ }
+          if (Math.random() < 0.4) {
+            try {
+              const replyText = await generateReply(tweet.text, tweet.author_id);
+              const { replyToTweet: reply } = await import("@/lib/x/post");
+              await reply(tweet.id, replyText);
+              replied++;
+              await prisma.activity.create({
+                data: { action: "Replied to new follow", detail: replyText.slice(0, 80), icon: "💬" },
+              });
               await randomDelay(2000, 4000);
-            }
-          } catch { /* already following or rate limited */ }
+            } catch { /* skip */ }
+          }
         }
       }
 
       await prisma.activity.create({
-        data: { action: `Deep follow: ${followed} accounts`, detail: `Liked ${liked} · ${replied} replies queued`, icon: "🤝" },
+        data: { action: `Follow+engage: ${followed} accounts`, detail: `Liked ${liked} · ${replied} replies`, icon: "🤝" },
       });
 
-      await reply(chatId,
-        `✅ Done!\n\n` +
-        `👤 *Followed:* ${followed} accounts\n` +
-        `❤️ *Liked:* ${liked} tweets\n` +
-        `💬 *Replies queued:* ${replied} (check /queue to approve)\n\n` +
+      await send(chatId,
+        `✅ *Done!*\n\n` +
+        `👤 Followed: *${followed}*\n` +
+        `❤️ Liked: *${liked}*\n` +
+        `💬 Replied: *${replied}*\n\n` +
         `_All from your niche: founders, creators & solopreneurs._`
       );
     } catch (e) {
-      await reply(chatId, `❌ Error: ${String(e).slice(0, 100)}`);
+      await send(chatId, `❌ Error: ${String(e).slice(0, 100)}`);
     }
+  }
+
+  // ── /mentions ─────────────────────────────────────────────────────────────
+  else if (cmd === "/mentions") {
+    await send(chatId, "🔍 Checking & replying to mentions...");
+    try {
+      const res = await fetch(`${APP}/api/jobs/mentions`, { method: "POST" });
+      const r = await res.json();
+      if (r.mentions === 0) {
+        await send(chatId, "✅ No new mentions.");
+      } else {
+        await send(chatId, `✅ Auto-replied to *${r.mentions}* mention${r.mentions > 1 ? "s" : ""}.`);
+      }
+    } catch (e) {
+      await send(chatId, `❌ Error: ${String(e).slice(0, 100)}`);
+    }
+  }
+
+  // ── /schedule ─────────────────────────────────────────────────────────────
+  else if (cmd === "/schedule") {
+    await send(chatId,
+      `*⏰ Automation Schedule (IST)*\n\n` +
+      `🐦 *Tweets* — 7:30am · 12:30pm · 6:30pm\n` +
+      `   _3x/day · 30% chance of branded image · 15% skip_\n\n` +
+      `🧵 *Threads* — Mon & Thu 2:30pm\n` +
+      `   _5 tweets · 20% skip chance_\n\n` +
+      `⚡ *Engagement* — Every 2h (7am–10pm)\n` +
+      `   _Like + follow + reply · 10:1 verified ratio_\n\n` +
+      `💬 *Mentions* — Every 30 minutes\n` +
+      `   _Auto-reply instantly_\n\n` +
+      `📊 *Daily summary* — 11:30pm\n` +
+      `   _Full Telegram report_\n\n` +
+      `_All running via GitHub Actions. Zero approval needed._`
+    );
+  }
+
+  // ── /pause ────────────────────────────────────────────────────────────────
+  else if (cmd === "/pause") {
+    await prisma.activity.create({ data: { action: "Automation paused", icon: "⏸️" } });
+    await send(chatId, "⏸️ *Paused.*\n\nGitHub Actions will still run — to fully stop, disable the workflow at github.com.\n\nSend /resume to mark as active.");
+  }
+
+  // ── /resume ───────────────────────────────────────────────────────────────
+  else if (cmd === "/resume") {
+    await prisma.activity.create({ data: { action: "Automation resumed", icon: "▶️" } });
+    await send(chatId, "▶️ *Resumed.* Phantom is back on autopilot.");
   }
 
   return NextResponse.json({ ok: true });
