@@ -1,4 +1,5 @@
 import { ImageResponse } from "@vercel/og";
+import { DISPLAY_INITIAL, X_HANDLE } from "@/lib/config";
 
 export const runtime = "edge";
 
@@ -69,13 +70,13 @@ export async function GET(req: Request) {
               flexShrink: 0,
             }}
           >
-            V
+            {DISPLAY_INITIAL}
           </div>
 
-          {/* Name + handle */}
+          {/* Handle */}
           <div style={{ display: "flex", flexDirection: "column" }}>
             <div style={{ color: "#6b7280", fontSize: 18, lineHeight: 1.2 }}>
-              {process.env.X_HANDLE ?? "@BigRedDr0id"}
+              {X_HANDLE}
             </div>
           </div>
 

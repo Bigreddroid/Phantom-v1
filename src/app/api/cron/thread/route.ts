@@ -4,16 +4,7 @@ import { postThread } from "@/lib/x/post";
 import { prisma } from "@/lib/db";
 import { notifyPosted, notifyError } from "@/lib/telegram/notify";
 import { isActiveHour, shouldSkip, humanPause } from "@/lib/scheduler/humanize";
-
-const PILLARS = [
-  "how I'm building a personal brand from scratch using AI",
-  "5 automation tools every founder should know about",
-  "what building in public actually looks like day to day",
-  "how to grow on X without paying for ads",
-  "the exact system I use to automate my personal brand",
-  "why most founders fail at content — and how to fix it",
-  "the 30-minute weekly system that keeps my brand alive",
-];
+import { THREAD_TOPICS } from "@/lib/config";
 
 export async function GET(req: Request) {
   const auth = req.headers.get("authorization");
@@ -28,7 +19,7 @@ export async function GET(req: Request) {
   await humanPause();
 
   try {
-    const pillar = PILLARS[Math.floor(Math.random() * PILLARS.length)];
+    const pillar = THREAD_TOPICS[Math.floor(Math.random() * THREAD_TOPICS.length)];
     const tweets = await generateThread(pillar, 5);
 
     const posted = await postThread(tweets);

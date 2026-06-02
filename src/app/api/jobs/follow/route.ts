@@ -6,19 +6,7 @@ import { prisma } from "@/lib/db";
 import { sendMessage } from "@/lib/telegram/notify";
 import { randomDelay } from "@/lib/scheduler/humanize";
 import { isBlocked } from "@/lib/blocklist";
-
-const KEYWORDS = [
-  "founder personal brand",
-  "building in public",
-  "solopreneur automation",
-  "AI tools for creators",
-  "indiehacker",
-  "personal brand tips",
-  "indie founder growth",
-  "content creator tools",
-  "creator economy",
-  "startup founder",
-];
+import { NICHE_KEYWORDS } from "@/lib/config";
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
@@ -29,7 +17,7 @@ export async function POST(req: Request) {
     let followed = 0, liked = 0, replied = 0;
     const seen = new Set<string>();
 
-    for (const keyword of KEYWORDS) {
+    for (const keyword of NICHE_KEYWORDS) {
       if (followed >= count) break;
 
       const verifiedTweets = await searchTweets(`${keyword} -is:retweet lang:en is:verified`, 10);

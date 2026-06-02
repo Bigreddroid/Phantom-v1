@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Phantom — Progress Document</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 13px; line-height: 1.6; color: #111; background: #fff; padding: 48px; max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 26px; font-weight: 800; margin: 0 0 6px; }
+  h2 { font-size: 17px; font-weight: 700; margin: 32px 0 10px; padding-bottom: 6px; border-bottom: 1.5px solid #e5e7eb; color: #111; }
+  h3 { font-size: 14px; font-weight: 700; margin: 20px 0 8px; }
+  p { margin: 8px 0; }
+  ul { margin: 8px 0 8px 20px; }
+  li { margin: 3px 0; }
+  code { background: #f3f4f6; padding: 1px 5px; border-radius: 3px; font-size: 12px; font-family: 'SF Mono', Consolas, monospace; }
+  pre { background: #f3f4f6; padding: 14px 16px; border-radius: 6px; overflow-x: auto; margin: 10px 0; }
+  pre code { background: none; padding: 0; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 12.5px; }
+  tr { border-bottom: 1px solid #e5e7eb; }
+  tr:first-child { background: #f9fafb; font-weight: 600; }
+  td { padding: 7px 10px; vertical-align: top; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 24px 0; }
+  strong { font-weight: 700; }
+  em { font-style: italic; color: #374151; }
+  blockquote { border-left: 3px solid #d1d5db; padding-left: 14px; color: #6b7280; margin: 10px 0; }
+  @media print { body { padding: 20px; } }
+</style>
+</head>
+<body>
+<h1>Phantom — Project Progress Document</h1>
+<strong>Status as of:</strong> June 3, 2026  
+<strong>Live at:</strong> https://phantom-beige.vercel.app  
+<strong>Repo:</strong> https://github.com/Bigreddroid/phantom (private)  
+<strong>Telegram Bot:</strong> @phantomioBot</p><p><hr></p><p><h2>What Is Phantom</h2></p><p>Phantom is a fully automated AI personal brand system for X (Twitter). It runs 24/7 with zero human intervention — posting original content, engaging with niche accounts, replying to mentions, and following relevant creators, all in a human-like pattern.</p><p>It is the first product of <strong>Project Z</strong> — a 90+ niche automation platform.</p><p>The operator controls everything through a <strong>Telegram bot</strong> that acts as a secretary dashboard. No approvals, no queues — everything fires automatically and sends notifications after the fact.</p><p><hr></p><p><h2>Tech Stack</h2></p><p><tr><td>Layer</td><td>Technology</td></tr>
+|---|---|
+<tr><td>Framework</td><td>Next.js 16 (App Router, TypeScript, Tailwind CSS)</td></tr>
+<tr><td>Database</td><td>Supabase PostgreSQL via Prisma v7 + <code>@prisma/adapter-pg</code></td></tr>
+<tr><td>X API</td><td>Twitter API v2 (OAuth 1.0a) via <code>twitter-api-v2</code></td></tr>
+<tr><td>AI — Primary</td><td>xAI Grok (<code>grok-3</code>) via OpenAI-compatible SDK</td></tr>
+<tr><td>AI — Fallback</td><td>Anthropic Claude (<code>claude-sonnet-4-6</code>)</td></tr>
+<tr><td>Notifications</td><td>Telegram Bot API (webhook mode)</td></tr>
+<tr><td>Scheduling</td><td>GitHub Actions (free tier, every 30 min)</td></tr>
+<tr><td>Hosting</td><td>Vercel (Hobby plan, production alias: phantom-beige.vercel.app)</td></tr>
+<tr><td>Image Generation</td><td><code>@vercel/og</code> (edge runtime, 1200×630 branded cards)</td></tr></p><p><hr></p><p><h2>Environment Variables</h2></p><p>All personal data lives in env vars — nothing is hardcoded in the repo.</p><p><h3>Required</h3>
+<pre><code>X_API_KEY
+X_API_SECRET
+X_BEARER_TOKEN
+X_ACCESS_TOKEN
+X_ACCESS_TOKEN_SECRET
+X_CLIENT_ID
+X_CLIENT_SECRET
+ANTHROPIC_API_KEY
+TELEGRAM_BOT_TOKEN
+TELEGRAM_CHAT_ID
+DATABASE_URL
+NEXTAUTH_SECRET
+NEXTAUTH_URL=https://phantom-beige.vercel.app  ← must be production URL on Vercel
+CRON_SECRET</code></pre></p><p><h3>Optional / Personalisation</h3>
+<pre><code>GROK_API_KEY          # xAI Grok — falls back to Claude if not set
+X_HANDLE              # e.g. @yourusername — used in prompts, OG image, status
+NEXT_PUBLIC_X_HANDLE  # same, for client-side dashboard
+BLOCKED_USERNAMES     # comma-separated — accounts Phantom silently skips
+BLOCKED_IDS           # comma-separated Twitter user IDs to skip</code></pre></p><p>> <strong>Critical:</strong> NEXTAUTH_URL must be <code>https://phantom-beige.vercel.app</code> on Vercel (not localhost). All internal bot commands break if it points to localhost. Set per-environment via Vercel REST API to avoid BOM encoding issues.</p><p>> <strong>BOM Warning:</strong> Never set Vercel env vars via PowerShell pipe (<code>echo | vercel env add</code>). Always use the Vercel REST API via Node.js to avoid UTF-8 BOM (U+FEFF) corruption that breaks X API OAuth.</p><p><hr></p><p><h2>Architecture — API Routes</h2></p><p><h3>Cron Routes (called by GitHub Actions)</h3>
+<tr><td>Route</td><td>Schedule</td><td>What it does</td></tr>
+|---|---|---|
+<tr><td><code>GET /api/cron/engage</code></td><td>Every 30 min, 24/7</td><td>Like + reply (40% rate). Day mode (7am–10pm IST): like + reply. Night mode: likes only.</td></tr>
+<tr><td><code>GET /api/cron/follow</code></td><td>9:30am, 3:30pm, 8:30pm IST</td><td>Follow niche accounts + like + reply to ~40%</td></tr>
+<tr><td><code>GET /api/cron/mentions</code></td><td>Every 30 min, 24/7</td><td>Auto-reply to all @mentions</td></tr>
+<tr><td><code>GET /api/cron/tweet</code></td><td>7:30am, 12:30pm, 6:30pm, 9:30pm IST</td><td>Auto-post tweet (30% chance of branded image, 15% skip)</td></tr>
+<tr><td><code>GET /api/cron/thread</code></td><td>Mon & Thu 2:30pm IST</td><td>Auto-post 5-tweet thread (20% skip)</td></tr>
+<tr><td><code>GET /api/cron/watchdog</code></td><td>Every hour</td><td>Self-heals if no DB activity in 90 min. Also re-registers Telegram webhook.</td></tr>
+<tr><td><code>GET /api/cron/summary</code></td><td>11:30pm IST</td><td>Daily Telegram summary report</td></tr></p><p><h3>Job Routes (called by Telegram bot)</h3>
+<tr><td>Route</td><td>Method</td><td>What it does</td></tr>
+|---|---|---|
+<tr><td><code>POST /api/jobs/tweet</code></td><td>POST</td><td>Generate + post tweet immediately</td></tr>
+<tr><td><code>POST /api/jobs/thread</code></td><td>POST</td><td>Generate + post thread immediately</td></tr>
+<tr><td><code>POST /api/jobs/engage</code></td><td>POST</td><td>Run engagement pass immediately</td></tr>
+<tr><td><code>POST /api/jobs/follow</code></td><td>POST <code>{ count: n }</code></td><td>Follow n accounts immediately</td></tr>
+<tr><td><code>POST /api/jobs/mentions</code></td><td>POST</td><td>Reply to all mentions immediately</td></tr></p><p><h3>Other Routes</h3>
+<tr><td>Route</td><td>What it does</td></tr>
+|---|---|
+<tr><td><code>POST /api/telegram</code></td><td>Webhook receiver for Telegram bot</td></tr>
+<tr><td><code>GET /api/og</code></td><td>Branded tweet image (1200×630, edge runtime)</td></tr>
+<tr><td><code>GET /api/stats</code></td><td>Live X account stats</td></tr>
+<tr><td><code>GET /api/activity</code></td><td>Recent activity from DB</td></tr>
+<tr><td><code>GET /api/queue</code></td><td>Content queue</td></tr></p><p><hr></p><p><h2>Telegram Bot Commands</h2></p><p>Set via <code>setMyCommands</code> — appear in the bot's <code>/</code> menu.</p><p><tr><td>Command</td><td>What it does</td></tr>
+|---|---|
+<tr><td><code>/status</code></td><td>Live stats — followers, following, tweets, posts, replies</td></tr>
+<tr><td><code>/activity</code></td><td>Last 10 actions Phantom took (with timestamps)</td></tr>
+<tr><td><code>/tweet</code></td><td>Generate & post tweet now (inline: text \</td><td>image)</td></tr>
+<tr><td><code>/thread</code></td><td>Generate & post 5-tweet thread now</td></tr>
+<tr><td><code>/post <text></code></td><td>Post your own custom tweet instantly</td></tr>
+<tr><td><code>/engage</code></td><td>Run engagement — like + reply (10:1 verified ratio)</td></tr>
+<tr><td><code>/follow [n]</code></td><td>Follow n niche accounts + like + reply</td></tr>
+<tr><td><code>/mentions</code></td><td>Auto-reply to all current mentions</td></tr>
+<tr><td><code>/schedule</code></td><td>Show full automation schedule</td></tr>
+<tr><td><code>/pause</code></td><td>Mark automation as paused (note: GitHub Actions still runs)</td></tr>
+<tr><td><code>/resume</code></td><td>Mark automation as resumed</td></tr>
+<tr><td><code>/blacklist <username></code></td><td>Log account to skip — add to BLOCKED_USERNAMES env var to activate</td></tr>
+<tr><td><code>/help</code></td><td>Show all commands</td></tr></p><p><hr></p><p><h2>Key Systems</h2></p><p><h3>Engagement Logic</h3>
+<ul><li><strong>10:1 verified:non-verified ratio</strong> — searches <code>is:verified</code> for 10 accounts, then 1 non-verified</li>
+<li><strong>Blocklist</strong> — reads <code>BLOCKED_USERNAMES</code> and <code>BLOCKED_IDS</code> env vars at runtime. Applied in engage, follow, and mentions routes. One-directional: they can see your account, Phantom ignores theirs.</li>
+<li><strong>Day/night mode</strong> — 7am–10pm IST: like + reply. 10pm–7am IST: likes only.</li>
+<li><strong>Human delays</strong> — <code>randomDelay()</code> between every action (800ms–5000ms) to avoid rate limits</li>
+</ul>
+<h3>Content Generation</h3>
+<ul><li>Grok (<code>grok-3</code>) is primary when <code>GROK_API_KEY</code> is set — better for X-native content</li>
+<li>Claude (<code>claude-sonnet-4-6</code>) is fallback</li>
+<li>Voice prompt: direct, confident, no fluff, no emojis unless natural, sounds like a real person thinking out loud</li>
+<li>Topics: personal branding, AI automation, building in public, solopreneur life</li>
+</ul>
+<h3>Telegram Notifications — Per Action</h3>
+Every significant action sends an individual Telegram message:
+<ul><li><strong>Comment posted</strong> — shows the original tweet + the reply text</li>
+<li><strong>Mention replied</strong> — shows the mention + the reply text</li>
+<li><strong>Follow run</strong> — summary of followed/liked/replied counts</li>
+<li><strong>Tweet posted</strong> — tweet content + whether image was attached</li>
+<li><strong>Watchdog fired</strong> — if silent for 90 min, alerts and restarts</li>
+</ul>
+<h3>Self-Healing Watchdog</h3>
+<ul><li>Runs every hour via GitHub Actions</li>
+<li>Checks DB for any activity in the last 90 minutes</li>
+<li>If silent: fires <code>/api/cron/engage</code> and <code>/api/cron/mentions</code></li>
+<li>Sends Telegram alert</li>
+<li>Also calls <code>ensureWebhook()</code> — re-registers Telegram webhook if URL changed</li>
+</ul>
+<h3>Telegram Webhook Auto-Registration</h3>
+<ul><li><code>src/lib/telegram/setup.ts</code> — <code>ensureWebhook()</code> is idempotent</li>
+<li>Called on every engage cron run (every 30 min) and every watchdog run (every hour)</li>
+<li>Checks current webhook URL, re-registers if missing or stale</li>
+<li>No manual setup needed after first deploy</li>
+</ul>
+<h3>OG Image Generation</h3>
+<ul><li>Route: <code>GET /api/og?text=...</code></li>
+<li>Edge runtime, <code>@vercel/og</code> / Satori</li>
+<li>1200×630, dark gradient background</li>
+<li>Blue accent bar, large tweet text with proper <code>wordBreak: "break-word"</code>, branded footer with handle and X logo</li>
+<li>Handle pulled from <code>X_HANDLE</code> env var</li>
+<li>Twitter v1.1 media upload (for attaching to tweets) requires <strong>Elevated API access</strong> — not available on free Basic plan. Currently falls back to text-only. Upgrade plan at developer.twitter.com to unlock image tweets.</li>
+</ul>
+<hr></p><p><h2>GitHub Actions Scheduler</h2></p><p>File: <code>.github/workflows/scheduler.yml</code>  
+Triggers: every 30 minutes, 24/7  
+GitHub repo secret required: <code>APP_URL</code> and <code>CRON_SECRET</code></p><p><pre><code>Every 30 min:   Mentions + Engagement
+9:30am IST:     Follow run
+3:30pm IST:     Follow run
+8:30pm IST:     Follow run
+7:30am IST:     Tweet
+12:30pm IST:    Tweet
+6:30pm IST:     Tweet
+9:30pm IST:     Tweet
+2:30pm IST Mon: Thread
+2:30pm IST Thu: Thread
+Every hour:     Watchdog</code></pre></p><p><hr></p><p><h2>Database Schema (Prisma)</h2></p><p>Key models in use:
+<ul><li><code>Activity</code> — logs every action (action, detail, icon, createdAt)</li>
+<li><code>Queue</code> — content queue items with status (PENDING/APPROVED/REJECTED/POSTED)</li>
+</ul>
+Config: <code>prisma.config.ts</code> with <code>@prisma/adapter-pg</code>. No <code>url</code> in <code>schema.prisma</code> — connection handled via adapter.</p><p><hr></p><p><h2>Known Limitations / To Upgrade Later</h2></p><p><li><strong>Image tweets require Twitter Elevated API access</strong> — free Basic plan only has v2. Upgrade at developer.twitter.com → Products → Elevated. Until then, <code>postTweetWithImage</code> falls back to text-only gracefully.</li>
+<li><strong>Grok API key not yet set</strong> — get from console.x.ai. Set as <code>GROK_API_KEY</code> on Vercel. Until then, Claude handles all generation.</li>
+<li><strong>LinkedIn automation</strong> — mentioned, not built.</li>
+<li><strong>Reddit integration</strong> — mentioned, not built.</li>
+<li><strong><code>/pause</code> command</strong> — logs to DB but doesn't actually stop GitHub Actions. To fully pause, disable the workflow at github.com/Bigreddroid/phantom/actions.</li>
+<li><strong><code>/blacklist</code> command</strong> — logs the username to DB but you still have to manually add it to <code>BLOCKED_USERNAMES</code> env var on Vercel + redeploy for it to take effect.</li></p><p><hr></p><p><h2>File Structure (Key Files)</h2></p><p><pre><code>src/
+  app/
+    api/
+      cron/
+        engage/route.ts     # Like + reply, day/night mode
+        follow/route.ts     # Follow + like + reply, 3x/day
+        mentions/route.ts   # Auto-reply to mentions
+        tweet/route.ts      # Auto-post tweet
+        thread/route.ts     # Auto-post thread
+        watchdog/route.ts   # Self-healing, webhook check
+        summary/route.ts    # Daily Telegram summary
+      jobs/
+        engage/route.ts     # Manual engage via bot
+        follow/route.ts     # Manual follow via bot
+        mentions/route.ts   # Manual mentions via bot
+        tweet/route.ts      # Manual tweet via bot
+        thread/route.ts     # Manual thread via bot
+      og/route.tsx          # Branded tweet image (edge)
+      stats/route.ts        # Live X stats
+      telegram/route.ts     # Bot webhook — all commands
+  lib/
+    x/
+      client.ts             # twitter-api-v2 OAuth client
+      engage.ts             # searchTweets, likeTweet, followUser, getMentions, getMyProfile
+      post.ts               # postTweet, postTweetWithImage, replyToTweet, postThread
+    claude/
+      generate.ts           # Grok (primary) + Claude (fallback), voice prompt
+    telegram/
+      notify.ts             # sendMessage, notifyPosted, notifyError, etc.
+      setup.ts              # ensureWebhook() — idempotent webhook registration
+    blocklist.ts            # isBlocked() — reads BLOCKED_USERNAMES/BLOCKED_IDS env vars
+    db.ts                   # Prisma client singleton
+    scheduler/
+      humanize.ts           # randomDelay, shouldSkip, humanPause
+      jobs.ts               # Legacy job runners (kept for reference)
+.github/
+  workflows/
+    scheduler.yml           # GitHub Actions 24/7 cron
+scripts/
+  setup-telegram.mjs        # One-time manual webhook setup (no longer needed)</code></pre></p><p><hr></p><p><h2>Continue From Here</h2></p><p><h3>Immediate next steps:</h3>
+<li><strong>Set <code>GROK_API_KEY</code></strong> — get from console.x.ai, set on Vercel as <code>GROK_API_KEY</code>. This makes content sound more X-native.</li>
+<li><strong>Add blocked usernames</strong> — add to <code>BLOCKED_USERNAMES</code> env var on Vercel (comma-separated). The <code>/blacklist</code> bot command logs them, but you still need to add to env manually.</li>
+<li><strong>Upgrade Twitter API to Elevated</strong> — unlocks v1.1 media upload so the 30% image chance actually works.</li>
+<li><strong>Add GitHub Actions secrets</strong> — ensure <code>APP_URL=https://phantom-beige.vercel.app</code> and <code>CRON_SECRET</code> are set in repo Settings → Secrets → Actions.</li>
+<li><strong>LinkedIn automation</strong> — build <code>src/app/api/cron/linkedin/route.ts</code> using LinkedIn API or a scraping approach.</li>
+<li><strong>Reddit integration</strong> — build <code>src/app/api/cron/reddit/route.ts</code> — post to relevant subreddits.</li>
+<li><strong><code>/pause</code> fully stops automation</strong> — need to implement a DB flag that all cron routes check before executing, so GitHub Actions can run but Phantom skips all work.</li>
+<li><strong><code>/blacklist</code> auto-activates</strong> — instead of requiring manual env var update, store blocklist in DB and have <code>isBlocked()</code> query the DB.</li></p><p><h3>Sessions to review:</h3>
+<ul><li>Session 1 (previous): X API BOM fix, secretary mode, 24/7 loop, Grok, blocklist, image support</li>
+<li>Session 2 (this): NEXTAUTH_URL fix, git email fix (Vercel BLOCKED), comments fix (missing import), follow split, OG image redesign, name removal, Telegram command list</li>
+</ul>
+</body>
+</html>

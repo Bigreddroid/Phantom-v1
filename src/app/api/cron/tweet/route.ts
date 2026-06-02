@@ -4,18 +4,7 @@ import { postTweet, postTweetWithImage } from "@/lib/x/post";
 import { prisma } from "@/lib/db";
 import { notifyPosted, notifyError } from "@/lib/telegram/notify";
 import { shouldSkip, humanPause } from "@/lib/scheduler/humanize";
-
-const PILLARS = [
-  "building a personal brand as a founder",
-  "AI automation for solopreneurs",
-  "lessons from building in public",
-  "growing an audience without spending money on ads",
-  "the intersection of tech and personal branding",
-  "why consistency beats virality",
-  "what I'm learning building Phantom",
-  "how to turn expertise into authority online",
-  "the compounding effect of daily content",
-];
+import { CONTENT_TOPICS } from "@/lib/config";
 
 export async function GET(req: Request) {
   const auth = req.headers.get("authorization");
@@ -30,7 +19,7 @@ export async function GET(req: Request) {
   await humanPause();
 
   try {
-    const pillar = PILLARS[Math.floor(Math.random() * PILLARS.length)];
+    const pillar = CONTENT_TOPICS[Math.floor(Math.random() * CONTENT_TOPICS.length)];
     const content = await generateTweet(pillar);
 
     // 30% chance to attach a branded image

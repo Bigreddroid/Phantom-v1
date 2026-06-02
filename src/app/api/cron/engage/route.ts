@@ -7,19 +7,7 @@ import { notifyPosted, sendMessage } from "@/lib/telegram/notify";
 import { randomDelay } from "@/lib/scheduler/humanize";
 import { isBlocked } from "@/lib/blocklist";
 import { ensureWebhook } from "@/lib/telegram/setup";
-
-const KEYWORDS = [
-  "founder personal brand",
-  "building in public",
-  "solopreneur automation",
-  "AI tools for creators",
-  "indiehacker",
-  "personal brand tips",
-  "indie founder growth",
-  "content creator tools",
-  "creator economy",
-  "startup founder",
-];
+import { NICHE_KEYWORDS } from "@/lib/config";
 
 function getISTHour(): number {
   return parseInt(
@@ -43,7 +31,7 @@ export async function GET(req: Request) {
     void ensureWebhook(); // fire-and-forget — re-registers if URL changed or missing
 
     const me = await getMyProfile();
-    const keyword = KEYWORDS[Math.floor(Math.random() * KEYWORDS.length)];
+    const keyword = NICHE_KEYWORDS[Math.floor(Math.random() * NICHE_KEYWORDS.length)];
 
     // 10:1 verified:non-verified ratio
     const verifiedTweets = await searchTweets(`${keyword} -is:retweet lang:en is:verified`, 10);

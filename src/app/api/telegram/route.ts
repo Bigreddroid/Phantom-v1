@@ -24,10 +24,7 @@ async function answerCallback(id: string) {
   });
 }
 
-const KEYWORDS = [
-  "founder personal brand", "building in public", "solopreneur automation",
-  "AI tools for creators", "indiehacker", "personal brand tips",
-];
+import { NICHE_KEYWORDS } from "@/lib/config";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();

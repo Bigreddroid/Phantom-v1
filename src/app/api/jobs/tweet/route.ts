@@ -3,23 +3,14 @@ import { generateTweet } from "@/lib/claude/generate";
 import { postTweet, postTweetWithImage } from "@/lib/x/post";
 import { prisma } from "@/lib/db";
 import { notifyPosted } from "@/lib/telegram/notify";
-
-const PILLARS = [
-  "building a personal brand as a founder",
-  "AI automation for solopreneurs",
-  "lessons from building in public",
-  "growing an audience without ads",
-  "the intersection of tech and personal branding",
-  "how to turn expertise into authority online",
-  "the compounding effect of daily content",
-];
+import { CONTENT_TOPICS } from "@/lib/config";
 
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
     const withImage = body.image === true || Math.random() < 0.3;
 
-    const pillar = PILLARS[Math.floor(Math.random() * PILLARS.length)];
+    const pillar = CONTENT_TOPICS[Math.floor(Math.random() * CONTENT_TOPICS.length)];
     const content = await generateTweet(pillar);
 
     const result = withImage

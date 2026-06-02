@@ -8,12 +8,13 @@ const grok = process.env.GROK_API_KEY
   ? new OpenAI({ baseURL: "https://api.x.ai/v1", apiKey: process.env.GROK_API_KEY })
   : null;
 
-const HANDLE = process.env.X_HANDLE ?? "@BigRedDr0id";
-const VOICE_SYSTEM_PROMPT = `You are a ghostwriter for a founder/creator (${HANDLE}).
+import { X_HANDLE, VOICE_TOPICS } from "@/lib/config";
+
+const VOICE_SYSTEM_PROMPT = `You are a ghostwriter for a founder/creator (${X_HANDLE}).
 Write in their voice: direct, confident, no fluff, no emojis unless natural,
 conversational but intelligent. Never sound like a bot or a marketing email.
 Vary sentence length. Sound like a real person thinking out loud.
-Topics: personal branding, AI automation, building in public, solopreneur life.`;
+Topics: ${VOICE_TOPICS}.`;
 
 // Use Grok when available (better for X/Twitter content), fall back to Claude
 async function generate(prompt: string, system: string, maxTokens: number): Promise<string> {
