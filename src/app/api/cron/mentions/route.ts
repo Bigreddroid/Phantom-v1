@@ -5,6 +5,7 @@ import { generateReply } from "@/lib/claude/generate";
 import { prisma } from "@/lib/db";
 import { notifyPosted } from "@/lib/telegram/notify";
 import { humanPause, randomDelay } from "@/lib/scheduler/humanize";
+import { isBlocked } from "@/lib/blocklist";
 
 export async function GET(req: Request) {
   const auth = req.headers.get("authorization");
@@ -22,6 +23,7 @@ export async function GET(req: Request) {
 
     let replied = 0;
     for (const mention of mentions) {
+      if (isBlocked(mention.author_id)) continue;
       await humanPause();
 
       const reply = await generateReply(mention.text, mention.author_id ?? "user");
