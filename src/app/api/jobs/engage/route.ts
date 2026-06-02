@@ -20,7 +20,7 @@ export async function POST() {
   try {
     const me = await getMyProfile();
     const keyword = KEYWORDS[Math.floor(Math.random() * KEYWORDS.length)];
-    const tweets = await searchTweets(`${keyword} -is:retweet lang:en`, 8);
+    const tweets = await searchTweets(`${keyword} -is:retweet lang:en`, 10);
 
     let liked = 0, followed = 0, replied = 0, queued = 0;
 

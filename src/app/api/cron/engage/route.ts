@@ -29,7 +29,7 @@ export async function GET(req: Request) {
 
   const me = await getMyProfile();
   const keyword = KEYWORDS[Math.floor(Math.random() * KEYWORDS.length)];
-  const tweets = await searchTweets(`${keyword} -is:retweet lang:en`, 8);
+  const tweets = await searchTweets(`${keyword} -is:retweet lang:en`, 10);
 
   let liked = 0;
   let followed = 0;

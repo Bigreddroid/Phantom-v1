@@ -49,7 +49,7 @@ export async function runThreadJob() {
 export async function runEngagementJob() {
   try {
     const keyword = NICHE_KEYWORDS[Math.floor(Math.random() * NICHE_KEYWORDS.length)];
-    const tweets = await searchTweets(`${keyword} -is:retweet lang:en`, 5);
+    const tweets = await searchTweets(`${keyword} -is:retweet lang:en`, 10);
 
     let engaged = 0;
     for (const tweet of tweets) {
