@@ -1,24 +1,8 @@
 {
   "crons": [
     {
-      "path": "/api/cron/tweet",
-      "schedule": "0 2,7,13 * * *"
-    },
-    {
-      "path": "/api/cron/thread",
-      "schedule": "0 9 * * 1,4"
-    },
-    {
-      "path": "/api/cron/engage",
-      "schedule": "0 1,3,5,7,9,11,13,15 * * *"
-    },
-    {
-      "path": "/api/cron/mentions",
-      "schedule": "*/30 * * * *"
-    },
-    {
       "path": "/api/cron/summary",
-      "schedule": "30 18 * * *"
+      "schedule": "0 18 * * *"
     }
   ]
 }

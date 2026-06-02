@@ -1,0 +1,62 @@
+name: Phantom Scheduler
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+jobs:
+  run-phantom:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get current time (IST)
+        id: time
+        run: |
+          HOUR=$(TZ='Asia/Kolkata' date +%-H)
+          MINUTE=$(TZ='Asia/Kolkata' date +%-M)
+          DOW=$(TZ='Asia/Kolkata' date +%u)
+          echo "hour=$HOUR" >> $GITHUB_OUTPUT
+          echo "minute=$MINUTE" >> $GITHUB_OUTPUT
+          echo "dow=$DOW" >> $GITHUB_OUTPUT
+          echo "IST time: $(TZ='Asia/Kolkata' date)"
+
+      - name: Mentions (every 30 min — always)
+        run: |
+          curl -sf -X GET "${{ secrets.APP_URL }}/api/cron/mentions" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" || true
+
+      - name: Engagement (every 2h during active hours 7am–10pm IST)
+        if: ${{ fromJson(steps.time.outputs.hour) >= 7 && fromJson(steps.time.outputs.hour) <= 22 && fromJson(steps.time.outputs.minute) < 30 }}
+        run: |
+          HOUR=${{ steps.time.outputs.hour }}
+          if (( HOUR % 2 == 0 )); then
+            curl -sf -X GET "${{ secrets.APP_URL }}/api/cron/engage" \
+              -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" || true
+          fi
+
+      - name: Tweet (7:30am, 12:30pm, 6:30pm IST)
+        if: |
+          ${{
+            fromJson(steps.time.outputs.minute) >= 28 &&
+            fromJson(steps.time.outputs.minute) <= 32 &&
+            (
+              fromJson(steps.time.outputs.hour) == 7 ||
+              fromJson(steps.time.outputs.hour) == 12 ||
+              fromJson(steps.time.outputs.hour) == 18
+            )
+          }}
+        run: |
+          curl -sf -X GET "${{ secrets.APP_URL }}/api/cron/tweet" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" || true
+
+      - name: Thread (Mon & Thu at 2:30pm IST)
+        if: |
+          ${{
+            fromJson(steps.time.outputs.minute) >= 28 &&
+            fromJson(steps.time.outputs.minute) <= 32 &&
+            fromJson(steps.time.outputs.hour) == 14 &&
+            (fromJson(steps.time.outputs.dow) == 1 || fromJson(steps.time.outputs.dow) == 4)
+          }}
+        run: |
+          curl -sf -X GET "${{ secrets.APP_URL }}/api/cron/thread" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" || true
