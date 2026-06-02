@@ -58,7 +58,7 @@ export async function GET(req: NextRequest) {
   // Fetch person ID — required for authoring posts
   let personId: string;
   try {
-    const profileRes = await fetch("https://api.linkedin.com/v2/me", {
+    const profileRes = await fetch("https://api.linkedin.com/v2/userinfo", {
       headers: { Authorization: `Bearer ${tokenData.access_token}` },
     });
 
@@ -66,8 +66,8 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(`${base}/?li=profile_error`);
     }
 
-    const profile = await profileRes.json() as { id: string };
-    personId = profile.id;
+    const profile = await profileRes.json() as { sub: string };
+    personId = profile.sub;
   } catch (e) {
     console.error("LinkedIn profile fetch threw:", e);
     return NextResponse.redirect(`${base}/?li=profile_error`);

@@ -22,7 +22,7 @@ export async function GET() {
     client_id: process.env.LINKEDIN_CLIENT_ID,
     redirect_uri: `${process.env.NEXTAUTH_URL}/api/auth/linkedin/callback`,
     state,
-    scope: "r_liteprofile w_member_social",
+    scope: "openid profile email w_member_social",
   });
 
   return NextResponse.redirect(
