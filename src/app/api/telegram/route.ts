@@ -103,7 +103,8 @@ export async function POST(req: NextRequest) {
       `/schedule — automation schedule\n\n` +
       `*Control*\n` +
       `/pause — pause automation\n` +
-      `/resume — resume automation\n\n` +
+      `/resume — resume automation\n` +
+      `/blacklist <username> — silently ignore an account\n\n` +
       `_Phantom posts autonomously. You'll get notified after every action._`
     );
   }
@@ -332,19 +333,23 @@ export async function POST(req: NextRequest) {
     await send(chatId, "▶️ *Resumed.* Phantom is back on autopilot.");
   }
 
-  // ── /block <username> ─────────────────────────────────────────────────────
-  else if (cmd === "/block") {
+  // ── /blacklist <username> | /block <username> ────────────────────────────
+  else if (cmd === "/blacklist" || cmd === "/block") {
     if (!args) {
-      await send(chatId, "Usage: `/block username` — adds to blocklist in code.\n\nCurrently managed in `src/lib/blocklist.ts`.");
+      await send(chatId,
+        `Usage: \`/blacklist username\`\n\n` +
+        `Phantom will silently skip that account — no Twitter block, no DM. They'll never know.\n\n` +
+        `To activate: add the username to the \`BLOCKED_USERNAMES\` env var on Vercel (comma-separated), then redeploy.`
+      );
     } else {
-      const username = args.replace("@", "").trim();
+      const username = args.replace("@", "").trim().toLowerCase();
       await prisma.activity.create({
-        data: { action: `Block requested: @${username}`, detail: "Add to src/lib/blocklist.ts manually", icon: "🚫" },
+        data: { action: `Blacklist requested: @${username}`, detail: "Add to BLOCKED_USERNAMES env var on Vercel", icon: "🚫" },
       });
       await send(chatId,
-        `🚫 *Block recorded: @${username}*\n\n` +
-        `Add this username to \`src/lib/blocklist.ts\` in the \`BLOCKED_USERNAMES\` set, then redeploy.\n\n` +
-        `Phantom won't engage with them after that.`
+        `🚫 *Logged: @${username}*\n\n` +
+        `To activate: add \`${username}\` to the \`BLOCKED_USERNAMES\` env var on Vercel, then redeploy.\n\n` +
+        `No Twitter block is made — Phantom just silently ignores them.`
       );
     }
   }
