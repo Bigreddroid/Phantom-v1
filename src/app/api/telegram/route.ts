@@ -90,8 +90,8 @@ export async function POST(req: NextRequest) {
       `*/thread* — generate a thread now\n` +
       `*/engage* — run engagement now\n` +
       `*/mentions* — check mentions now\n` +
-      `*/follow* — follow 5 niche accounts\n` +
-      `*/follow 10* — follow N accounts (max 20)\n` +
+      `*/follow* — follow + like + AI-reply to 5 niche accounts\n` +
+      `*/follow 10* — same but N accounts (max 15)\n` +
       `*/pause* — pause all automation\n` +
       `*/resume* — resume automation\n`
     );
@@ -184,9 +184,9 @@ export async function POST(req: NextRequest) {
 
   else if (cmd.startsWith("/follow")) {
     const parts = cmd.split(" ");
-    const count = Math.min(parseInt(parts[1] ?? "5", 10) || 5, 20);
+    const count = Math.min(parseInt(parts[1] ?? "5", 10) || 5, 15);
 
-    await reply(chatId, `🔍 Finding ${count} relevant accounts to follow...`);
+    await reply(chatId, `🧠 Scanning niche for ${count} accounts to follow, like & engage...`);
 
     const KEYWORDS = [
       "founder personal brand",
@@ -194,12 +194,14 @@ export async function POST(req: NextRequest) {
       "solopreneur automation",
       "AI tools for creators",
       "indiehacker",
+      "personal brand tips",
+      "indie founder growth",
     ];
 
     try {
       const me = await getMyProfile();
       const seen = new Set<string>();
-      let followed = 0;
+      let followed = 0, liked = 0, replied = 0;
 
       for (const keyword of KEYWORDS) {
         if (followed >= count) break;
@@ -211,18 +213,49 @@ export async function POST(req: NextRequest) {
           seen.add(tweet.author_id);
 
           try {
+            // Follow
             await followUser(tweet.author_id, me.id);
             followed++;
-            await randomDelay(1500, 3500);
+            await randomDelay(800, 2000);
+
+            // Like the tweet
+            try { await likeTweet(tweet.id, me.id); liked++; } catch { /* skip */ }
+            await randomDelay(500, 1500);
+
+            // 40% chance: reply with AI-generated contextual comment
+            if (Math.random() < 0.4) {
+              try {
+                const { generateReply } = await import("@/lib/claude/generate");
+                const replyText = await generateReply(tweet.text, tweet.author_id);
+                const item = await prisma.queueItem.create({
+                  data: {
+                    type: "Reply",
+                    content: replyText,
+                    metadata: { tweetId: tweet.id, original: tweet.text.slice(0, 100), source: "follow-engage" },
+                  },
+                });
+                await import("@/lib/telegram/notify").then(m =>
+                  m.requestApproval("Reply to new follow", replyText, { original: tweet.text.slice(0, 80), id: item.id })
+                );
+                replied++;
+              } catch { /* skip */ }
+              await randomDelay(2000, 4000);
+            }
           } catch { /* already following or rate limited */ }
         }
       }
 
       await prisma.activity.create({
-        data: { action: `Followed ${followed} accounts`, detail: "Via Telegram /follow command", icon: "👤" },
+        data: { action: `Deep follow: ${followed} accounts`, detail: `Liked ${liked} · ${replied} replies queued`, icon: "🤝" },
       });
 
-      await reply(chatId, `✅ Followed *${followed}* relevant accounts from your niche.\n\nUse \`/follow 10\` to follow more at once.`);
+      await reply(chatId,
+        `✅ Done!\n\n` +
+        `👤 *Followed:* ${followed} accounts\n` +
+        `❤️ *Liked:* ${liked} tweets\n` +
+        `💬 *Replies queued:* ${replied} (check /queue to approve)\n\n` +
+        `_All from your niche: founders, creators & solopreneurs._`
+      );
     } catch (e) {
       await reply(chatId, `❌ Error: ${String(e).slice(0, 100)}`);
     }
