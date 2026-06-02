@@ -1,18 +1,20 @@
-// Accounts to never engage with, follow, or reply to.
-// Add Twitter user IDs or usernames here.
-// To find a user ID: https://tweeterid.com
-const BLOCKED_USERNAMES = new Set<string>([
-  // Add usernames below (without @):
-  // "username1",
-  // "username2",
-]);
+// Blocked accounts are stored in env vars — never in the repo.
+// Set BLOCKED_USERNAMES=user1,user2 and BLOCKED_IDS=123,456 in .env.local / Vercel.
 
-const BLOCKED_IDS = new Set<string>([
-  // Add numeric Twitter user IDs below:
-]);
+function getBlockedUsernames(): Set<string> {
+  const raw = process.env.BLOCKED_USERNAMES ?? "";
+  return new Set(raw.split(",").map(s => s.trim().toLowerCase()).filter(Boolean));
+}
+
+function getBlockedIds(): Set<string> {
+  const raw = process.env.BLOCKED_IDS ?? "";
+  return new Set(raw.split(",").map(s => s.trim()).filter(Boolean));
+}
 
 export function isBlocked(userId?: string, username?: string): boolean {
-  if (userId && BLOCKED_IDS.has(userId)) return true;
-  if (username && BLOCKED_USERNAMES.has(username.toLowerCase())) return true;
+  const ids = getBlockedIds();
+  const usernames = getBlockedUsernames();
+  if (userId && ids.has(userId)) return true;
+  if (username && usernames.has(username.toLowerCase())) return true;
   return false;
 }
