@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { xClient } from "@/lib/x/client";
 import { prisma } from "@/lib/db";
+import { getLinkedInAuth } from "@/lib/linkedin/client";
 
 export async function GET() {
   try {
@@ -22,9 +23,11 @@ export async function GET() {
       return sum + (match ? parseInt(match[1]) : 1);
     }, 0);
 
-    const [dmsSent, tweetsPosted] = await Promise.all([
+    const [dmsSent, tweetsPosted, liPostsCount, liAuth] = await Promise.all([
       prisma.activity.count({ where: { action: { contains: "DM" } } }),
       prisma.activity.count({ where: { icon: "🐦" } }),
+      prisma.activity.count({ where: { icon: "💼" } }),
+      getLinkedInAuth(),
     ]);
 
     return NextResponse.json({
@@ -34,6 +37,9 @@ export async function GET() {
       tweetsPosted,
       engagements,
       dmsSent,
+      liPosts: liPostsCount,
+      linkedInConnected: !!liAuth,
+      linkedInExpiry: liAuth ? liAuth.expiresAt.toISOString() : null,
     });
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });

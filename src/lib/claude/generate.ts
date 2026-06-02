@@ -94,6 +94,28 @@ Never sycophantic. Sounds real, not polished.`,
   );
 }
 
+export async function generateLinkedInPost(topic: string) {
+  return generate(
+    `Write a LinkedIn post about: ${topic}
+
+Format:
+- First line is a standalone hook — short, punchy, makes someone stop scrolling
+- Leave a blank line after the hook
+- 3–5 short paragraphs or bullet lines (use line breaks, not walls of text)
+- End with a genuine insight or a real question — not a call-to-action
+- 500–1100 characters total
+- 2–3 relevant hashtags at the very end on their own line
+- No corporate buzzwords (leverage, synergy, circle back, excited to announce)
+- No "I'm humbled" or "Here's what I learned" openers`,
+    `You are a ghostwriter for a founder/creator (${X_HANDLE}).
+Write in their voice: direct, confident, no fluff, conversational but intelligent.
+LinkedIn tone: slightly more professional than Twitter, but still human and opinionated.
+The audience is other founders, operators, and professionals who are allergic to performative LinkedIn content.
+Sound like someone sharing a real lesson from building, not a motivational quote account.`,
+    700
+  );
+}
+
 export async function generateDM(recipientUsername: string, context: string) {
   return generate(
     `Write a cold DM to @${recipientUsername}.

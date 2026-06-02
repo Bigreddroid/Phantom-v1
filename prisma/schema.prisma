@@ -42,6 +42,16 @@ model BlockedAccount {
   createdAt DateTime @default(now())
 }
 
+model LinkedInAuth {
+  id           String    @id @default("singleton")
+  accessToken  String
+  refreshToken String?
+  personId     String
+  expiresAt    DateTime
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
 enum QueueStatus {
   PENDING
   APPROVED

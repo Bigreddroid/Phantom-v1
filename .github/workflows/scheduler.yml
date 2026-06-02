@@ -84,3 +84,17 @@ jobs:
         run: |
           curl -sf -X GET "${{ secrets.APP_URL }}/api/cron/thread" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" || true
+
+      # ── LinkedIn — Tue–Fri 8:30am IST (skip weekends) ────────────────────
+      - name: LinkedIn
+        if: |
+          ${{
+            fromJson(steps.time.outputs.minute) >= 28 &&
+            fromJson(steps.time.outputs.minute) <= 32 &&
+            fromJson(steps.time.outputs.hour) == 8 &&
+            fromJson(steps.time.outputs.dow) >= 2 &&
+            fromJson(steps.time.outputs.dow) <= 5
+          }}
+        run: |
+          curl -sf -X GET "${{ secrets.APP_URL }}/api/cron/linkedin" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" || true

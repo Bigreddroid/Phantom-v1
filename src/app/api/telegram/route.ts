@@ -7,6 +7,7 @@ import { ensureWebhook, ensureCommands } from "@/lib/telegram/setup";
 import { xRO } from "@/lib/x/client";
 import { sendDM, getDMConversations } from "@/lib/x/dm";
 import { searchTweets, getMyProfile } from "@/lib/x/engage";
+import { getLinkedInAuth } from "@/lib/linkedin/client";
 
 const BOT = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
 const CHAT = process.env.TELEGRAM_CHAT_ID!;
@@ -91,6 +92,56 @@ export async function POST(req: NextRequest) {
       } catch (e) { await send(chatId, `❌ ${String(e).slice(0, 100)}`); }
     }
 
+    // ── LinkedIn callbacks ──────────────────────────────────────────────────
+    if (action === "li_post") {
+      await send(chatId, "💼 Generating & publishing LinkedIn post...");
+      try {
+        const res = await fetch(`${APP}/api/jobs/linkedin`, { method: "POST" });
+        const r = await res.json();
+        if (r.error) throw new Error(r.error);
+        await send(chatId, `✅ *LinkedIn post published*\n\n${(r.content as string)?.slice(0, 500) ?? ""}`);
+      } catch (e) { await send(chatId, `❌ ${String(e).slice(0, 200)}`); }
+    }
+
+    if (action === "li_connect") {
+      await send(chatId,
+        `🔗 *Connect LinkedIn*\n\n` +
+        `Open this link in your browser to authorize Phantom:\n\n` +
+        `${APP}/api/auth/linkedin\n\n` +
+        `_One-time setup. Token lasts 60 days — you'll be reminded when it expires._`
+      );
+    }
+
+    if (action === "li_status") {
+      const liAuth = await getLinkedInAuth();
+      if (!liAuth) {
+        await send(chatId,
+          `❌ *LinkedIn not connected*\n\nUse \`/linkedin\` → Connect account to authorize.\n\n` +
+          `You need \`LINKEDIN_CLIENT_ID\` and \`LINKEDIN_CLIENT_SECRET\` set in your env vars first.`
+        );
+      } else {
+        const daysLeft = Math.floor((liAuth.expiresAt.getTime() - Date.now()) / 86400000);
+        const expired = daysLeft <= 0;
+        await send(chatId,
+          `${expired ? "⚠️ *LinkedIn token expired*" : `✅ *LinkedIn connected*`}\n\n` +
+          `Person ID: \`${liAuth.personId}\`\n` +
+          `Token ${expired ? "expired" : `expires in *${daysLeft} days*`}\n\n` +
+          `${expired ? "Reconnect via /linkedin → Connect account." : "Posts are running on schedule."}`
+        );
+      }
+    }
+
+    if (action === "dm_send") {
+      await send(chatId,
+        `📨 *Send a DM*\n\nReply with this format:\n\n` +
+        "`/dm @username [optional context about them]`\n\n" +
+        `Examples:\n` +
+        "`/dm @johndoe`\n" +
+        "`/dm @janefoo she builds SaaS tools and tweets about growth`\n\n" +
+        `_Phantom generates a personalised cold DM and sends it via X._`
+      );
+    }
+
     return NextResponse.json({ ok: true });
   }
 
@@ -110,27 +161,39 @@ export async function POST(req: NextRequest) {
     await send(chatId,
       `*🤖 Phantom — AI Brand Secretary*\n\n` +
       `Everything runs automatically. Use these to control it:\n\n` +
-      `*Content*\n` +
+      `*𝕏 Content*\n` +
       `/tweet — generate & post tweet now\n` +
       `/thread — generate & post thread now\n` +
-      `/post <text> — post your own tweet instantly\n` +
-      `/dm @username [context] — send a personalised cold DM\n\n` +
-      `*Engagement*\n` +
+      `/post <text> — post your own tweet instantly\n\n` +
+      `*LinkedIn*\n` +
+      `/linkedin — post, connect, or check status\n\n` +
+      `*Engagement & Outreach*\n` +
       `/engage — run engagement (like + reply, 10:1 ratio)\n` +
       `/goout — drop comments on 5 tweets (human mode)\n` +
       `/follow [n] — follow + like + reply to n accounts\n` +
-      `/mentions — check & auto-reply to mentions\n\n` +
+      `/mentions — check & auto-reply to mentions\n` +
+      `/dm @username [context] — send a personalised cold DM\n\n` +
       `*Dashboard*\n` +
-      `/status — live stats\n` +
+      `/status — live stats (both platforms)\n` +
       `/activity — last 10 actions\n` +
       `/schedule — automation schedule\n\n` +
       `*Control*\n` +
-      `/pause — pause automation\n` +
+      `/pause — pause all automation\n` +
       `/resume — resume automation\n` +
       `/blacklist <username> — silently ignore an account\n` +
       `/setup — register webhook & command menu\n` +
       `/test — test X API connectivity\n\n` +
-      `_Phantom posts autonomously. You'll get notified after every action._`
+      `_Phantom posts autonomously. You'll get notified after every action._`,
+      {
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: "📨 Send DM", callback_data: "dm_send:" },
+              { text: "💼 LinkedIn post", callback_data: "li_post:" },
+            ],
+          ],
+        },
+      }
     );
   }
 
@@ -449,6 +512,26 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // ── /linkedin ──────────────────────────────────────────────────────────────
+  else if (cmd === "/linkedin") {
+    await send(chatId,
+      `*💼 LinkedIn — What do you want to do?*`,
+      {
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: "💼 Post now",       callback_data: "li_post:" },
+              { text: "📊 Check status",   callback_data: "li_status:" },
+            ],
+            [
+              { text: "🔗 Connect account", callback_data: "li_connect:" },
+            ],
+          ],
+        },
+      }
+    );
+  }
+
   // ── /dm <username> [context] ──────────────────────────────────────────────
   else if (cmd === "/dm") {
     const parts = args.split(" ");
@@ -456,7 +539,13 @@ export async function POST(req: NextRequest) {
     const context = parts.slice(1).join(" ").trim();
 
     if (!username) {
-      await send(chatId, "Usage: `/dm @username [optional context about them]`\n\nPhantom will auto-generate a personalised DM.");
+      await send(chatId,
+        `📨 *Send a DM*\n\nUsage: \`/dm @username [optional context]\`\n\n` +
+        `Phantom will generate a personalised cold DM and send it.\n\n` +
+        `Examples:\n` +
+        "`/dm @johndoe`\n" +
+        "`/dm @janefoo she builds SaaS tools and tweets about growth`"
+      );
     } else {
       await send(chatId, `✉️ Sending DM to @${username}...`);
       try {
