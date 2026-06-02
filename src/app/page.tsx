@@ -7,6 +7,7 @@ type ActivityItem = { id: string; action: string; detail?: string; icon?: string
 type Stats = {
   followers: number; following: number; tweets: number; engagements: number;
   dmsSent: number; liPosts?: number; linkedInConnected?: boolean; linkedInExpiry?: string | null;
+  paused?: boolean;
 };
 
 const SETUP_GROUPS = [
@@ -211,6 +212,15 @@ export default function Dashboard() {
   const [setupStatus, setSetupStatus] = useState<Record<string, boolean> | null>(null);
   const [liSetupModal, setLiSetupModal] = useState(false);
 
+  const openLiConnect = () => {
+    if (setupStatus?.["LINKEDIN_CLIENT_ID"]) {
+      window.location.href = "/api/auth/linkedin";
+    } else {
+      window.open("https://developer.linkedin.com/apps", "_blank", "noopener");
+      setLiSetupModal(true);
+    }
+  };
+
   const showToast = (msg: string, type: "ok" | "err" = "ok") => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3500);
@@ -263,13 +273,36 @@ export default function Dashboard() {
   const handle     = process.env.NEXT_PUBLIC_X_HANDLE ?? "@yourusername";
   const liConnected    = stats?.linkedInConnected ?? false;
   const liExpiringSoon = stats?.linkedInExpiry ? (new Date(stats.linkedInExpiry).getTime() - Date.now()) < 7 * 86400000 : false;
+  const isPaused   = stats?.paused ?? false;
   const appUrl     = typeof window !== "undefined" ? window.location.origin : "";
+
+  const togglePause = async () => {
+    const action = isPaused ? "resume" : "pause";
+    await fetch("/api/stats", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action }) });
+    showToast(action === "pause" ? "Automation paused" : "Automation resumed");
+    await fetchAll();
+  };
 
   return (
     <div className="min-h-screen bg-[#090909] text-white font-sans antialiased">
 
       {/* Red accent line — top of page */}
       <div className="fixed top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-red-600 to-transparent z-50 opacity-80" />
+
+      {/* Paused banner */}
+      {isPaused && (
+        <div className="fixed top-[2px] left-0 right-0 z-40 bg-red-950/95 border-b border-red-800/50 backdrop-blur-sm">
+          <div className="max-w-5xl mx-auto px-6 h-9 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-red-400 text-sm">⏸</span>
+              <p className="text-sm font-semibold text-red-300">Automation paused — all cron jobs are skipping</p>
+            </div>
+            <button onClick={togglePause} className="text-xs font-bold text-red-400 hover:text-white border border-red-700/60 px-3 py-1 rounded-lg transition-colors hover:bg-red-600/20">
+              Resume →
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* LinkedIn Setup Modal */}
       {liSetupModal && (
@@ -337,7 +370,7 @@ export default function Dashboard() {
       )}
 
       {/* ── Header ── */}
-      <header className="sticky top-[2px] z-40 border-b border-white/[0.06] bg-[#090909]/95 backdrop-blur-md">
+      <header className={`sticky z-40 border-b border-white/[0.06] bg-[#090909]/95 backdrop-blur-md ${isPaused ? "top-9" : "top-[2px]"}`}>
         <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
 
           {/* Brand */}
@@ -375,6 +408,18 @@ export default function Dashboard() {
               <span className={`w-1.5 h-1.5 rounded-full ${refreshing ? "bg-white/30 animate-pulse" : "bg-red-500"}`} />
               {refreshing ? "Syncing" : "Live"}
             </div>
+
+            {/* Pause / Resume toggle */}
+            <button
+              onClick={togglePause}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border font-bold transition-all ${
+                isPaused
+                  ? "border-red-600/50 bg-red-600/15 text-red-400 hover:bg-red-600/25"
+                  : "border-white/[0.08] bg-white/[0.03] text-white/35 hover:text-white/65 hover:bg-white/[0.06]"
+              }`}
+            >
+              {isPaused ? "▶ Resume" : "⏸ Pause"}
+            </button>
           </div>
         </div>
       </header>
@@ -441,7 +486,7 @@ export default function Dashboard() {
               <span className="text-[9px] font-black tracking-widest uppercase text-white/20 bg-white/[0.06] px-2 py-0.5 rounded">in LinkedIn</span>
               {!liConnected && (
                 <button
-                  onClick={() => { setupStatus?.["LINKEDIN_CLIENT_ID"] ? (window.location.href = "/api/auth/linkedin") : setLiSetupModal(true); }}
+                  onClick={openLiConnect}
                   className="text-[11px] font-medium text-red-400/80 hover:text-red-400 border border-red-500/20 bg-red-500/8 px-3 py-1 rounded-lg transition-colors"
                 >Connect →</button>
               )}
@@ -619,7 +664,7 @@ export default function Dashboard() {
                       </div>
                     </div>
                     <button
-                      onClick={() => { setupStatus?.["LINKEDIN_CLIENT_ID"] ? (window.location.href = "/api/auth/linkedin") : setLiSetupModal(true); }}
+                      onClick={openLiConnect}
                       className="text-xs font-bold px-4 py-2 rounded-xl transition-colors border border-white/[0.08] bg-white/[0.04] text-white/45 hover:text-white hover:bg-white/[0.08]"
                     >{liConnected ? "Reconnect" : "Connect"}</button>
                   </div>
