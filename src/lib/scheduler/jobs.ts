@@ -3,7 +3,7 @@ import { postTweet, postThread } from "../x/post";
 import { getMentions, searchTweets, likeTweet, followUser } from "../x/engage";
 import { requestApproval, notifyPosted, notifyError } from "../telegram/notify";
 
-const MY_USER_ID = "2061773668603314176"; // @BigRedDr0id
+const MY_USER_ID = process.env.X_USER_ID ?? "";
 
 // Content pillars — topics Phantom rotates through
 const CONTENT_PILLARS = [
