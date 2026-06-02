@@ -2,7 +2,7 @@ name: Phantom Scheduler
 
 on:
   schedule:
-    - cron: "*/30 * * * *"
+    - cron: "*/15 * * * *"
   workflow_dispatch:
 
 jobs:
@@ -97,4 +97,58 @@ jobs:
           }}
         run: |
           curl -sf -X GET "${{ secrets.APP_URL }}/api/cron/linkedin" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" || true
+
+      # ── Resurface — daily 10:30am IST (sends to Telegram for approval) ────
+      - name: Resurface
+        if: |
+          ${{
+            fromJson(steps.time.outputs.minute) >= 28 &&
+            fromJson(steps.time.outputs.minute) <= 32 &&
+            fromJson(steps.time.outputs.hour) == 10
+          }}
+        run: |
+          curl -sf -X GET "${{ secrets.APP_URL }}/api/cron/resurface" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" || true
+
+      # ── Niche RT — daily 4:30pm IST (sends to Telegram for approval) ──────
+      - name: Niche RT
+        if: |
+          ${{
+            fromJson(steps.time.outputs.minute) >= 28 &&
+            fromJson(steps.time.outputs.minute) <= 32 &&
+            fromJson(steps.time.outputs.hour) == 16
+          }}
+        run: |
+          curl -sf -X GET "${{ secrets.APP_URL }}/api/cron/niche-rt" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" || true
+
+      # ── Auto DM — daily 1:30pm IST (approval-gated via Telegram) ─────────
+      - name: Auto DM
+        if: |
+          ${{
+            fromJson(steps.time.outputs.minute) >= 28 &&
+            fromJson(steps.time.outputs.minute) <= 32 &&
+            fromJson(steps.time.outputs.hour) == 13
+          }}
+        run: |
+          curl -sf -X GET "${{ secrets.APP_URL }}/api/cron/dm" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" || true
+
+      # ── Auto Go-out comments — 5x/day: 9am, 11am, 2pm, 5pm, 8pm IST ────────
+      - name: Auto Goout
+        if: |
+          ${{
+            fromJson(steps.time.outputs.minute) >= 28 &&
+            fromJson(steps.time.outputs.minute) <= 32 &&
+            (
+              fromJson(steps.time.outputs.hour) == 9  ||
+              fromJson(steps.time.outputs.hour) == 11 ||
+              fromJson(steps.time.outputs.hour) == 14 ||
+              fromJson(steps.time.outputs.hour) == 17 ||
+              fromJson(steps.time.outputs.hour) == 20
+            )
+          }}
+        run: |
+          curl -sf -X GET "${{ secrets.APP_URL }}/api/cron/goout" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" || true
