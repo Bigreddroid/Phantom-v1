@@ -103,6 +103,26 @@ export async function POST(req: NextRequest) {
       } catch (e) { await send(chatId, `❌ ${String(e).slice(0, 200)}`); }
     }
 
+    if (action === "li_story") {
+      await send(chatId, "📖 Writing LinkedIn story post (draws from recent X content)...");
+      try {
+        const res = await fetch(`${APP}/api/jobs/linkedin-story`, { method: "POST" });
+        const r = await res.json();
+        if (r.error) throw new Error(r.error);
+        await send(chatId, `✅ *LinkedIn story published*\n\n${(r.content as string)?.slice(0, 500) ?? ""}`);
+      } catch (e) { await send(chatId, `❌ ${String(e).slice(0, 200)}`); }
+    }
+
+    if (action === "li_list") {
+      await send(chatId, "📋 Writing LinkedIn 5-lesson list post...");
+      try {
+        const res = await fetch(`${APP}/api/jobs/linkedin-list`, { method: "POST" });
+        const r = await res.json();
+        if (r.error) throw new Error(r.error);
+        await send(chatId, `✅ *LinkedIn list published*\n\n${(r.content as string)?.slice(0, 500) ?? ""}`);
+      } catch (e) { await send(chatId, `❌ ${String(e).slice(0, 200)}`); }
+    }
+
     if (action === "li_connect") {
       await send(chatId,
         `🔗 *Connect LinkedIn*\n\n` +
@@ -188,8 +208,10 @@ export async function POST(req: NextRequest) {
         reply_markup: {
           inline_keyboard: [
             [
-              { text: "📨 Send DM", callback_data: "dm_send:" },
-              { text: "💼 LinkedIn post", callback_data: "li_post:" },
+              { text: "📨 Send DM",      callback_data: "dm_send:"  },
+              { text: "💼 LI Post",      callback_data: "li_post:"  },
+              { text: "📖 LI Story",     callback_data: "li_story:" },
+              { text: "📋 LI 5 Lessons", callback_data: "li_list:"  },
             ],
           ],
         },
@@ -515,15 +537,20 @@ export async function POST(req: NextRequest) {
   // ── /linkedin ──────────────────────────────────────────────────────────────
   else if (cmd === "/linkedin") {
     await send(chatId,
-      `*💼 LinkedIn — What do you want to do?*`,
+      `*💼 LinkedIn — Pick a post type:*\n\n` +
+      `*Post* — thought leadership on your niche\n` +
+      `*Story* — personal narrative drawn from recent X content\n` +
+      `*5 Lessons* — numbered list format (high engagement)\n`,
       {
         reply_markup: {
           inline_keyboard: [
             [
-              { text: "💼 Post now",       callback_data: "li_post:" },
-              { text: "📊 Check status",   callback_data: "li_status:" },
+              { text: "💼 Post",      callback_data: "li_post:"  },
+              { text: "📖 Story",     callback_data: "li_story:" },
+              { text: "📋 5 Lessons", callback_data: "li_list:"  },
             ],
             [
+              { text: "📊 Status",         callback_data: "li_status:"  },
               { text: "🔗 Connect account", callback_data: "li_connect:" },
             ],
           ],

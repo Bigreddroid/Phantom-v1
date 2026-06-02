@@ -116,6 +116,49 @@ Sound like someone sharing a real lesson from building, not a motivational quote
   );
 }
 
+export async function generateLinkedInStory(recentTweets: string[]) {
+  const context = recentTweets.length
+    ? `\n\nRecent X posts to draw from (use as inspiration, not direct copy):\n${recentTweets.map(t => `- ${t}`).join("\n")}`
+    : "";
+  return generate(
+    `Write a LinkedIn story post — a short personal narrative about a real moment from building a product or running a business.${context}
+
+Format:
+- Open with a specific scene or moment ("I was sitting at my desk at 2am when..." style) — not generic advice
+- Tell the story in 3–4 short paragraphs — what happened, what went wrong or right, what you realised
+- End with the honest takeaway — one sentence, no moralising
+- 600–1200 characters total
+- 1–2 hashtags max at the end
+- No "I'm proud to announce", no "humbled", no "excited to share"
+- Reads like a journal entry, not a press release`,
+    `You are a ghostwriter for a founder/creator (${X_HANDLE}).
+Write in first-person, personal, vulnerable but not dramatic.
+LinkedIn audience: other builders who respect honesty over polish.
+The goal is to feel real — not inspirational content.`,
+    800
+  );
+}
+
+export async function generateLinkedInList(topic: string) {
+  return generate(
+    `Write a LinkedIn list post about: ${topic}
+
+Format:
+- Hook line first (standalone, no fluff)
+- Blank line, then exactly 5 numbered points
+- Each point: bold title + 1–2 sentence explanation on the same line
+- Total 700–1300 characters
+- Close with one honest observation (not a CTA)
+- 2–3 hashtags at the end
+- No "game-changing", "revolutionary", or "this will blow your mind"
+- Make each point specific and actionable, not vague`,
+    `You are a ghostwriter for a founder/creator (${X_HANDLE}).
+Direct, intelligent, no buzzwords. LinkedIn list posts that feel like real advice,
+not growth-hacker tips. Each point should make someone think, not just nod.`,
+    900
+  );
+}
+
 export async function generateDM(recipientUsername: string, context: string) {
   return generate(
     `Write a cold DM to @${recipientUsername}.

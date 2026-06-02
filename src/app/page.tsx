@@ -204,7 +204,9 @@ const X_JOBS = [
 ];
 
 const LI_JOBS = [
-  { label: "Post to LinkedIn", endpoint: "/api/jobs/linkedin", icon: "💼" },
+  { label: "Post",         endpoint: "/api/jobs/linkedin",       icon: "💼", desc: "Thought leadership"  },
+  { label: "Story",        endpoint: "/api/jobs/linkedin-story", icon: "📖", desc: "Personal narrative"   },
+  { label: "5 Lessons",    endpoint: "/api/jobs/linkedin-list",  icon: "📋", desc: "Numbered list post"   },
 ];
 
 export default function Dashboard() {
@@ -576,7 +578,12 @@ export default function Dashboard() {
                   ) : (
                     <>
                       <span className="text-base leading-none">{job.icon}</span>
-                      {job.label}
+                      <span>
+                        {job.label}
+                        {"desc" in job && job.desc && (
+                          <span className="block text-[10px] opacity-50 font-normal leading-none mt-0.5">{job.desc}</span>
+                        )}
+                      </span>
                     </>
                   )}
                 </button>
