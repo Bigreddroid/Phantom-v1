@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { postTweet, postThread } from "@/lib/x/post";
-import { searchTweets, followUser, getMyProfile } from "@/lib/x/engage";
-import { notifyPosted, sendMessage } from "@/lib/telegram/notify";
+import { searchTweets, followUser, getMyProfile, likeTweet } from "@/lib/x/engage";
+import { requestApproval, notifyPosted, sendMessage } from "@/lib/telegram/notify";
+import { generateReply } from "@/lib/claude/generate";
 import { randomDelay } from "@/lib/scheduler/humanize";
 
 const TELEGRAM_API = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
@@ -225,7 +226,6 @@ export async function POST(req: NextRequest) {
             // 40% chance: reply with AI-generated contextual comment
             if (Math.random() < 0.4) {
               try {
-                const { generateReply } = await import("@/lib/claude/generate");
                 const replyText = await generateReply(tweet.text, tweet.author_id);
                 const item = await prisma.queueItem.create({
                   data: {
@@ -234,9 +234,7 @@ export async function POST(req: NextRequest) {
                     metadata: { tweetId: tweet.id, original: tweet.text.slice(0, 100), source: "follow-engage" },
                   },
                 });
-                await import("@/lib/telegram/notify").then(m =>
-                  m.requestApproval("Reply to new follow", replyText, { original: tweet.text.slice(0, 80), id: item.id })
-                );
+                await requestApproval("Reply to new follow", replyText, { original: tweet.text.slice(0, 80), id: item.id });
                 replied++;
               } catch { /* skip */ }
               await randomDelay(2000, 4000);
