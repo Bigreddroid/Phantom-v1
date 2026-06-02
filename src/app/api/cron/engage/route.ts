@@ -73,9 +73,11 @@ export async function GET(req: Request) {
           );
           await randomDelay(2000, 5000);
         } catch (e) {
-          replyErrors.push(String(e).slice(0, 80));
+          const msg = String(e);
+          if (msg.includes("403")) continue; // reply restricted on that tweet — skip silently
+          replyErrors.push(msg.slice(0, 80));
           await prisma.activity.create({
-            data: { action: "Reply failed", detail: String(e).slice(0, 80), icon: "❌" },
+            data: { action: "Reply failed", detail: msg.slice(0, 80), icon: "❌" },
           });
         }
       }

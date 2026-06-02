@@ -7,6 +7,14 @@ import { notifyPosted, sendMessage } from "@/lib/telegram/notify";
 import { humanPause, randomDelay } from "@/lib/scheduler/humanize";
 import { loadBlocklist } from "@/lib/blocklist";
 
+function isSpam(text: string): boolean {
+  const t = text.toLowerCase();
+  const hasLink = /https?:\/\/\S+/.test(text);
+  const spamWords = ["select", "winner", "congratul", "prize", "claim", "you've been", "you have been chosen", "dm to claim"];
+  return (hasLink && spamWords.some(w => t.includes(w)))
+    || /\b(click|tap) (here|this|the link)\b/i.test(text);
+}
+
 export async function GET(req: Request) {
   const auth = req.headers.get("authorization");
   if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -44,6 +52,7 @@ export async function GET(req: Request) {
 
     for (const mention of mentions) {
       if (isBlocked(mention.author_id)) continue;
+      if (isSpam(mention.text)) continue; // skip silently — don't engage with bots
       await humanPause();
 
       try {

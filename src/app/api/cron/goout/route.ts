@@ -87,13 +87,13 @@ export async function GET(req: Request) {
     });
 
     // ── Score, filter, and sort ────────────────────────────────────────────────
-    const targets = unique
+    const scored = unique
       .filter(t =>
         t.author_id &&
         t.author_id !== me.id &&
         !isBlocked(t.author_id, t.author_username) &&
-        !seenTweetIds.has(t.id) &&        // skip already-commented tweets
-        !seenAuthorIds.has(t.author_id)    // skip already-commented authors (7d)
+        !seenTweetIds.has(t.id) &&
+        !seenAuthorIds.has(t.author_id)
       )
       .map(t => ({
         ...t,
@@ -101,9 +101,11 @@ export async function GET(req: Request) {
           + (t.public_metrics?.retweet_count ?? 0) * 4
           + (t.public_metrics?.reply_count ?? 0) * 2,
       }))
-      .filter(t => t.score >= 10)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 3);
+      .sort((a, b) => b.score - a.score);
+
+    // Primary tier ≥10, fallback tier ≥5 (fewer slots) when nothing passes the bar
+    let targets = scored.filter(t => t.score >= 10).slice(0, 3);
+    if (!targets.length) targets = scored.filter(t => t.score >= 5).slice(0, 2);
 
     if (!targets.length) {
       return NextResponse.json({ skipped: true, reason: "no unseen high-traction targets" });

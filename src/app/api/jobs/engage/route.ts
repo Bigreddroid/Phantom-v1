@@ -104,7 +104,8 @@ export async function POST(req: Request) {
         await randomDelay(800, 1500);
       } catch (e) {
         const msg = String(e);
-        const hint = msg.includes("403") ? " (check OAuth write permissions)" : msg.includes("429") ? " (rate limit)" : "";
+        if (msg.includes("403")) continue; // reply restricted on that tweet — skip silently
+        const hint = msg.includes("429") ? " (rate limit)" : "";
         errors.push(`reply: ${msg.slice(0, 60)}${hint}`);
         await prisma.activity.create({
           data: { action: "Reply failed", detail: msg.slice(0, 80), icon: "❌" },
