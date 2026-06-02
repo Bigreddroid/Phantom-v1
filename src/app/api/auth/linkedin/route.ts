@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 
 export async function GET() {
   if (!process.env.LINKEDIN_CLIENT_ID) {
-    return NextResponse.json({ error: "LINKEDIN_CLIENT_ID not set" }, { status: 500 });
+    return NextResponse.redirect(`${process.env.NEXTAUTH_URL}/?li=needs_setup`);
   }
 
   const state = crypto.randomUUID();

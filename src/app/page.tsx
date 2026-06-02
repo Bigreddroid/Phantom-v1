@@ -216,6 +216,7 @@ export default function Dashboard() {
   const [toast, setToast] = useState<{ msg: string; type: "ok" | "err" } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [setupStatus, setSetupStatus] = useState<Record<string, boolean> | null>(null);
+  const [liSetupModal, setLiSetupModal] = useState(false);
 
   const showToast = (msg: string, type: "ok" | "err" = "ok") => {
     setToast({ msg, type });
@@ -249,8 +250,9 @@ export default function Dashboard() {
   useEffect(() => {
     const p = new URLSearchParams(window.location.search);
     const li = p.get("li");
-    if (li === "connected") { showToast("LinkedIn connected successfully"); setActiveTab("settings"); }
-    else if (li === "denied") showToast("LinkedIn authorization denied", "err");
+    if (li === "connected")     { showToast("LinkedIn connected"); setActiveTab("settings"); }
+    else if (li === "needs_setup") setLiSetupModal(true);
+    else if (li === "denied")   showToast("LinkedIn authorization denied", "err");
     else if (li === "token_error" || li === "profile_error" || li === "invalid") showToast("LinkedIn auth failed — try again", "err");
     if (li) window.history.replaceState({}, "", "/");
   }, []);
@@ -287,8 +289,125 @@ export default function Dashboard() {
     ? (new Date(stats.linkedInExpiry).getTime() - Date.now()) < 7 * 86400000
     : false;
 
+  const appUrl = typeof window !== "undefined" ? window.location.origin : "";
+
   return (
     <div className="min-h-screen bg-[#06060e] text-white font-sans antialiased">
+
+      {/* LinkedIn Setup Modal */}
+      {liSetupModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="w-full max-w-lg bg-[#0d0d18] border border-white/[0.09] rounded-2xl shadow-2xl shadow-black/60 overflow-hidden">
+
+            {/* Modal header */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-white/[0.07]">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-blue-500/15 border border-blue-500/20 flex items-center justify-center text-sm font-bold text-blue-400">in</div>
+                <div>
+                  <p className="font-semibold text-sm">Connect LinkedIn</p>
+                  <p className="text-xs text-white/35 mt-0.5">One-time setup · 5 minutes</p>
+                </div>
+              </div>
+              <button onClick={() => setLiSetupModal(false)} className="w-7 h-7 rounded-lg bg-white/[0.05] hover:bg-white/[0.09] text-white/40 hover:text-white/70 flex items-center justify-center text-lg leading-none transition-colors">×</button>
+            </div>
+
+            {/* Steps */}
+            <div className="px-6 py-5 space-y-4 max-h-[60vh] overflow-y-auto">
+              <p className="text-xs text-white/35">Follow these steps, then come back and click <span className="text-white/60 font-medium">Try Again</span> below.</p>
+
+              {[
+                {
+                  n: 1,
+                  title: "Create a LinkedIn App",
+                  body: "Go to developer.linkedin.com → My Apps → Create app. Fill in app name, attach a company page (create one if needed), and upload a logo.",
+                  link: { label: "Open LinkedIn Developer Portal →", href: "https://developer.linkedin.com/apps" },
+                },
+                {
+                  n: 2,
+                  title: "Enable 'Share on LinkedIn' product",
+                  body: "In your app → Products tab → find 'Share on LinkedIn' → click Request access. Approval is instant.",
+                },
+                {
+                  n: 3,
+                  title: "Copy your credentials",
+                  body: "In your app → Auth tab → copy Client ID and Client Secret 1. These go into Vercel as env vars.",
+                },
+                {
+                  n: 4,
+                  title: "Add the redirect URL",
+                  body: `In Auth tab → Authorized Redirect URLs → add exactly:`,
+                  code: `${appUrl}/api/auth/linkedin/callback`,
+                },
+                {
+                  n: 5,
+                  title: "Add env vars to Vercel",
+                  body: "Go to your Vercel project → Settings → Environment Variables and add both keys.",
+                  link: { label: "Open Vercel Dashboard →", href: "https://vercel.com/dashboard" },
+                  code2: "LINKEDIN_CLIENT_ID\nLINKEDIN_CLIENT_SECRET",
+                },
+                {
+                  n: 6,
+                  title: "Redeploy Vercel",
+                  body: "After adding env vars, trigger a redeploy so Vercel picks them up. Then come back and click Try Again.",
+                },
+              ].map((s) => (
+                <div key={s.n} className="flex gap-3.5">
+                  <span className="shrink-0 w-6 h-6 rounded-full bg-blue-500/15 border border-blue-500/20 text-blue-400 text-[11px] font-bold flex items-center justify-center mt-0.5">{s.n}</span>
+                  <div className="flex-1 min-w-0 space-y-1.5">
+                    <p className="text-sm font-medium text-white/80">{s.title}</p>
+                    <p className="text-xs text-white/40 leading-relaxed">{s.body}</p>
+                    {s.code && (
+                      <div className="flex items-center gap-2 bg-white/[0.04] border border-white/[0.07] rounded-lg px-3 py-2">
+                        <code className="text-xs text-blue-300/80 font-mono flex-1 break-all">{s.code}</code>
+                        <button
+                          onClick={() => { navigator.clipboard.writeText(s.code!); showToast("Copied"); }}
+                          className="shrink-0 text-[10px] text-white/30 hover:text-white/60 border border-white/[0.08] rounded-md px-2 py-0.5 transition-colors"
+                        >copy</button>
+                      </div>
+                    )}
+                    {s.code2 && (
+                      <div className="bg-white/[0.04] border border-white/[0.07] rounded-lg px-3 py-2 space-y-1">
+                        {s.code2.split("\n").map(k => (
+                          <code key={k} className="block text-xs text-white/50 font-mono">{k}</code>
+                        ))}
+                      </div>
+                    )}
+                    {s.link && (
+                      <a href={s.link.href} target="_blank" rel="noreferrer" className="inline-flex items-center text-xs text-blue-400/70 hover:text-blue-400 transition-colors">
+                        {s.link.label}
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Footer actions */}
+            <div className="flex items-center justify-between gap-3 px-6 py-4 border-t border-white/[0.07] bg-white/[0.015]">
+              <button
+                onClick={() => setLiSetupModal(false)}
+                className="text-sm text-white/30 hover:text-white/55 transition-colors"
+              >
+                Do this later
+              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setLiSetupModal(false); setActiveTab("settings"); }}
+                  className="px-4 py-2 text-sm border border-white/[0.08] rounded-xl text-white/40 hover:text-white/70 hover:bg-white/[0.04] transition-colors"
+                >
+                  View Settings
+                </button>
+                <a
+                  href="/api/auth/linkedin"
+                  className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-medium transition-colors shadow-sm shadow-blue-500/20"
+                >
+                  Try Again →
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Toast */}
       {toast && (
@@ -422,12 +541,16 @@ export default function Dashboard() {
               <span className="text-[10px] font-bold bg-blue-500/15 px-2 py-0.5 rounded-md text-blue-400/70">in</span>
               <span className="text-[10px] uppercase tracking-widest font-medium text-white/25">LinkedIn</span>
               {!liConnected && (
-                <a
-                  href="/api/auth/linkedin"
+                <button
+                  onClick={() => {
+                    const hasClientId = setupStatus?.["LINKEDIN_CLIENT_ID"];
+                    if (!hasClientId) { setLiSetupModal(true); }
+                    else { window.location.href = "/api/auth/linkedin"; }
+                  }}
                   className="ml-auto text-[10px] text-blue-400/70 hover:text-blue-400 border border-blue-500/20 bg-blue-500/8 px-2 py-0.5 rounded-md transition-colors"
                 >
                   Connect →
-                </a>
+                </button>
               )}
             </div>
             <div className="flex flex-wrap gap-2">
@@ -649,8 +772,12 @@ export default function Dashboard() {
                         </p>
                       </div>
                     </div>
-                    <a
-                      href="/api/auth/linkedin"
+                    <button
+                      onClick={() => {
+                        const hasClientId = setupStatus?.["LINKEDIN_CLIENT_ID"];
+                        if (!hasClientId) { setLiSetupModal(true); }
+                        else { window.location.href = "/api/auth/linkedin"; }
+                      }}
                       className={`text-xs font-medium px-4 py-2 rounded-xl transition-colors border ${
                         liConnected
                           ? "border-blue-500/25 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20"
@@ -658,7 +785,7 @@ export default function Dashboard() {
                       }`}
                     >
                       {liConnected ? "Reconnect" : "Connect"}
-                    </a>
+                    </button>
                   </div>
                 </div>
 
