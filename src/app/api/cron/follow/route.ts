@@ -5,7 +5,7 @@ import { replyToTweet } from "@/lib/x/post";
 import { prisma } from "@/lib/db";
 import { sendMessage } from "@/lib/telegram/notify";
 import { randomDelay } from "@/lib/scheduler/humanize";
-import { isBlocked } from "@/lib/blocklist";
+import { loadBlocklist } from "@/lib/blocklist";
 import { NICHE_KEYWORDS } from "@/lib/config";
 
 export async function GET(req: Request) {
@@ -15,6 +15,10 @@ export async function GET(req: Request) {
   }
 
   try {
+    const pauseState = await prisma.stats.findUnique({ where: { id: "singleton" }, select: { paused: true } });
+    if (pauseState?.paused) return NextResponse.json({ skipped: true, reason: "paused" });
+
+    const isBlocked = await loadBlocklist();
     const me = await getMyProfile();
     const keyword = NICHE_KEYWORDS[Math.floor(Math.random() * NICHE_KEYWORDS.length)];
 
@@ -30,7 +34,7 @@ export async function GET(req: Request) {
     const seen = new Set<string>();
 
     for (const tweet of tweets) {
-      if (!tweet.author_id || tweet.author_id === me.id || seen.has(tweet.author_id) || isBlocked(tweet.author_id)) continue;
+      if (!tweet.author_id || tweet.author_id === me.id || seen.has(tweet.author_id) || isBlocked(tweet.author_id, tweet.author_username)) continue;
       seen.add(tweet.author_id);
 
       try { await followUser(tweet.author_id, me.id); followed++; } catch { /* already following */ }
@@ -42,7 +46,7 @@ export async function GET(req: Request) {
       // Reply to ~40% of followed accounts
       if (Math.random() < 0.4) {
         try {
-          const reply = await generateReply(tweet.text, tweet.author_id);
+          const reply = await generateReply(tweet.text, tweet.author_username || tweet.author_id);
           await replyToTweet(tweet.id, reply);
           replied++;
           await prisma.activity.create({

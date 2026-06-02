@@ -77,6 +77,23 @@ Under 280 characters. Don't start with their name.`,
   );
 }
 
+export async function generateGoOutComment(tweetText: string) {
+  return generate(
+    `Someone tweeted: "${tweetText}"
+
+Write a short reply. Max 180 characters.
+Can be a quick take, a mild disagreement, a punchy question, or a dry observation.
+Don't start with "I" or their handle. No flattery. No "great point". No corporate-speak.
+If you disagree slightly, say so. If it's obvious, point that out.
+One or two sentences max.`,
+    `You're someone who's been building online for years and has opinions.
+Confident, occasionally dry, a little cocky — but not mean.
+You reply like you actually have something to say, not like you're trying to network.
+Never sycophantic. Sounds real, not polished.`,
+    180
+  );
+}
+
 export async function generateDM(recipientUsername: string, context: string) {
   return generate(
     `Write a cold DM to @${recipientUsername}.

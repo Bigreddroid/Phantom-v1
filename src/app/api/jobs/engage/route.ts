@@ -5,11 +5,12 @@ import { generateReply } from "@/lib/claude/generate";
 import { prisma } from "@/lib/db";
 import { notifyPosted, sendMessage } from "@/lib/telegram/notify";
 import { randomDelay } from "@/lib/scheduler/humanize";
-import { isBlocked } from "@/lib/blocklist";
+import { loadBlocklist } from "@/lib/blocklist";
 import { NICHE_KEYWORDS } from "@/lib/config";
 
 export async function POST() {
   try {
+    const isBlocked = await loadBlocklist();
     const me = await getMyProfile();
     const keyword = NICHE_KEYWORDS[Math.floor(Math.random() * NICHE_KEYWORDS.length)];
 
@@ -23,20 +24,25 @@ export async function POST() {
 
     let liked = 0, replied = 0;
     const seen = new Set<string>();
+    const comments: Array<{ original: string; reply: string }> = [];
+    const errors: string[] = [];
 
     for (const tweet of tweets) {
-      if (!tweet.author_id || tweet.author_id === me.id || seen.has(tweet.author_id) || isBlocked(tweet.author_id)) continue;
+      if (!tweet.author_id || tweet.author_id === me.id || seen.has(tweet.author_id) || isBlocked(tweet.author_id, tweet.author_username)) continue;
       seen.add(tweet.author_id);
 
-      try { await likeTweet(tweet.id, me.id); liked++; } catch { /* skip */ }
+      try { await likeTweet(tweet.id, me.id); liked++; } catch (e) {
+        errors.push(`like ${tweet.id}: ${String(e).slice(0, 60)}`);
+      }
       await randomDelay(800, 2000);
 
       // Reply — 40% chance
       if (Math.random() < 0.4) {
         try {
-          const reply = await generateReply(tweet.text, tweet.author_id);
+          const reply = await generateReply(tweet.text, tweet.author_username || tweet.author_id || "someone");
           await replyToTweet(tweet.id, reply);
           replied++;
+          comments.push({ original: tweet.text.slice(0, 100), reply });
           await prisma.activity.create({
             data: { action: "Replied to tweet", detail: reply.slice(0, 80), icon: "💬" },
           });
@@ -46,7 +52,9 @@ export async function POST() {
             `*Reply:* ${reply.slice(0, 200)}`
           );
           await randomDelay(2000, 5000);
-        } catch { /* skip */ }
+        } catch (e) {
+          errors.push(`reply ${tweet.id}: ${String(e).slice(0, 60)}`);
+        }
       }
     }
 
@@ -63,7 +71,7 @@ export async function POST() {
       `❤️ ${liked} likes · 💬 ${replied} replies\nTopic: "${keyword}"`
     );
 
-    return NextResponse.json({ ok: true, liked, replied, keyword });
+    return NextResponse.json({ ok: true, liked, replied, keyword, comments, errors });
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }

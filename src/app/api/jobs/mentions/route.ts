@@ -5,11 +5,12 @@ import { generateReply } from "@/lib/claude/generate";
 import { prisma } from "@/lib/db";
 import { notifyPosted } from "@/lib/telegram/notify";
 import { humanPause, randomDelay } from "@/lib/scheduler/humanize";
-import { isBlocked } from "@/lib/blocklist";
+import { loadBlocklist } from "@/lib/blocklist";
 import { sendMessage } from "@/lib/telegram/notify";
 
 export async function POST() {
   try {
+    const isBlocked = await loadBlocklist();
     const me = await getMyProfile();
     const mentions = await getMentions(me.id);
 

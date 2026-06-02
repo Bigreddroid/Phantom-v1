@@ -5,7 +5,7 @@ import { generateReply } from "@/lib/claude/generate";
 import { prisma } from "@/lib/db";
 import { notifyPosted, sendMessage } from "@/lib/telegram/notify";
 import { humanPause, randomDelay } from "@/lib/scheduler/humanize";
-import { isBlocked } from "@/lib/blocklist";
+import { loadBlocklist } from "@/lib/blocklist";
 
 export async function GET(req: Request) {
   const auth = req.headers.get("authorization");
@@ -14,6 +14,10 @@ export async function GET(req: Request) {
   }
 
   try {
+    const pauseState = await prisma.stats.findUnique({ where: { id: "singleton" }, select: { paused: true } });
+    if (pauseState?.paused) return NextResponse.json({ skipped: true, reason: "paused" });
+
+    const isBlocked = await loadBlocklist();
     const me = await getMyProfile();
     const mentions = await getMentions(me.id);
 
@@ -22,6 +26,7 @@ export async function GET(req: Request) {
     }
 
     let replied = 0;
+    const replyErrors: string[] = [];
     for (const mention of mentions) {
       if (isBlocked(mention.author_id)) continue;
       await humanPause();
@@ -40,7 +45,16 @@ export async function GET(req: Request) {
           `*Reply:* ${reply.slice(0, 200)}`
         );
         await randomDelay(2000, 5000);
-      } catch { /* skip */ }
+      } catch (e) {
+        replyErrors.push(String(e).slice(0, 80));
+        await prisma.activity.create({
+          data: { action: "Mention reply failed", detail: String(e).slice(0, 80), icon: "❌" },
+        });
+      }
+    }
+
+    if (replyErrors.length > 0) {
+      await sendMessage(`⚠️ *Mentions cron: ${replyErrors.length} reply(s) failed*\n\n\`${replyErrors[0]}\``);
     }
 
     if (replied > 0) {

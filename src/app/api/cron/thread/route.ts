@@ -12,6 +12,9 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const pauseState = await prisma.stats.findUnique({ where: { id: "singleton" }, select: { paused: true } });
+  if (pauseState?.paused) return NextResponse.json({ skipped: true, reason: "paused" });
+
   if (!isActiveHour() || shouldSkip(0.2)) {
     return NextResponse.json({ skipped: true });
   }

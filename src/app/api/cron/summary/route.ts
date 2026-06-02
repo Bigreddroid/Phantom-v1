@@ -13,19 +13,33 @@ export async function GET(req: Request) {
 
   const me = await xClient.v2.me({ "user.fields": ["public_metrics"] });
   const m = { followers_count: 0, tweet_count: 0, ...me.data.public_metrics };
+  const currentFollowers = m.followers_count;
 
   const since = new Date(Date.now() - 86400000); // last 24h
 
-  const [tweetsPosted, engagements, mentions, dmsSent] = await Promise.all([
+  const [tweetsPosted, engagements, mentions, dmsSent, statsRecord] = await Promise.all([
     prisma.activity.count({ where: { action: { contains: "posted" }, createdAt: { gte: since } } }),
     prisma.activity.count({ where: { action: { contains: "Liked" }, createdAt: { gte: since } } }),
     prisma.activity.count({ where: { action: { contains: "mention" }, createdAt: { gte: since } } }),
     prisma.activity.count({ where: { action: { contains: "DM" }, createdAt: { gte: since } } }),
+    prisma.stats.findUnique({ where: { id: "singleton" } }),
   ]);
 
+  // Delta since last summary run (0 on first run — seeds the baseline)
+  const followerGain = statsRecord && statsRecord.followers > 0
+    ? Math.max(0, currentFollowers - statsRecord.followers)
+    : 0;
+
+  // Persist today's count for tomorrow's delta
+  await prisma.stats.upsert({
+    where: { id: "singleton" },
+    update: { followers: currentFollowers },
+    create: { followers: currentFollowers },
+  });
+
   await notifyDailySummary({
-    followers: m.followers_count,
-    followerGain: 0, // TODO: track daily delta
+    followers: currentFollowers,
+    followerGain,
     tweetsPosted,
     engagements,
     mentions,

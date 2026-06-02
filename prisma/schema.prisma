@@ -32,7 +32,14 @@ model Stats {
   tweets      Int      @default(0)
   engagements Int      @default(0)
   dmsSent     Int      @default(0)
+  paused      Boolean  @default(false)
   updatedAt   DateTime @updatedAt
+}
+
+model BlockedAccount {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  createdAt DateTime @default(now())
 }
 
 enum QueueStatus {

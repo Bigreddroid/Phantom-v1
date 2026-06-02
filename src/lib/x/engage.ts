@@ -40,7 +40,10 @@ export async function searchTweets(query: string, maxResults = 10) {
     "user.fields": ["username", "name"],
     expansions: ["author_id"],
   });
-  return results.data?.data ?? [];
+  const tweets = results.data?.data ?? [];
+  const users: Array<{ id: string; username: string }> = (results.data?.includes?.users as Array<{ id: string; username: string }>) ?? [];
+  const userMap = new Map(users.map(u => [u.id, u.username]));
+  return tweets.map(t => ({ ...t, author_username: userMap.get(t.author_id ?? "") ?? "" }));
 }
 
 export async function getMyProfile() {

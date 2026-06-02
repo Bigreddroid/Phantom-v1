@@ -5,7 +5,7 @@ import { replyToTweet } from "@/lib/x/post";
 import { prisma } from "@/lib/db";
 import { sendMessage } from "@/lib/telegram/notify";
 import { randomDelay } from "@/lib/scheduler/humanize";
-import { isBlocked } from "@/lib/blocklist";
+import { loadBlocklist } from "@/lib/blocklist";
 import { NICHE_KEYWORDS } from "@/lib/config";
 
 export async function POST(req: Request) {
@@ -13,6 +13,7 @@ export async function POST(req: Request) {
   const count = Math.min(Number(body.count) || 5, 20);
 
   try {
+    const isBlocked = await loadBlocklist();
     const me = await getMyProfile();
     let followed = 0, liked = 0, replied = 0;
     const seen = new Set<string>();
@@ -26,7 +27,7 @@ export async function POST(req: Request) {
 
       for (const tweet of tweets) {
         if (followed >= count) break;
-        if (!tweet.author_id || tweet.author_id === me.id || seen.has(tweet.author_id) || isBlocked(tweet.author_id)) continue;
+        if (!tweet.author_id || tweet.author_id === me.id || seen.has(tweet.author_id) || isBlocked(tweet.author_id, tweet.author_username)) continue;
         seen.add(tweet.author_id);
 
         try { await followUser(tweet.author_id, me.id); followed++; } catch { /* already following */ }
@@ -37,7 +38,7 @@ export async function POST(req: Request) {
 
         if (Math.random() < 0.4) {
           try {
-            const reply = await generateReply(tweet.text, tweet.author_id);
+            const reply = await generateReply(tweet.text, tweet.author_username || tweet.author_id || "someone");
             await replyToTweet(tweet.id, reply);
             replied++;
             await prisma.activity.create({

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { sendMessage } from "@/lib/telegram/notify";
-import { ensureWebhook } from "@/lib/telegram/setup";
+import { ensureWebhook, ensureCommands } from "@/lib/telegram/setup";
 
 // Self-healing: if no activity in 90 minutes, fire engage + mentions
 export async function GET(req: Request) {
@@ -10,7 +10,8 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  void ensureWebhook(); // hourly check — re-registers webhook if missing or stale
+  void ensureWebhook();  // re-registers webhook if missing or stale
+  void ensureCommands(); // keeps bot / menu in sync
 
   const cutoff = new Date(Date.now() - 90 * 60 * 1000);
   const recent = await prisma.activity.findFirst({

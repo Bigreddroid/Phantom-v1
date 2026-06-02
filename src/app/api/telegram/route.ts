@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { postTweet, postTweetWithImage, postThread } from "@/lib/x/post";
-import { generateTweet, generateThread } from "@/lib/claude/generate";
+import { generateTweet, generateThread, generateDM } from "@/lib/claude/generate";
 import { notifyPosted } from "@/lib/telegram/notify";
+import { ensureWebhook, ensureCommands } from "@/lib/telegram/setup";
+import { xRO } from "@/lib/x/client";
+import { sendDM, getDMConversations } from "@/lib/x/dm";
+import { searchTweets, getMyProfile } from "@/lib/x/engage";
 
 const BOT = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
 const CHAT = process.env.TELEGRAM_CHAT_ID!;
@@ -87,9 +91,11 @@ export async function POST(req: NextRequest) {
       `*Content*\n` +
       `/tweet — generate & post tweet now\n` +
       `/thread — generate & post thread now\n` +
-      `/post <text> — post your own tweet instantly\n\n` +
+      `/post <text> — post your own tweet instantly\n` +
+      `/dm @username [context] — send a personalised cold DM\n\n` +
       `*Engagement*\n` +
-      `/engage — run engagement (like/follow/reply)\n` +
+      `/engage — run engagement (like + reply, 10:1 ratio)\n` +
+      `/goout — drop comments on 5 tweets (human mode)\n` +
       `/follow [n] — follow + like + reply to n accounts\n` +
       `/mentions — check & auto-reply to mentions\n\n` +
       `*Dashboard*\n` +
@@ -99,7 +105,9 @@ export async function POST(req: NextRequest) {
       `*Control*\n` +
       `/pause — pause automation\n` +
       `/resume — resume automation\n` +
-      `/blacklist <username> — silently ignore an account\n\n` +
+      `/blacklist <username> — silently ignore an account\n` +
+      `/setup — register webhook & command menu\n` +
+      `/test — test X API connectivity\n\n` +
       `_Phantom posts autonomously. You'll get notified after every action._`
     );
   }
@@ -210,14 +218,51 @@ export async function POST(req: NextRequest) {
     try {
       const res = await fetch(`${APP}/api/jobs/engage`, { method: "POST" });
       const r = await res.json();
-      await send(chatId,
-        `✅ *Engagement complete*\n\n` +
-        `❤️ Liked: ${r.liked}\n` +
-        `👤 Followed: ${r.followed}\n` +
-        `💬 Replied: ${r.replied}\n` +
-        `🎯 Topic: "${r.keyword}"\n` +
-        `_10:1 verified:non-verified ratio applied_`
-      );
+      if (!res.ok || r.error) {
+        await send(chatId, `❌ Engagement failed: ${r.error ?? "Unknown error"}`);
+      } else {
+        const commentLines = (r.comments ?? []).map(
+          (c: { original: string; reply: string }) =>
+            `_"${c.original}"_\n↩ ${c.reply}`
+        ).join("\n\n");
+        const errorNote = r.errors?.length
+          ? `\n\n⚠️ _${r.errors.length} failed: ${r.errors[0]}_`
+          : "";
+        await send(chatId,
+          `✅ *Engagement done* — ❤️ ${r.liked} likes · 💬 ${r.replied} comments\n` +
+          `🎯 Topic: "${r.keyword}"\n\n` +
+          (commentLines || "_No replies this run._") +
+          errorNote
+        );
+      }
+    } catch (e) {
+      await send(chatId, `❌ Error: ${String(e).slice(0, 100)}`);
+    }
+  }
+
+  // ── /goout ────────────────────────────────────────────────────────────────
+  else if (cmd === "/goout") {
+    await send(chatId, "🗣️ Going out to drop some comments...");
+    try {
+      const res = await fetch(`${APP}/api/jobs/goout`, { method: "POST" });
+      const r = await res.json();
+      if (!res.ok || r.error) {
+        await send(chatId, `❌ Go-out failed: ${r.error ?? "Unknown error"}`);
+      } else {
+        const lines = (r.comments ?? []).map(
+          (c: { original: string; reply: string }) =>
+            `_"${c.original}"_\n↩ ${c.reply}`
+        ).join("\n\n");
+        const errorNote = r.errors?.length
+          ? `\n\n⚠️ _${r.errors.length} failed: ${r.errors[0]}_`
+          : "";
+        await send(chatId,
+          `✅ *Dropped ${r.comments?.length ?? 0} comments*\n` +
+          `🎯 Topic: "${r.keyword}"\n\n` +
+          (lines || "_Nothing to comment on this run._") +
+          errorNote
+        );
+      }
     } catch (e) {
       await send(chatId, `❌ Error: ${String(e).slice(0, 100)}`);
     }
@@ -234,13 +279,17 @@ export async function POST(req: NextRequest) {
         body: JSON.stringify({ count }),
       });
       const r = await res.json();
-      await send(chatId,
-        `✅ *Follow run done*\n\n` +
-        `👤 Followed: *${r.followed}*\n` +
-        `❤️ Liked: *${r.liked}*\n` +
-        `💬 Replied: *${r.replied}*\n\n` +
-        `_Each reply also sent to this chat._`
-      );
+      if (!res.ok || r.error) {
+        await send(chatId, `❌ Follow failed: ${r.error ?? "Unknown error"}`);
+      } else {
+        await send(chatId,
+          `✅ *Follow run done*\n\n` +
+          `👤 Followed: *${r.followed}*\n` +
+          `❤️ Liked: *${r.liked}*\n` +
+          `💬 Replied: *${r.replied}*\n\n` +
+          `_Each reply also sent to this chat._`
+        );
+      }
     } catch (e) {
       await send(chatId, `❌ Error: ${String(e).slice(0, 100)}`);
     }
@@ -252,7 +301,9 @@ export async function POST(req: NextRequest) {
     try {
       const res = await fetch(`${APP}/api/jobs/mentions`, { method: "POST" });
       const r = await res.json();
-      if (r.mentions === 0) {
+      if (!res.ok || r.error) {
+        await send(chatId, `❌ Mentions failed: ${r.error ?? "Unknown error"}`);
+      } else if (r.mentions === 0) {
         await send(chatId, "✅ No new mentions.");
       } else {
         await send(chatId, `✅ Auto-replied to *${r.mentions}* mention${r.mentions > 1 ? "s" : ""}.`);
@@ -282,14 +333,93 @@ export async function POST(req: NextRequest) {
 
   // ── /pause ────────────────────────────────────────────────────────────────
   else if (cmd === "/pause") {
+    await prisma.stats.upsert({
+      where: { id: "singleton" },
+      update: { paused: true },
+      create: { paused: true },
+    });
     await prisma.activity.create({ data: { action: "Automation paused", icon: "⏸️" } });
-    await send(chatId, "⏸️ *Paused.*\n\nGitHub Actions will still run — to fully stop, disable the workflow at github.com.\n\nSend /resume to mark as active.");
+    await send(chatId, "⏸️ *Paused.* All cron jobs will skip until you /resume.\n\n_(GitHub Actions still fires but Phantom does nothing.)_");
   }
 
   // ── /resume ───────────────────────────────────────────────────────────────
   else if (cmd === "/resume") {
+    await prisma.stats.upsert({
+      where: { id: "singleton" },
+      update: { paused: false },
+      create: { paused: false },
+    });
     await prisma.activity.create({ data: { action: "Automation resumed", icon: "▶️" } });
     await send(chatId, "▶️ *Resumed.* Phantom is back on autopilot.");
+  }
+
+  // ── /test ────────────────────────────────────────────────────────────────
+  else if (cmd === "/test") {
+    await send(chatId, "🔍 Running API diagnostics...");
+    const lines: string[] = [];
+
+    try {
+      const me = await getMyProfile();
+      lines.push(`✅ *Auth* — @${(me as unknown as Record<string, unknown>).username ?? me.id}`);
+    } catch (e) {
+      lines.push(`❌ *Auth* — ${String(e).slice(0, 80)}`);
+    }
+
+    try {
+      const tweets = await searchTweets("AI -is:retweet lang:en", 5);
+      lines.push(`✅ *Search* — ${tweets.length} results`);
+    } catch (e) {
+      lines.push(`❌ *Search* — ${String(e).slice(0, 80)}`);
+    }
+
+    try {
+      await getDMConversations();
+      lines.push(`✅ *DM API*`);
+    } catch (e) {
+      lines.push(`❌ *DM API* — ${String(e).slice(0, 80)}`);
+    }
+
+    await send(chatId, `*🔍 Diagnostics*\n\n${lines.join("\n")}`);
+  }
+
+  // ── /setup ────────────────────────────────────────────────────────────────
+  else if (cmd === "/setup") {
+    await send(chatId, "⚙️ Registering webhook and command menu...");
+    try {
+      const [webhook, commands] = await Promise.all([ensureWebhook(), ensureCommands()]);
+      await send(chatId,
+        `*🔧 Setup*\n\n` +
+        `Webhook: ${webhook ? "✅ OK" : "❌ Failed"}\n` +
+        `Commands: ${commands ? "✅ OK" : "❌ Failed"}`
+      );
+    } catch (e) {
+      await send(chatId, `❌ Setup error: ${String(e).slice(0, 120)}`);
+    }
+  }
+
+  // ── /dm <username> [context] ──────────────────────────────────────────────
+  else if (cmd === "/dm") {
+    const parts = args.split(" ");
+    const username = parts[0]?.replace("@", "").trim();
+    const context = parts.slice(1).join(" ").trim();
+
+    if (!username) {
+      await send(chatId, "Usage: `/dm @username [optional context about them]`\n\nPhantom will auto-generate a personalised DM.");
+    } else {
+      await send(chatId, `✉️ Sending DM to @${username}...`);
+      try {
+        const { data: user } = await xRO.v2.userByUsername(username);
+        if (!user) throw new Error(`@${username} not found`);
+        const dmText = await generateDM(username, context || `a creator in the ${NICHE_KEYWORDS[0]} space`);
+        await sendDM(user.id, dmText);
+        await prisma.activity.create({
+          data: { action: `DM sent to @${username}`, detail: dmText.slice(0, 80), icon: "✉️" },
+        });
+        await send(chatId, `✅ *DM sent to @${username}*\n\n_"${dmText}"_`);
+      } catch (e) {
+        await send(chatId, `❌ DM failed: ${String(e).slice(0, 150)}`);
+      }
+    }
   }
 
   // ── /blacklist <username> | /block <username> ────────────────────────────
@@ -298,17 +428,20 @@ export async function POST(req: NextRequest) {
       await send(chatId,
         `Usage: \`/blacklist username\`\n\n` +
         `Phantom will silently skip that account — no Twitter block, no DM. They'll never know.\n\n` +
-        `To activate: add the username to the \`BLOCKED_USERNAMES\` env var on Vercel (comma-separated), then redeploy.`
+        `Takes effect immediately (stored in DB).`
       );
     } else {
       const username = args.replace("@", "").trim().toLowerCase();
+      await prisma.blockedAccount.upsert({
+        where: { username },
+        update: {},
+        create: { username },
+      });
       await prisma.activity.create({
-        data: { action: `Blacklist requested: @${username}`, detail: "Add to BLOCKED_USERNAMES env var on Vercel", icon: "🚫" },
+        data: { action: `Blacklisted: @${username}`, detail: "Active immediately", icon: "🚫" },
       });
       await send(chatId,
-        `🚫 *Logged: @${username}*\n\n` +
-        `To activate: add \`${username}\` to the \`BLOCKED_USERNAMES\` env var on Vercel, then redeploy.\n\n` +
-        `No Twitter block is made — Phantom just silently ignores them.`
+        `🚫 *Blocked: @${username}*\n\nActive immediately — Phantom will silently skip this account.\n\nNo Twitter block is made — they can still see your profile.`
       );
     }
   }

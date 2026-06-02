@@ -5,7 +5,7 @@ import { generateReply } from "@/lib/claude/generate";
 import { prisma } from "@/lib/db";
 import { notifyPosted, sendMessage } from "@/lib/telegram/notify";
 import { randomDelay } from "@/lib/scheduler/humanize";
-import { isBlocked } from "@/lib/blocklist";
+import { loadBlocklist } from "@/lib/blocklist";
 import { ensureWebhook } from "@/lib/telegram/setup";
 import { NICHE_KEYWORDS } from "@/lib/config";
 
@@ -30,6 +30,10 @@ export async function GET(req: Request) {
   try {
     void ensureWebhook(); // fire-and-forget — re-registers if URL changed or missing
 
+    const pauseState = await prisma.stats.findUnique({ where: { id: "singleton" }, select: { paused: true } });
+    if (pauseState?.paused) return NextResponse.json({ skipped: true, reason: "paused" });
+
+    const isBlocked = await loadBlocklist();
     const me = await getMyProfile();
     const keyword = NICHE_KEYWORDS[Math.floor(Math.random() * NICHE_KEYWORDS.length)];
 
@@ -42,10 +46,11 @@ export async function GET(req: Request) {
     ];
 
     let liked = 0, replied = 0;
+    const replyErrors: string[] = [];
     const seen = new Set<string>();
 
     for (const tweet of tweets) {
-      if (!tweet.author_id || tweet.author_id === me.id || seen.has(tweet.author_id) || isBlocked(tweet.author_id)) continue;
+      if (!tweet.author_id || tweet.author_id === me.id || seen.has(tweet.author_id) || isBlocked(tweet.author_id, tweet.author_username)) continue;
       seen.add(tweet.author_id);
 
       // Always like — day or night
@@ -55,7 +60,7 @@ export async function GET(req: Request) {
       // Reply — 40% chance (day only)
       if (isDay && Math.random() < 0.4) {
         try {
-          const reply = await generateReply(tweet.text, tweet.author_id);
+          const reply = await generateReply(tweet.text, tweet.author_username || tweet.author_id);
           await replyToTweet(tweet.id, reply);
           replied++;
           await prisma.activity.create({
@@ -67,8 +72,17 @@ export async function GET(req: Request) {
             `*Reply:* ${reply.slice(0, 200)}`
           );
           await randomDelay(2000, 5000);
-        } catch { /* skip */ }
+        } catch (e) {
+          replyErrors.push(String(e).slice(0, 80));
+          await prisma.activity.create({
+            data: { action: "Reply failed", detail: String(e).slice(0, 80), icon: "❌" },
+          });
+        }
       }
+    }
+
+    if (replyErrors.length > 0) {
+      await sendMessage(`⚠️ *Engage cron: ${replyErrors.length} reply(s) failed*\n\n\`${replyErrors[0]}\``);
     }
 
     await prisma.activity.create({
