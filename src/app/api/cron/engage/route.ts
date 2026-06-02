@@ -3,7 +3,7 @@ import { searchTweets, likeTweet, followUser, getMyProfile } from "@/lib/x/engag
 import { replyToTweet } from "@/lib/x/post";
 import { generateReply } from "@/lib/claude/generate";
 import { prisma } from "@/lib/db";
-import { notifyPosted } from "@/lib/telegram/notify";
+import { notifyPosted, sendMessage } from "@/lib/telegram/notify";
 import { randomDelay, shouldSkip } from "@/lib/scheduler/humanize";
 import { isBlocked } from "@/lib/blocklist";
 
@@ -75,8 +75,17 @@ export async function GET(req: Request) {
             await replyToTweet(tweet.id, reply);
             replied++;
             await prisma.activity.create({
-              data: { action: "Replied to tweet", detail: reply.slice(0, 80), icon: "💬" },
+              data: {
+                action: `Replied to tweet`,
+                detail: reply.slice(0, 80),
+                icon: "💬",
+              },
             });
+            await sendMessage(
+              `💬 *Comment posted on X*\n\n` +
+              `_In reply to:_ "${tweet.text.slice(0, 100)}"\n\n` +
+              `*Reply:* ${reply.slice(0, 200)}`
+            );
             await randomDelay(2000, 5000);
           } catch { /* skip */ }
         }

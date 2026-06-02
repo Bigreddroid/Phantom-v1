@@ -3,7 +3,7 @@ import { getMentions, getMyProfile } from "@/lib/x/engage";
 import { replyToTweet } from "@/lib/x/post";
 import { generateReply } from "@/lib/claude/generate";
 import { prisma } from "@/lib/db";
-import { notifyPosted } from "@/lib/telegram/notify";
+import { notifyPosted, sendMessage } from "@/lib/telegram/notify";
 import { humanPause, randomDelay } from "@/lib/scheduler/humanize";
 import { isBlocked } from "@/lib/blocklist";
 
@@ -26,26 +26,26 @@ export async function GET(req: Request) {
       if (isBlocked(mention.author_id)) continue;
       await humanPause();
 
-      const reply = await generateReply(mention.text, mention.author_id ?? "user");
+      try {
+        const reply = await generateReply(mention.text, mention.author_id ?? "user");
+        await replyToTweet(mention.id, reply);
+        replied++;
 
-      await replyToTweet(mention.id, reply);
-      replied++;
-
-      await prisma.activity.create({
-        data: {
-          action: "Replied to mention",
-          detail: reply.slice(0, 80),
-          icon: "💬",
-        },
-      });
-
-      await randomDelay(2000, 5000);
+        await prisma.activity.create({
+          data: { action: "Replied to mention", detail: reply.slice(0, 80), icon: "💬" },
+        });
+        await sendMessage(
+          `💬 *Replied to mention on X*\n\n` +
+          `_They said:_ "${mention.text.slice(0, 120)}"\n\n` +
+          `*Reply:* ${reply.slice(0, 200)}`
+        );
+        await randomDelay(2000, 5000);
+      } catch { /* skip */ }
     }
 
-    await notifyPosted(
-      `Replied to ${replied} mention${replied > 1 ? "s" : ""}`,
-      mentions.map(m => `• ${m.text.slice(0, 60)}`).join("\n")
-    );
+    if (replied > 0) {
+      await notifyPosted(`Replied to ${replied} mention${replied > 1 ? "s" : ""}`, "");
+    }
 
     return NextResponse.json({ ok: true, mentions: replied });
   } catch (e) {
