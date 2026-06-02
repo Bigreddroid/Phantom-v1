@@ -188,7 +188,6 @@ BLOCKED_USERNAMES=
 BLOCKED_IDS=
 `;
 
-// Determine platform from activity icon
 function platformBadge(icon?: string) {
   const liIcons = ["💼", "🔗"];
   if (!icon) return null;
@@ -249,7 +248,6 @@ export default function Dashboard() {
     fetch("/api/setup").then(r => r.json()).then(setSetupStatus).catch(() => {});
   }, []);
 
-  // Handle LinkedIn OAuth redirect params
   useEffect(() => {
     const p = new URLSearchParams(window.location.search);
     const li = p.get("li");
@@ -295,17 +293,16 @@ export default function Dashboard() {
   const appUrl = typeof window !== "undefined" ? window.location.origin : "";
 
   return (
-    <div className="min-h-screen bg-[#06060e] text-white font-sans antialiased">
+    <div className="min-h-screen bg-black text-white font-sans antialiased">
 
       {/* LinkedIn Setup Modal */}
       {liSetupModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-          <div className="w-full max-w-lg bg-[#0d0d18] border border-white/[0.09] rounded-2xl shadow-2xl shadow-black/60 overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="w-full max-w-lg bg-[#0d0d0d] border border-white/[0.09] rounded-2xl shadow-2xl shadow-black/60 overflow-hidden">
 
-            {/* Modal header */}
             <div className="flex items-center justify-between px-6 py-5 border-b border-white/[0.07]">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-blue-500/15 border border-blue-500/20 flex items-center justify-center text-sm font-bold text-blue-400">in</div>
+                <div className="w-9 h-9 rounded-xl bg-white/[0.06] border border-white/[0.10] flex items-center justify-center text-sm font-bold text-white/60">in</div>
                 <div>
                   <p className="font-semibold text-sm">Connect LinkedIn</p>
                   <p className="text-xs text-white/35 mt-0.5">One-time setup · 5 minutes</p>
@@ -314,7 +311,6 @@ export default function Dashboard() {
               <button onClick={() => setLiSetupModal(false)} className="w-7 h-7 rounded-lg bg-white/[0.05] hover:bg-white/[0.09] text-white/40 hover:text-white/70 flex items-center justify-center text-lg leading-none transition-colors">×</button>
             </div>
 
-            {/* Steps */}
             <div className="px-6 py-5 space-y-4 max-h-[60vh] overflow-y-auto">
               <p className="text-xs text-white/35">Follow these steps, then come back and click <span className="text-white/60 font-medium">Try Again</span> below.</p>
 
@@ -355,13 +351,13 @@ export default function Dashboard() {
                 },
               ].map((s) => (
                 <div key={s.n} className="flex gap-3.5">
-                  <span className="shrink-0 w-6 h-6 rounded-full bg-blue-500/15 border border-blue-500/20 text-blue-400 text-[11px] font-bold flex items-center justify-center mt-0.5">{s.n}</span>
+                  <span className="shrink-0 w-6 h-6 rounded-full bg-red-500/15 border border-red-500/25 text-red-400 text-[11px] font-bold flex items-center justify-center mt-0.5">{s.n}</span>
                   <div className="flex-1 min-w-0 space-y-1.5">
                     <p className="text-sm font-medium text-white/80">{s.title}</p>
                     <p className="text-xs text-white/40 leading-relaxed">{s.body}</p>
                     {s.code && (
                       <div className="flex items-center gap-2 bg-white/[0.04] border border-white/[0.07] rounded-lg px-3 py-2">
-                        <code className="text-xs text-blue-300/80 font-mono flex-1 break-all">{s.code}</code>
+                        <code className="text-xs text-red-300/80 font-mono flex-1 break-all">{s.code}</code>
                         <button
                           onClick={() => { navigator.clipboard.writeText(s.code!); showToast("Copied"); }}
                           className="shrink-0 text-[10px] text-white/30 hover:text-white/60 border border-white/[0.08] rounded-md px-2 py-0.5 transition-colors"
@@ -376,7 +372,7 @@ export default function Dashboard() {
                       </div>
                     )}
                     {s.link && (
-                      <a href={s.link.href} target="_blank" rel="noreferrer" className="inline-flex items-center text-xs text-blue-400/70 hover:text-blue-400 transition-colors">
+                      <a href={s.link.href} target="_blank" rel="noreferrer" className="inline-flex items-center text-xs text-white/40 hover:text-white/70 transition-colors">
                         {s.link.label}
                       </a>
                     )}
@@ -385,7 +381,6 @@ export default function Dashboard() {
               ))}
             </div>
 
-            {/* Footer actions */}
             <div className="flex items-center justify-between gap-3 px-6 py-4 border-t border-white/[0.07] bg-white/[0.015]">
               <button
                 onClick={() => setLiSetupModal(false)}
@@ -402,7 +397,7 @@ export default function Dashboard() {
                 </button>
                 <a
                   href="/api/auth/linkedin"
-                  className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-medium transition-colors shadow-sm shadow-blue-500/20"
+                  className="px-4 py-2 text-sm bg-red-600 hover:bg-red-500 text-white rounded-xl font-medium transition-colors shadow-sm shadow-red-500/20"
                 >
                   Try Again →
                 </a>
@@ -417,21 +412,21 @@ export default function Dashboard() {
         <div className={`fixed top-4 right-4 z-50 text-sm font-medium px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2.5 border transition-all ${
           toast.type === "err"
             ? "bg-red-950 border-red-800/60 text-red-300"
-            : "bg-[#0f1117] border-white/10 text-white"
+            : "bg-[#111] border-white/10 text-white"
         }`}>
-          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${toast.type === "err" ? "bg-red-400" : "bg-emerald-400"}`} />
+          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${toast.type === "err" ? "bg-red-400" : "bg-red-500"}`} />
           {toast.msg}
         </div>
       )}
 
       {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-white/[0.05] bg-[#06060e]/90 backdrop-blur-md">
+      <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-black/90 backdrop-blur-md">
         <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between gap-4">
 
           {/* Brand */}
           <div className="flex items-center gap-3">
             <div className="relative w-7 h-7 shrink-0">
-              <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 opacity-90" />
+              <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-red-600 to-red-900 opacity-90" />
               <svg className="absolute inset-0 w-full h-full p-1.5" viewBox="0 0 16 16" fill="none">
                 <path d="M8 1.5L13.5 4.75V11.25L8 14.5L2.5 11.25V4.75L8 1.5Z" stroke="white" strokeWidth="1.4" strokeLinejoin="round"/>
                 <circle cx="8" cy="8" r="1.8" fill="white"/>
@@ -448,21 +443,21 @@ export default function Dashboard() {
             {/* X status */}
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.07] text-xs text-white/50">
               <span className="font-bold text-white/70">𝕏</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
             </div>
 
             {/* LinkedIn status */}
             <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs transition-colors ${
               liConnected
                 ? liExpiringSoon
-                  ? "bg-amber-500/10 border-amber-500/25 text-amber-400"
-                  : "bg-blue-500/10 border-blue-500/25 text-blue-400"
+                  ? "bg-red-500/10 border-red-500/25 text-red-400"
+                  : "bg-white/[0.05] border-white/[0.10] text-white/55"
                 : "bg-white/[0.03] border-white/[0.06] text-white/25"
             }`}>
               <span className="font-bold text-[11px]">in</span>
               <span className={`w-1.5 h-1.5 rounded-full ${
                 liConnected
-                  ? liExpiringSoon ? "bg-amber-400" : "bg-blue-400"
+                  ? liExpiringSoon ? "bg-red-400" : "bg-white/40"
                   : "bg-white/20"
               }`} />
             </div>
@@ -470,10 +465,10 @@ export default function Dashboard() {
             {/* Live / Syncing */}
             <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs border ${
               refreshing
-                ? "border-amber-500/25 bg-amber-500/8 text-amber-400"
-                : "border-emerald-500/25 bg-emerald-500/8 text-emerald-400"
+                ? "border-white/[0.12] bg-white/[0.04] text-white/50"
+                : "border-red-500/25 bg-red-500/8 text-red-400"
             }`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${refreshing ? "bg-amber-400 animate-pulse" : "bg-emerald-400"}`} />
+              <span className={`w-1.5 h-1.5 rounded-full ${refreshing ? "bg-white/40 animate-pulse" : "bg-red-500"}`} />
               {refreshing ? "Syncing" : "Live"}
             </div>
           </div>
@@ -485,11 +480,11 @@ export default function Dashboard() {
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-2.5">
           {[
-            { label: "Followers",  value: stats?.followers   ?? "—", sub: "X",       color: "text-emerald-400", accent: "from-emerald-500/10"  },
-            { label: "Tweets",     value: stats?.tweets      ?? "—", sub: "X",       color: "text-sky-400",     accent: "from-sky-500/10"      },
-            { label: "Engagements",value: stats?.engagements ?? "—", sub: "X",       color: "text-violet-400",  accent: "from-violet-500/10"   },
-            { label: "DMs Sent",   value: stats?.dmsSent     ?? "—", sub: "X",       color: "text-amber-400",   accent: "from-amber-500/10"    },
-            { label: "LI Posts",   value: stats?.liPosts     ?? "—", sub: "LinkedIn",color: "text-blue-400",    accent: "from-blue-500/10"     },
+            { label: "Followers",   value: stats?.followers   ?? "—", sub: "X",        color: "text-red-400",    accent: "from-red-500/10"    },
+            { label: "Tweets",      value: stats?.tweets      ?? "—", sub: "X",        color: "text-white/80",   accent: "from-white/[0.04]"  },
+            { label: "Engagements", value: stats?.engagements ?? "—", sub: "X",        color: "text-red-300",    accent: "from-red-400/8"     },
+            { label: "DMs Sent",    value: stats?.dmsSent     ?? "—", sub: "X",        color: "text-white/60",   accent: "from-white/[0.03]"  },
+            { label: "LI Posts",    value: stats?.liPosts     ?? "—", sub: "LinkedIn", color: "text-white/50",   accent: "from-white/[0.03]"  },
           ].map((s) => (
             <div
               key={s.label}
@@ -499,7 +494,7 @@ export default function Dashboard() {
               <p className={`text-2xl font-bold tabular-nums ${s.color}`}>{s.value}</p>
               <span className={`absolute top-3 right-3 text-[9px] font-bold px-1.5 py-0.5 rounded-md ${
                 s.sub === "LinkedIn"
-                  ? "bg-blue-500/15 text-blue-400/70"
+                  ? "bg-white/[0.07] text-white/30"
                   : "bg-white/5 text-white/20"
               }`}>{s.sub === "LinkedIn" ? "in" : "𝕏"}</span>
             </div>
@@ -520,11 +515,11 @@ export default function Dashboard() {
                   key={job.label}
                   onClick={() => runJob(job.endpoint, job.label)}
                   disabled={!!loading}
-                  className="flex items-center gap-2 px-3.5 py-2 bg-white/[0.04] hover:bg-white/[0.07] border border-white/[0.08] hover:border-white/[0.14] rounded-xl text-sm text-white/60 hover:text-white/90 transition-all disabled:opacity-30 disabled:cursor-not-allowed active:scale-95"
+                  className="flex items-center gap-2 px-3.5 py-2 bg-white/[0.04] hover:bg-white/[0.07] border border-white/[0.08] hover:border-red-500/30 rounded-xl text-sm text-white/60 hover:text-white/90 transition-all disabled:opacity-30 disabled:cursor-not-allowed active:scale-95"
                 >
                   {loading === job.label ? (
                     <>
-                      <span className="w-3 h-3 border border-white/30 border-t-white/80 rounded-full animate-spin" />
+                      <span className="w-3 h-3 border border-white/30 border-t-red-400 rounded-full animate-spin" />
                       <span className="text-white/40">Running…</span>
                     </>
                   ) : (
@@ -544,7 +539,7 @@ export default function Dashboard() {
           {/* LinkedIn jobs */}
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-[10px] font-bold bg-blue-500/15 px-2 py-0.5 rounded-md text-blue-400/70">in</span>
+              <span className="text-[10px] font-bold bg-white/[0.07] px-2 py-0.5 rounded-md text-white/40">in</span>
               <span className="text-[10px] uppercase tracking-widest font-medium text-white/25">LinkedIn</span>
               {!liConnected && (
                 <button
@@ -553,7 +548,7 @@ export default function Dashboard() {
                     if (!hasClientId) { setLiSetupModal(true); }
                     else { window.location.href = "/api/auth/linkedin"; }
                   }}
-                  className="ml-auto text-[10px] text-blue-400/70 hover:text-blue-400 border border-blue-500/20 bg-blue-500/8 px-2 py-0.5 rounded-md transition-colors"
+                  className="ml-auto text-[10px] text-white/50 hover:text-white border border-white/[0.10] bg-white/[0.04] px-2 py-0.5 rounded-md transition-colors"
                 >
                   Connect →
                 </button>
@@ -570,14 +565,14 @@ export default function Dashboard() {
                   disabled={!!loading}
                   className={`flex items-center gap-2 px-3.5 py-2 border rounded-xl text-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 ${
                     liConnected
-                      ? "bg-blue-500/8 hover:bg-blue-500/15 border-blue-500/20 hover:border-blue-500/35 text-blue-400/70 hover:text-blue-400"
-                      : "bg-white/[0.03] border-white/[0.06] text-white/25 cursor-not-allowed"
+                      ? "bg-white/[0.04] hover:bg-white/[0.07] border-white/[0.08] hover:border-white/[0.15] text-white/55 hover:text-white/85"
+                      : "bg-white/[0.02] border-white/[0.05] text-white/20 cursor-not-allowed"
                   }`}
                 >
                   {loading === job.label ? (
                     <>
-                      <span className="w-3 h-3 border border-blue-400/30 border-t-blue-400/80 rounded-full animate-spin" />
-                      <span className="text-blue-400/40">Running…</span>
+                      <span className="w-3 h-3 border border-white/20 border-t-white/60 rounded-full animate-spin" />
+                      <span className="text-white/30">Running…</span>
                     </>
                   ) : (
                     <>
@@ -605,13 +600,13 @@ export default function Dashboard() {
                 onClick={() => setActiveTab(tab)}
                 className={`relative px-4 py-1.5 rounded-lg text-sm capitalize font-medium transition-all ${
                   activeTab === tab
-                    ? "bg-white/[0.09] text-white shadow-sm"
+                    ? "bg-red-600/20 border border-red-500/25 text-red-400 shadow-sm"
                     : "text-white/30 hover:text-white/55 hover:bg-white/[0.03]"
                 }`}
               >
                 {tab}
                 {tab === "queue" && queue.length > 0 && (
-                  <span className="ml-1.5 inline-flex items-center justify-center w-4 h-4 text-[9px] font-bold bg-indigo-500 text-white rounded-full">{queue.length}</span>
+                  <span className="ml-1.5 inline-flex items-center justify-center w-4 h-4 text-[9px] font-bold bg-red-600 text-white rounded-full">{queue.length}</span>
                 )}
               </button>
             ))}
@@ -641,7 +636,7 @@ export default function Dashboard() {
                     <button
                       onClick={() => handleQueue(item.id, "approve")}
                       disabled={loading === item.id}
-                      className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-white text-xs rounded-lg font-semibold transition-colors disabled:opacity-40 shadow-sm shadow-emerald-500/25"
+                      className="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white text-xs rounded-lg font-semibold transition-colors disabled:opacity-40 shadow-sm shadow-red-500/20"
                     >
                       {loading === item.id ? "…" : "Post"}
                     </button>
@@ -677,7 +672,7 @@ export default function Dashboard() {
                       <div className="flex items-center gap-2">
                         <p className="text-sm text-white/75 truncate">{item.action}</p>
                         {plat === "li" && (
-                          <span className="shrink-0 text-[9px] font-bold bg-blue-500/15 text-blue-400/70 px-1.5 py-0.5 rounded-md">in</span>
+                          <span className="shrink-0 text-[9px] font-bold bg-white/[0.07] text-white/35 px-1.5 py-0.5 rounded-md">in</span>
                         )}
                       </div>
                       {item.detail && <p className="text-xs text-white/28 truncate mt-0.5">{item.detail}</p>}
@@ -695,25 +690,27 @@ export default function Dashboard() {
           {activeTab === "schedule" && (
             <div className="rounded-2xl border border-white/[0.06] bg-white/[0.015] overflow-hidden">
               {[
-                { job: "Tweets",         emoji: "🐦", times: "7:30am · 12:30pm · 6:30pm · 9:30pm",  freq: "4× / day",   note: "±15 min offset · 15% skip",                     color: "text-sky-400",     platform: "x"  },
-                { job: "Threads",        emoji: "🧵", times: "Mon & Thu · 2:30pm IST",               freq: "2× / week",  note: "5 tweets · 20% skip chance",                   color: "text-violet-400",  platform: "x"  },
-                { job: "Engagement",     emoji: "⚡", times: "Every 30 min · 24/7",                  freq: "48× / day",  note: "Like + reply · 10:1 verified ratio",            color: "text-amber-400",   platform: "x"  },
-                { job: "Follow",         emoji: "🤝", times: "9:30am · 3:30pm · 8:30pm IST",         freq: "3× / day",   note: "Follow + like + reply to niche accounts",       color: "text-pink-400",    platform: "x"  },
-                { job: "Mentions",       emoji: "💬", times: "Every 30 minutes",                     freq: "48× / day",  note: "Auto-replies instantly",                        color: "text-emerald-400", platform: "x"  },
-                { job: "LinkedIn",       emoji: "💼", times: "Tue–Fri · 8:30am IST",                 freq: "4× / week",  note: "Original post · 10% skip",                      color: "text-blue-400",    platform: "li" },
-                { job: "Resurface",       emoji: "🔁", times: "Daily · 10:30am IST",                   freq: "1× / day",   note: "Quote-tweet old content · 20% skip · preview first", color: "text-teal-400",  platform: "x"  },
-                { job: "Niche RT",       emoji: "🔁", times: "Daily · 4:30pm IST",                    freq: "1× / day",   note: "Retweet or quote niche post · 30% skip · preview first", color: "text-pink-400", platform: "x"  },
-                { job: "Daily summary",  emoji: "📊", times: "11:30pm IST",                          freq: "1× / day",   note: "Telegram report with follower gain",            color: "text-white/35",    platform: "x"  },
+                { job: "Tweets",        emoji: "🐦", times: "7:30am · 12:30pm · 6:30pm · 9:30pm",  freq: "4× / day",   note: "±15 min offset · 15% skip",                          color: "text-red-400",   platform: "x"  },
+                { job: "Threads",       emoji: "🧵", times: "Mon & Thu · 2:30pm IST",               freq: "2× / week",  note: "5 tweets · 20% skip chance",                         color: "text-red-300",   platform: "x"  },
+                { job: "Engagement",    emoji: "⚡", times: "Every 15 min · 24/7",                  freq: "96× / day",  note: "Like + reply · traction filtered · score ≥5",         color: "text-white/70",  platform: "x"  },
+                { job: "Follow",        emoji: "🤝", times: "9:30am · 3:30pm · 8:30pm IST",         freq: "3× / day",   note: "Follow + like + reply to niche accounts",             color: "text-white/60",  platform: "x"  },
+                { job: "Mentions",      emoji: "💬", times: "Every 15 minutes",                     freq: "96× / day",  note: "Auto-replies instantly",                              color: "text-red-300",   platform: "x"  },
+                { job: "LinkedIn",      emoji: "💼", times: "Tue–Fri · 8:30am IST",                 freq: "4× / week",  note: "Original post · 10% skip",                            color: "text-white/50",  platform: "li" },
+                { job: "Resurface",     emoji: "🔁", times: "Daily · 10:30am IST",                  freq: "1× / day",   note: "Quote-tweet top-traction old content · preview first", color: "text-red-300",   platform: "x"  },
+                { job: "Niche RT",      emoji: "🔁", times: "Daily · 4:30pm IST",                   freq: "1× / day",   note: "Retweet niche post · score ≥20 · preview first",      color: "text-white/60",  platform: "x"  },
+                { job: "Auto Comments", emoji: "🗣️", times: "9am · 11am · 2pm · 5pm · 8pm IST",   freq: "5× / day",   note: "Drops on high-traction AI/automation posts · score ≥10", color: "text-red-400", platform: "x"  },
+                { job: "Auto DM",       emoji: "📨", times: "Daily · 1:30pm IST",                   freq: "1× / day",   note: "Personalised DM · Telegram approval before send",     color: "text-white/60",  platform: "x"  },
+                { job: "Daily summary", emoji: "📊", times: "11:30pm IST",                          freq: "1× / day",   note: "Telegram report with follower gain",                  color: "text-white/30",  platform: "x"  },
               ].map((s, i, arr) => (
                 <div key={s.job} className={`flex items-center gap-4 px-5 py-4 ${i !== arr.length - 1 ? "border-b border-white/[0.05]" : ""} hover:bg-white/[0.02] transition-colors`}>
                   <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm shrink-0 ${
-                    s.platform === "li" ? "bg-blue-500/10" : "bg-white/[0.05]"
+                    s.platform === "li" ? "bg-white/[0.05]" : "bg-white/[0.05]"
                   }`}>{s.emoji}</div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="font-medium text-sm text-white/85">{s.job}</p>
                       {s.platform === "li" && (
-                        <span className="text-[9px] font-bold bg-blue-500/15 text-blue-400/70 px-1.5 py-0.5 rounded-md">in</span>
+                        <span className="text-[9px] font-bold bg-white/[0.07] text-white/30 px-1.5 py-0.5 rounded-md">in</span>
                       )}
                     </div>
                     <p className="text-xs text-white/30 mt-0.5">{s.times}</p>
@@ -749,7 +746,7 @@ export default function Dashboard() {
                   <div className="flex items-center gap-3 shrink-0">
                     <div className="w-24 h-1.5 bg-white/8 rounded-full overflow-hidden">
                       <div
-                        className={`h-full rounded-full transition-all duration-500 ${allGood ? "bg-emerald-400" : "bg-amber-400"}`}
+                        className={`h-full rounded-full transition-all duration-500 ${allGood ? "bg-red-500" : "bg-white/40"}`}
                         style={{ width: `${pct}%` }}
                       />
                     </div>
@@ -761,20 +758,20 @@ export default function Dashboard() {
                 <div className={`rounded-2xl border p-5 transition-colors ${
                   liConnected
                     ? liExpiringSoon
-                      ? "border-amber-500/25 bg-amber-500/5"
-                      : "border-blue-500/20 bg-blue-500/5"
+                      ? "border-red-500/25 bg-red-500/5"
+                      : "border-white/[0.10] bg-white/[0.03]"
                     : "border-white/[0.07] bg-white/[0.025]"
                 }`}>
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
                       <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold ${
-                        liConnected ? "bg-blue-500/20 text-blue-400" : "bg-white/[0.05] text-white/30"
+                        liConnected ? "bg-white/[0.08] text-white/60" : "bg-white/[0.05] text-white/30"
                       }`}>in</div>
                       <div>
                         <p className="text-sm font-semibold">LinkedIn</p>
                         <p className={`text-xs mt-0.5 ${
                           liConnected
-                            ? liExpiringSoon ? "text-amber-400" : "text-blue-400/70"
+                            ? liExpiringSoon ? "text-red-400" : "text-white/45"
                             : "text-white/30"
                         }`}>
                           {liConnected
@@ -793,7 +790,7 @@ export default function Dashboard() {
                       }}
                       className={`text-xs font-medium px-4 py-2 rounded-xl transition-colors border ${
                         liConnected
-                          ? "border-blue-500/25 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20"
+                          ? "border-white/[0.10] bg-white/[0.05] text-white/55 hover:bg-white/[0.09] hover:text-white/80"
                           : "border-white/[0.08] bg-white/[0.04] text-white/50 hover:text-white hover:bg-white/[0.08]"
                       }`}
                     >
@@ -805,16 +802,14 @@ export default function Dashboard() {
                 {/* Env key groups */}
                 {SETUP_GROUPS.map(group => (
                   <div key={group.title} className="rounded-2xl border border-white/[0.07] bg-white/[0.025] overflow-hidden">
-                    {/* Group header */}
                     <div className="flex items-center justify-between gap-4 px-5 pt-5 pb-3">
                       <h3 className="text-sm font-semibold text-white/80">{group.title}</h3>
                       {group.href
-                        ? <a href={group.href} target="_blank" rel="noreferrer" className="text-xs text-blue-400/70 hover:text-blue-400 transition-colors">{group.hintText} ↗</a>
+                        ? <a href={group.href} target="_blank" rel="noreferrer" className="text-xs text-white/35 hover:text-white/65 transition-colors">{group.hintText} ↗</a>
                         : group.hintText && <span className="text-[11px] text-white/25 text-right max-w-xs">{group.hintText}</span>
                       }
                     </div>
 
-                    {/* Setup guide */}
                     {group.guide && (
                       <div className="mx-5 mb-4 rounded-xl bg-white/[0.03] border border-white/[0.05] p-3.5 space-y-1.5">
                         <p className="text-[10px] uppercase tracking-widest font-semibold text-white/25 mb-2">How to set up</p>
@@ -827,15 +822,14 @@ export default function Dashboard() {
                       </div>
                     )}
 
-                    {/* Keys */}
                     <div className="border-t border-white/[0.05]">
-                      {group.keys.map(({ key, label, required, hint }, ki) => {
+                      {group.keys.map(({ key, required, hint }, ki) => {
                         const isSet = setupStatus?.[key];
                         return (
                           <div key={key} className={`flex items-start gap-3 px-5 py-3 ${ki !== group.keys.length - 1 ? "border-b border-white/[0.04]" : ""}`}>
                             <span className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 ${
-                              isSet        ? "bg-emerald-500/15 text-emerald-400" :
-                              required     ? "bg-red-500/12 text-red-400" :
+                              isSet        ? "bg-red-500/15 text-red-400" :
+                              required     ? "bg-red-500/10 text-red-500/70" :
                                              "bg-white/5 text-white/20"
                             }`}>
                               {isSet ? "✓" : required ? "✗" : "–"}
@@ -862,7 +856,7 @@ export default function Dashboard() {
                   <div>
                     {POST_SETUP_STEPS.map(({ step, desc }, i) => (
                       <div key={step} className={`flex items-start gap-3 py-2.5 ${i !== POST_SETUP_STEPS.length - 1 ? "border-b border-white/[0.04]" : ""}`}>
-                        <span className="mt-0.5 text-white/20 text-xs shrink-0">→</span>
+                        <span className="mt-0.5 text-red-500/50 text-xs shrink-0">→</span>
                         <div>
                           <code className="text-xs text-white/60 font-mono">{step}</code>
                           <p className="text-[11px] text-white/28 mt-0.5">{desc}</p>
@@ -878,7 +872,7 @@ export default function Dashboard() {
                     navigator.clipboard.writeText(ENV_TEMPLATE);
                     showToast(".env.local template copied");
                   }}
-                  className="w-full py-3 border border-white/[0.07] rounded-2xl text-sm text-white/35 hover:text-white/60 hover:bg-white/[0.04] transition-colors"
+                  className="w-full py-3 border border-white/[0.07] rounded-2xl text-sm text-white/35 hover:text-white/60 hover:bg-white/[0.04] hover:border-red-500/20 transition-colors"
                 >
                   Copy .env.local template
                 </button>
