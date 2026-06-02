@@ -61,11 +61,33 @@ export async function POST(req: NextRequest) {
       } catch (e) { await send(chatId, `❌ ${String(e).slice(0, 100)}`); }
     }
 
-    if (action === "thread_post") {
-      await send(chatId, "🧵 Generating & posting thread...");
+    if (action === "thread_plain") {
+      await send(chatId, "🧵 Generating & posting thread (text only)...");
       try {
-        await fetch(`${APP}/api/jobs/thread`, { method: "POST" });
-        await send(chatId, `✅ Thread posted — check your X profile.`);
+        const res = await fetch(`${APP}/api/jobs/thread`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ images: "none" }) });
+        const r = await res.json();
+        if (r.error) throw new Error(r.error);
+        await send(chatId, `✅ *Thread posted* — ${r.count} tweets · check your X profile.`);
+      } catch (e) { await send(chatId, `❌ ${String(e).slice(0, 100)}`); }
+    }
+
+    if (action === "thread_img_first") {
+      await send(chatId, "🖼️ Generating thread with image on tweet #1...");
+      try {
+        const res = await fetch(`${APP}/api/jobs/thread`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ images: "first" }) });
+        const r = await res.json();
+        if (r.error) throw new Error(r.error);
+        await send(chatId, `✅ *Thread posted* — ${r.count} tweets · ${r.hasImages ? "image attached to tweet #1" : "text-only fallback (media upload unavailable)"}`);
+      } catch (e) { await send(chatId, `❌ ${String(e).slice(0, 100)}`); }
+    }
+
+    if (action === "thread_img_all") {
+      await send(chatId, "🖼️🖼️ Generating thread with image on all 5 tweets...");
+      try {
+        const res = await fetch(`${APP}/api/jobs/thread`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ images: "all" }) });
+        const r = await res.json();
+        if (r.error) throw new Error(r.error);
+        await send(chatId, `✅ *Thread posted* — ${r.count} tweets · ${r.hasImages ? "images attached" : "text-only fallback (media upload unavailable)"}`);
       } catch (e) { await send(chatId, `❌ ${String(e).slice(0, 100)}`); }
     }
 
@@ -182,12 +204,18 @@ export async function POST(req: NextRequest) {
   // ── /thread ───────────────────────────────────────────────────────────────
   else if (cmd === "/thread") {
     await send(chatId,
-      `*Post a thread?*`,
+      `*Post a 5-tweet thread:*`,
       {
         reply_markup: {
-          inline_keyboard: [[
-            { text: "🧵 Post 5-tweet thread", callback_data: "thread_post:" },
-          ]],
+          inline_keyboard: [
+            [
+              { text: "🖊️ Text only",        callback_data: "thread_plain:" },
+              { text: "🖼️ Image on tweet #1", callback_data: "thread_img_first:" },
+            ],
+            [
+              { text: "🖼️🖼️ Image on all 5 tweets", callback_data: "thread_img_all:" },
+            ],
+          ],
         },
       }
     );
@@ -358,20 +386,44 @@ export async function POST(req: NextRequest) {
     await send(chatId, "🔍 Running API diagnostics...");
     const lines: string[] = [];
 
+    // Auth
+    let meId = "";
     try {
       const me = await getMyProfile();
+      meId = me.id;
       lines.push(`✅ *Auth* — @${(me as unknown as Record<string, unknown>).username ?? me.id}`);
     } catch (e) {
       lines.push(`❌ *Auth* — ${String(e).slice(0, 80)}`);
     }
 
+    // Search (read)
+    let testTweet: { id: string } | null = null;
     try {
-      const tweets = await searchTweets("AI -is:retweet lang:en", 5);
-      lines.push(`✅ *Search* — ${tweets.length} results`);
+      const tweets = await searchTweets("building in public -is:retweet lang:en", 5);
+      testTweet = tweets[0] ?? null;
+      lines.push(`✅ *Search (read)* — ${tweets.length} results`);
     } catch (e) {
-      lines.push(`❌ *Search* — ${String(e).slice(0, 80)}`);
+      lines.push(`❌ *Search (read)* — ${String(e).slice(0, 80)}`);
     }
 
+    // Like a tweet (write test — non-destructive)
+    if (testTweet && meId) {
+      try {
+        const { likeTweet } = await import("@/lib/x/engage");
+        await likeTweet(testTweet.id, meId);
+        lines.push(`✅ *Write (like)* — OK · replies & tweets should work`);
+      } catch (e) {
+        const err = String(e);
+        const hint = err.includes("403")
+          ? "\n→ *Fix:* Go to developer.x.com → your app → User auth → set Read+Write → *regenerate your Access Tokens*"
+          : err.includes("429")
+          ? "\n→ Rate limit — wait 15 min and try again"
+          : "";
+        lines.push(`❌ *Write (like)* — ${err.slice(0, 80)}${hint}`);
+      }
+    }
+
+    // DM API
     try {
       await getDMConversations();
       lines.push(`✅ *DM API*`);
