@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { notifyPosted, sendMessage } from "@/lib/telegram/notify";
 import { randomDelay, shouldSkip } from "@/lib/scheduler/humanize";
 import { isBlocked } from "@/lib/blocklist";
+import { ensureWebhook } from "@/lib/telegram/setup";
 
 const KEYWORDS = [
   "founder personal brand",
@@ -39,6 +40,8 @@ export async function GET(req: Request) {
   const isDay = hour >= 7 && hour < 22;
 
   try {
+    void ensureWebhook(); // fire-and-forget — re-registers if URL changed or missing
+
     const me = await getMyProfile();
     const keyword = KEYWORDS[Math.floor(Math.random() * KEYWORDS.length)];
 
