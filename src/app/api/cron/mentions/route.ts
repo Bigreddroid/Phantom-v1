@@ -14,19 +14,34 @@ export async function GET(req: Request) {
   }
 
   try {
-    const pauseState = await prisma.stats.findUnique({ where: { id: "singleton" }, select: { paused: true } });
-    if (pauseState?.paused) return NextResponse.json({ skipped: true, reason: "paused" });
+    const [statsRow, isBlocked, me] = await Promise.all([
+      prisma.stats.findUnique({ where: { id: "singleton" } }),
+      loadBlocklist(),
+      getMyProfile(),
+    ]);
 
-    const isBlocked = await loadBlocklist();
-    const me = await getMyProfile();
-    const mentions = await getMentions(me.id);
+    if (statsRow?.paused) return NextResponse.json({ skipped: true, reason: "paused" });
+
+    // Only fetch mentions newer than the last one we already replied to
+    const sinceId = statsRow?.lastMentionId ?? undefined;
+    const mentions = await getMentions(me.id, sinceId);
 
     if (!mentions.length) {
       return NextResponse.json({ ok: true, mentions: 0 });
     }
 
+    // Save the newest mention ID as the cursor for next run
+    // Twitter returns newest first, so index 0 is the most recent
+    const newestId = mentions[0].id;
+    await prisma.stats.upsert({
+      where:  { id: "singleton" },
+      update: { lastMentionId: newestId },
+      create: { id: "singleton", lastMentionId: newestId },
+    });
+
     let replied = 0;
     const replyErrors: string[] = [];
+
     for (const mention of mentions) {
       if (isBlocked(mention.author_id)) continue;
       await humanPause();
@@ -40,7 +55,7 @@ export async function GET(req: Request) {
           data: { action: "Replied to mention", detail: reply.slice(0, 80), icon: "💬" },
         });
         await sendMessage(
-          `💬 *Replied to mention on X*\n\n` +
+          `💬 *Replied to mention*\n\n` +
           `_They said:_ "${mention.text.slice(0, 120)}"\n\n` +
           `*Reply:* ${reply.slice(0, 200)}`
         );
@@ -54,14 +69,14 @@ export async function GET(req: Request) {
     }
 
     if (replyErrors.length > 0) {
-      await sendMessage(`⚠️ *Mentions cron: ${replyErrors.length} reply(s) failed*\n\n\`${replyErrors[0]}\``);
+      await sendMessage(`⚠️ *Mentions: ${replyErrors.length} reply(s) failed*\n\`${replyErrors[0]}\``);
     }
 
     if (replied > 0) {
       await notifyPosted(`Replied to ${replied} mention${replied > 1 ? "s" : ""}`, "");
     }
 
-    return NextResponse.json({ ok: true, mentions: replied });
+    return NextResponse.json({ ok: true, mentions: replied, sinceId, newestId });
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }

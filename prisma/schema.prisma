@@ -26,14 +26,15 @@ model Activity {
 }
 
 model Stats {
-  id          String   @id @default("singleton")
-  followers   Int      @default(0)
-  following   Int      @default(0)
-  tweets      Int      @default(0)
-  engagements Int      @default(0)
-  dmsSent     Int      @default(0)
-  paused      Boolean  @default(false)
-  updatedAt   DateTime @updatedAt
+  id            String   @id @default("singleton")
+  followers     Int      @default(0)
+  following     Int      @default(0)
+  tweets        Int      @default(0)
+  engagements   Int      @default(0)
+  dmsSent       Int      @default(0)
+  paused        Boolean  @default(false)
+  lastMentionId String?
+  updatedAt     DateTime @updatedAt
 }
 
 model BlockedAccount {
