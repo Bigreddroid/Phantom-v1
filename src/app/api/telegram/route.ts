@@ -332,5 +332,22 @@ export async function POST(req: NextRequest) {
     await send(chatId, "▶️ *Resumed.* Phantom is back on autopilot.");
   }
 
+  // ── /block <username> ─────────────────────────────────────────────────────
+  else if (cmd === "/block") {
+    if (!args) {
+      await send(chatId, "Usage: `/block username` — adds to blocklist in code.\n\nCurrently managed in `src/lib/blocklist.ts`.");
+    } else {
+      const username = args.replace("@", "").trim();
+      await prisma.activity.create({
+        data: { action: `Block requested: @${username}`, detail: "Add to src/lib/blocklist.ts manually", icon: "🚫" },
+      });
+      await send(chatId,
+        `🚫 *Block recorded: @${username}*\n\n` +
+        `Add this username to \`src/lib/blocklist.ts\` in the \`BLOCKED_USERNAMES\` set, then redeploy.\n\n` +
+        `Phantom won't engage with them after that.`
+      );
+    }
+  }
+
   return NextResponse.json({ ok: true });
 }

@@ -9,7 +9,7 @@ jobs:
   run-phantom:
     runs-on: ubuntu-latest
     steps:
-      - name: Get current time (IST)
+      - name: Get current IST time
         id: time
         run: |
           HOUR=$(TZ='Asia/Kolkata' date +%-H)
@@ -18,38 +18,46 @@ jobs:
           echo "hour=$HOUR" >> $GITHUB_OUTPUT
           echo "minute=$MINUTE" >> $GITHUB_OUTPUT
           echo "dow=$DOW" >> $GITHUB_OUTPUT
-          echo "IST time: $(TZ='Asia/Kolkata' date)"
+          echo "IST: $(TZ='Asia/Kolkata' date)"
 
-      - name: Mentions (every 30 min — always)
+      # ── Mentions — every 30 min, 24/7 ─────────────────────────────────────
+      - name: Mentions
         run: |
           curl -sf -X GET "${{ secrets.APP_URL }}/api/cron/mentions" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" || true
 
-      - name: Engagement (every 2h during active hours 7am–10pm IST)
-        if: ${{ fromJson(steps.time.outputs.hour) >= 7 && fromJson(steps.time.outputs.hour) <= 22 && fromJson(steps.time.outputs.minute) < 30 }}
+      # ── Engagement — every 30 min, 24/7 (day=full, night=likes only) ──────
+      - name: Engagement
         run: |
-          HOUR=${{ steps.time.outputs.hour }}
-          if (( HOUR % 2 == 0 )); then
-            curl -sf -X GET "${{ secrets.APP_URL }}/api/cron/engage" \
-              -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" || true
-          fi
+          curl -sf -X GET "${{ secrets.APP_URL }}/api/cron/engage" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" || true
 
-      - name: Tweet (7:30am, 12:30pm, 6:30pm IST)
+      # ── Tweets — 4x/day: 7:30am, 12:30pm, 6:30pm, 9:30pm IST ────────────
+      - name: Tweet
         if: |
           ${{
             fromJson(steps.time.outputs.minute) >= 28 &&
             fromJson(steps.time.outputs.minute) <= 32 &&
             (
-              fromJson(steps.time.outputs.hour) == 7 ||
+              fromJson(steps.time.outputs.hour) == 7  ||
               fromJson(steps.time.outputs.hour) == 12 ||
-              fromJson(steps.time.outputs.hour) == 18
+              fromJson(steps.time.outputs.hour) == 18 ||
+              fromJson(steps.time.outputs.hour) == 21
             )
           }}
         run: |
           curl -sf -X GET "${{ secrets.APP_URL }}/api/cron/tweet" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" || true
 
-      - name: Thread (Mon & Thu at 2:30pm IST)
+      # ── Watchdog — every hour (fires at :00) ─────────────────────────────
+      - name: Watchdog
+        if: ${{ fromJson(steps.time.outputs.minute) < 30 }}
+        run: |
+          curl -sf -X GET "${{ secrets.APP_URL }}/api/cron/watchdog" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" || true
+
+      # ── Threads — Mon & Thu 2:30pm IST ───────────────────────────────────
+      - name: Thread
         if: |
           ${{
             fromJson(steps.time.outputs.minute) >= 28 &&

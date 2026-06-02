@@ -5,6 +5,7 @@ import { generateReply } from "@/lib/claude/generate";
 import { prisma } from "@/lib/db";
 import { notifyPosted } from "@/lib/telegram/notify";
 import { randomDelay, shouldSkip } from "@/lib/scheduler/humanize";
+import { isBlocked } from "@/lib/blocklist";
 
 const KEYWORDS = [
   "founder personal brand",
@@ -33,7 +34,7 @@ export async function POST() {
     const seen = new Set<string>();
 
     for (const tweet of tweets) {
-      if (!tweet.author_id || tweet.author_id === me.id || seen.has(tweet.author_id)) continue;
+      if (!tweet.author_id || tweet.author_id === me.id || seen.has(tweet.author_id) || isBlocked(tweet.author_id)) continue;
       seen.add(tweet.author_id);
 
       try { await likeTweet(tweet.id, me.id); liked++; } catch { /* skip */ }

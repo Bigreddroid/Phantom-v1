@@ -4,7 +4,8 @@ import { replyToTweet } from "@/lib/x/post";
 import { generateReply } from "@/lib/claude/generate";
 import { prisma } from "@/lib/db";
 import { notifyPosted } from "@/lib/telegram/notify";
-import { isActiveHour, randomDelay, shouldSkip } from "@/lib/scheduler/humanize";
+import { randomDelay, shouldSkip } from "@/lib/scheduler/humanize";
+import { isBlocked } from "@/lib/blocklist";
 
 const KEYWORDS = [
   "founder personal brand",
@@ -15,7 +16,16 @@ const KEYWORDS = [
   "personal brand tips",
   "indie founder growth",
   "content creator tools",
+  "creator economy",
+  "startup founder",
 ];
+
+function getISTHour(): number {
+  return parseInt(
+    new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata", hour: "numeric", hour12: false }),
+    10
+  );
+}
 
 export async function GET(req: Request) {
   const auth = req.headers.get("authorization");
@@ -23,9 +33,10 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!isActiveHour()) {
-    return NextResponse.json({ skipped: true, reason: "outside active hours" });
-  }
+  // Day mode (7am–10pm): like + follow + reply
+  // Night mode (10pm–7am): likes only — safe, quiet, still active
+  const hour = getISTHour();
+  const isDay = hour >= 7 && hour < 22;
 
   try {
     const me = await getMyProfile();
@@ -34,8 +45,6 @@ export async function GET(req: Request) {
     // 10:1 verified:non-verified ratio
     const verifiedTweets = await searchTweets(`${keyword} -is:retweet lang:en is:verified`, 10);
     const normalTweets = await searchTweets(`${keyword} -is:retweet lang:en -is:verified`, 10);
-
-    // 10 verified + 1 non-verified
     const tweets = [
       ...verifiedTweets,
       ...normalTweets.slice(0, Math.max(1, Math.floor(verifiedTweets.length / 10))),
@@ -45,36 +54,38 @@ export async function GET(req: Request) {
     const seen = new Set<string>();
 
     for (const tweet of tweets) {
-      if (!tweet.author_id || tweet.author_id === me.id || seen.has(tweet.author_id)) continue;
+      if (!tweet.author_id || tweet.author_id === me.id || seen.has(tweet.author_id) || isBlocked(tweet.author_id)) continue;
       seen.add(tweet.author_id);
 
-      // Always like
+      // Always like — day or night
       try { await likeTweet(tweet.id, me.id); liked++; } catch { /* skip */ }
       await randomDelay(800, 2000);
 
-      // 20% chance to follow
-      if (!shouldSkip(0.8)) {
-        try { await followUser(tweet.author_id, me.id); followed++; } catch { /* skip */ }
-        await randomDelay(500, 1500);
-      }
+      if (isDay) {
+        // Follow — 20% chance (day only)
+        if (!shouldSkip(0.8)) {
+          try { await followUser(tweet.author_id, me.id); followed++; } catch { /* skip */ }
+          await randomDelay(500, 1500);
+        }
 
-      // 25% chance to auto-reply
-      if (!shouldSkip(0.75)) {
-        try {
-          const reply = await generateReply(tweet.text, tweet.author_id);
-          await replyToTweet(tweet.id, reply);
-          replied++;
-          await prisma.activity.create({
-            data: { action: "Replied to tweet", detail: reply.slice(0, 80), icon: "💬" },
-          });
-          await randomDelay(2000, 5000);
-        } catch { /* skip */ }
+        // Reply — 25% chance (day only)
+        if (!shouldSkip(0.75)) {
+          try {
+            const reply = await generateReply(tweet.text, tweet.author_id);
+            await replyToTweet(tweet.id, reply);
+            replied++;
+            await prisma.activity.create({
+              data: { action: "Replied to tweet", detail: reply.slice(0, 80), icon: "💬" },
+            });
+            await randomDelay(2000, 5000);
+          } catch { /* skip */ }
+        }
       }
     }
 
     await prisma.activity.create({
       data: {
-        action: `Engagement run (10:1 ratio)`,
+        action: isDay ? "Engagement (day)" : "Engagement (night — likes only)",
         detail: `❤️ ${liked} · 👤 ${followed} · 💬 ${replied} · "${keyword}"`,
         icon: "⚡",
       },
@@ -82,12 +93,12 @@ export async function GET(req: Request) {
 
     if (liked > 0) {
       await notifyPosted(
-        "Engagement complete",
-        `❤️ ${liked} likes · 👤 ${followed} follows · 💬 ${replied} replies\nTopic: "${keyword}"\n_10:1 verified ratio_`
+        isDay ? "Engagement complete" : "Night engagement (likes only)",
+        `❤️ ${liked} likes · 👤 ${followed} follows · 💬 ${replied} replies\n"${keyword}"`
       );
     }
 
-    return NextResponse.json({ ok: true, liked, followed, replied, keyword });
+    return NextResponse.json({ ok: true, liked, followed, replied, keyword, mode: isDay ? "day" : "night" });
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }

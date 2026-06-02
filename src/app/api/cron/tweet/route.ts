@@ -3,7 +3,7 @@ import { generateTweet } from "@/lib/claude/generate";
 import { postTweet, postTweetWithImage } from "@/lib/x/post";
 import { prisma } from "@/lib/db";
 import { notifyPosted, notifyError } from "@/lib/telegram/notify";
-import { isActiveHour, shouldSkip, humanPause } from "@/lib/scheduler/humanize";
+import { shouldSkip, humanPause } from "@/lib/scheduler/humanize";
 
 const PILLARS = [
   "building a personal brand as a founder",
@@ -21,10 +21,6 @@ export async function GET(req: Request) {
   const auth = req.headers.get("authorization");
   if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  if (!isActiveHour()) {
-    return NextResponse.json({ skipped: true, reason: "outside active hours" });
   }
 
   if (shouldSkip(0.15)) {

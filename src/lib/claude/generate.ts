@@ -1,83 +1,83 @@
 import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-const VOICE_SYSTEM_PROMPT = `You are a ghostwriter for a founder/creator.
+// xAI Grok — OpenAI-compatible, trained on X/Twitter data
+const grok = process.env.GROK_API_KEY
+  ? new OpenAI({ baseURL: "https://api.x.ai/v1", apiKey: process.env.GROK_API_KEY })
+  : null;
+
+const VOICE_SYSTEM_PROMPT = `You are a ghostwriter for a founder/creator named Varun (@BigRedDr0id).
 Write in their voice: direct, confident, no fluff, no emojis unless natural,
 conversational but intelligent. Never sound like a bot or a marketing email.
-Vary sentence length. Sound like a real person thinking out loud.`;
+Vary sentence length. Sound like a real person thinking out loud.
+Topics: personal branding, AI automation, building in public, solopreneur life.`;
+
+// Use Grok when available (better for X/Twitter content), fall back to Claude
+async function generate(prompt: string, system: string, maxTokens: number): Promise<string> {
+  if (grok) {
+    const res = await grok.chat.completions.create({
+      model: "grok-3",
+      max_tokens: maxTokens,
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: prompt },
+      ],
+    });
+    return res.choices[0]?.message?.content?.trim() ?? "";
+  }
+
+  const msg = await anthropic.messages.create({
+    model: "claude-sonnet-4-6",
+    max_tokens: maxTokens,
+    system,
+    messages: [{ role: "user", content: prompt }],
+  });
+  return (msg.content[0] as { text: string }).text.trim();
+}
 
 export async function generateTweet(topic: string, context?: string) {
-  const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 300,
-    system: VOICE_SYSTEM_PROMPT,
-    messages: [
-      {
-        role: "user",
-        content: `Write a single tweet about: ${topic}${context ? `\n\nContext: ${context}` : ""}
+  return generate(
+    `Write a single tweet about: ${topic}${context ? `\n\nContext: ${context}` : ""}
 
 Rules:
 - Under 280 characters
 - No hashtags unless they add real value
 - No generic opener like "Hot take:" or "Thread:"
 - Sound like a real thought, not a post`,
-      },
-    ],
-  });
-
-  return (message.content[0] as { text: string }).text.trim();
+    VOICE_SYSTEM_PROMPT,
+    300
+  );
 }
 
 export async function generateThread(topic: string, numTweets = 5) {
-  const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 1500,
-    system: VOICE_SYSTEM_PROMPT,
-    messages: [
-      {
-        role: "user",
-        content: `Write a ${numTweets}-tweet thread about: ${topic}
+  const raw = await generate(
+    `Write a ${numTweets}-tweet thread about: ${topic}
 
 Format each tweet on its own line, separated by "---"
 First tweet hooks the reader. Last tweet has a clear CTA.
 Each tweet under 280 characters. No numbering like "1/" needed.`,
-      },
-    ],
-  });
-
-  const raw = (message.content[0] as { text: string }).text.trim();
+    VOICE_SYSTEM_PROMPT,
+    1500
+  );
   return raw.split("---").map((t) => t.trim()).filter(Boolean);
 }
 
 export async function generateReply(mentionText: string, authorUsername: string) {
-  const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 200,
-    system: VOICE_SYSTEM_PROMPT,
-    messages: [
-      {
-        role: "user",
-        content: `@${authorUsername} tweeted: "${mentionText}"
+  return generate(
+    `@${authorUsername} tweeted: "${mentionText}"
 
 Write a reply. Be genuine, add value or continue the conversation.
 Under 280 characters. Don't start with their name.`,
-      },
-    ],
-  });
-
-  return (message.content[0] as { text: string }).text.trim();
+    VOICE_SYSTEM_PROMPT,
+    200
+  );
 }
 
 export async function generateDM(recipientUsername: string, context: string) {
-  const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 300,
-    system: VOICE_SYSTEM_PROMPT,
-    messages: [
-      {
-        role: "user",
-        content: `Write a cold DM to @${recipientUsername}.
+  return generate(
+    `Write a cold DM to @${recipientUsername}.
 Context: ${context}
 
 Rules:
@@ -86,9 +86,7 @@ Rules:
 - Clear ask or reason for reaching out
 - Under 300 characters
 - No "I hope this message finds you well"`,
-      },
-    ],
-  });
-
-  return (message.content[0] as { text: string }).text.trim();
+    VOICE_SYSTEM_PROMPT,
+    300
+  );
 }
