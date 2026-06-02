@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { postTweet, postTweetWithImage, postThread } from "@/lib/x/post";
-import { searchTweets, followUser, getMyProfile, likeTweet } from "@/lib/x/engage";
-import { generateTweet, generateThread, generateReply } from "@/lib/claude/generate";
+import { generateTweet, generateThread } from "@/lib/claude/generate";
 import { notifyPosted } from "@/lib/telegram/notify";
-import { randomDelay } from "@/lib/scheduler/humanize";
 
 const BOT = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
 const CHAT = process.env.TELEGRAM_CHAT_ID!;
@@ -230,57 +228,21 @@ export async function POST(req: NextRequest) {
 
   // ── /follow [n] ───────────────────────────────────────────────────────────
   else if (cmd === "/follow") {
-    const count = Math.min(parseInt(args || "5", 10) || 5, 15);
-    await send(chatId, `🧠 Finding ${count} niche accounts to follow, like & engage...`);
-
+    const count = Math.min(parseInt(args || "5", 10) || 5, 20);
+    await send(chatId, `🤝 Following ${count} niche accounts (like + reply included)...`);
     try {
-      const me = await getMyProfile();
-      const seen = new Set<string>();
-      let followed = 0, liked = 0, replied = 0;
-
-      for (const keyword of KEYWORDS) {
-        if (followed >= count) break;
-        const tweets = await searchTweets(`${keyword} -is:retweet lang:en`, 10);
-
-        for (const tweet of tweets) {
-          if (followed >= count) break;
-          if (!tweet.author_id || tweet.author_id === me.id || seen.has(tweet.author_id)) continue;
-          seen.add(tweet.author_id);
-
-          try {
-            await followUser(tweet.author_id, me.id);
-            followed++;
-            await randomDelay(800, 2000);
-          } catch { /* already following */ }
-
-          try { await likeTweet(tweet.id, me.id); liked++; } catch { /* skip */ }
-          await randomDelay(500, 1500);
-
-          if (Math.random() < 0.4) {
-            try {
-              const replyText = await generateReply(tweet.text, tweet.author_id);
-              const { replyToTweet: reply } = await import("@/lib/x/post");
-              await reply(tweet.id, replyText);
-              replied++;
-              await prisma.activity.create({
-                data: { action: "Replied to new follow", detail: replyText.slice(0, 80), icon: "💬" },
-              });
-              await randomDelay(2000, 4000);
-            } catch { /* skip */ }
-          }
-        }
-      }
-
-      await prisma.activity.create({
-        data: { action: `Follow+engage: ${followed} accounts`, detail: `Liked ${liked} · ${replied} replies`, icon: "🤝" },
+      const res = await fetch(`${APP}/api/jobs/follow`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ count }),
       });
-
+      const r = await res.json();
       await send(chatId,
-        `✅ *Done!*\n\n` +
-        `👤 Followed: *${followed}*\n` +
-        `❤️ Liked: *${liked}*\n` +
-        `💬 Replied: *${replied}*\n\n` +
-        `_All from your niche: founders, creators & solopreneurs._`
+        `✅ *Follow run done*\n\n` +
+        `👤 Followed: *${r.followed}*\n` +
+        `❤️ Liked: *${r.liked}*\n` +
+        `💬 Replied: *${r.replied}*\n\n` +
+        `_Each reply also sent to this chat._`
       );
     } catch (e) {
       await send(chatId, `❌ Error: ${String(e).slice(0, 100)}`);

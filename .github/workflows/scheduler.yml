@@ -56,6 +56,22 @@ jobs:
           curl -sf -X GET "${{ secrets.APP_URL }}/api/cron/watchdog" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" || true
 
+      # ── Follow — 3x/day: 9:30am, 3:30pm, 8:30pm IST ────────────────────
+      - name: Follow
+        if: |
+          ${{
+            fromJson(steps.time.outputs.minute) >= 28 &&
+            fromJson(steps.time.outputs.minute) <= 32 &&
+            (
+              fromJson(steps.time.outputs.hour) == 9  ||
+              fromJson(steps.time.outputs.hour) == 15 ||
+              fromJson(steps.time.outputs.hour) == 20
+            )
+          }}
+        run: |
+          curl -sf -X GET "${{ secrets.APP_URL }}/api/cron/follow" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" || true
+
       # ── Threads — Mon & Thu 2:30pm IST ───────────────────────────────────
       - name: Thread
         if: |

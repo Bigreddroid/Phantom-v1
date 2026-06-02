@@ -8,7 +8,7 @@ export async function postTweet(text: string) {
 
 export async function postTweetWithImage(text: string): Promise<{ id: string; hasImage: boolean }> {
   try {
-    const ogUrl = `${process.env.NEXTAUTH_URL}/api/og?text=${encodeURIComponent(text.slice(0, 120))}`;
+    const ogUrl = `${process.env.NEXTAUTH_URL}/api/og?text=${encodeURIComponent(text.slice(0, 220))}`;
     const imgRes = await fetch(ogUrl, { signal: AbortSignal.timeout(8000) });
     if (!imgRes.ok) throw new Error("og fetch failed");
 

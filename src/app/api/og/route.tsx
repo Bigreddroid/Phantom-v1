@@ -10,23 +10,90 @@ export async function GET(req: Request) {
     (
       <div
         style={{
-          background: "#000",
+          background: "linear-gradient(135deg, #000000 0%, #0d0d0d 60%, #111827 100%)",
           width: "100%",
           height: "100%",
           display: "flex",
           flexDirection: "column",
-          alignItems: "flex-start",
-          justifyContent: "center",
-          padding: "80px",
+          padding: "64px 80px 56px",
           fontFamily: "sans-serif",
         }}
       >
-        <div style={{ color: "white", fontSize: 52, fontWeight: 700, lineHeight: 1.3, maxWidth: 900 }}>
+        {/* Accent bar */}
+        <div style={{ display: "flex", marginBottom: 40 }}>
+          <div style={{ width: 48, height: 4, background: "#1d9bf0", borderRadius: 2 }} />
+        </div>
+
+        {/* Tweet text */}
+        <div
+          style={{
+            color: "#ffffff",
+            fontSize: 46,
+            fontWeight: 700,
+            lineHeight: 1.35,
+            flex: 1,
+            wordBreak: "break-word",
+            width: "100%",
+            display: "flex",
+            alignItems: "center",
+          }}
+        >
           {text}
         </div>
-        <div style={{ color: "#555", fontSize: 28, marginTop: 48, display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ color: "white", fontWeight: 600 }}>@BigRedDr0id</div>
-          <div>· Building Phantom in public</div>
+
+        {/* Bottom bar */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            marginTop: 48,
+            paddingTop: 28,
+            borderTop: "1px solid #1f2937",
+            width: "100%",
+          }}
+        >
+          {/* Avatar */}
+          <div
+            style={{
+              width: 52,
+              height: 52,
+              borderRadius: "50%",
+              background: "linear-gradient(135deg, #1d9bf0 0%, #0052cc 100%)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#fff",
+              fontSize: 22,
+              fontWeight: 800,
+              marginRight: 16,
+              flexShrink: 0,
+            }}
+          >
+            V
+          </div>
+
+          {/* Name + handle */}
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <div style={{ color: "#ffffff", fontSize: 22, fontWeight: 700, lineHeight: 1.2 }}>
+              Varun
+            </div>
+            <div style={{ color: "#6b7280", fontSize: 18, lineHeight: 1.2, marginTop: 2 }}>
+              @BigRedDr0id
+            </div>
+          </div>
+
+          {/* X logo */}
+          <div
+            style={{
+              marginLeft: "auto",
+              color: "#374151",
+              fontSize: 42,
+              fontWeight: 900,
+              letterSpacing: -2,
+            }}
+          >
+            𝕏
+          </div>
         </div>
       </div>
     ),

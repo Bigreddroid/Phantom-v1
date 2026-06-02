@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { searchTweets, likeTweet, followUser, getMyProfile } from "@/lib/x/engage";
+import { searchTweets, likeTweet, getMyProfile } from "@/lib/x/engage";
 import { replyToTweet } from "@/lib/x/post";
 import { generateReply } from "@/lib/claude/generate";
 import { prisma } from "@/lib/db";
 import { notifyPosted, sendMessage } from "@/lib/telegram/notify";
-import { randomDelay, shouldSkip } from "@/lib/scheduler/humanize";
+import { randomDelay } from "@/lib/scheduler/humanize";
 import { isBlocked } from "@/lib/blocklist";
 
 const KEYWORDS = [
@@ -14,7 +14,10 @@ const KEYWORDS = [
   "AI tools for creators",
   "indiehacker",
   "personal brand tips",
+  "indie founder growth",
   "content creator tools",
+  "creator economy",
+  "startup founder",
 ];
 
 export async function POST() {
@@ -30,7 +33,7 @@ export async function POST() {
       ...normalTweets.slice(0, Math.max(1, Math.floor(verifiedTweets.length / 10))),
     ];
 
-    let liked = 0, followed = 0, replied = 0;
+    let liked = 0, replied = 0;
     const seen = new Set<string>();
 
     for (const tweet of tweets) {
@@ -40,12 +43,8 @@ export async function POST() {
       try { await likeTweet(tweet.id, me.id); liked++; } catch { /* skip */ }
       await randomDelay(800, 2000);
 
-      if (!shouldSkip(0.8)) {
-        try { await followUser(tweet.author_id, me.id); followed++; } catch { /* skip */ }
-        await randomDelay(500, 1500);
-      }
-
-      if (!shouldSkip(0.75)) {
+      // Reply — 40% chance
+      if (Math.random() < 0.4) {
         try {
           const reply = await generateReply(tweet.text, tweet.author_id);
           await replyToTweet(tweet.id, reply);
@@ -65,18 +64,18 @@ export async function POST() {
 
     await prisma.activity.create({
       data: {
-        action: `Engagement run (10:1 ratio)`,
-        detail: `❤️ ${liked} · 👤 ${followed} · 💬 ${replied} · "${keyword}"`,
+        action: "Engagement run",
+        detail: `❤️ ${liked} · 💬 ${replied} · "${keyword}"`,
         icon: "⚡",
       },
     });
 
     await notifyPosted(
       "Engagement complete",
-      `❤️ ${liked} likes · 👤 ${followed} follows · 💬 ${replied} replies\nTopic: "${keyword}"`
+      `❤️ ${liked} likes · 💬 ${replied} replies\nTopic: "${keyword}"`
     );
 
-    return NextResponse.json({ ok: true, liked, followed, replied, keyword });
+    return NextResponse.json({ ok: true, liked, replied, keyword });
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }

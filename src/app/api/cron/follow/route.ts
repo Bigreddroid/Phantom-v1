@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
-import { searchTweets, likeTweet, getMyProfile } from "@/lib/x/engage";
-import { replyToTweet } from "@/lib/x/post";
+import { searchTweets, followUser, likeTweet, getMyProfile } from "@/lib/x/engage";
 import { generateReply } from "@/lib/claude/generate";
+import { replyToTweet } from "@/lib/x/post";
 import { prisma } from "@/lib/db";
-import { notifyPosted, sendMessage } from "@/lib/telegram/notify";
+import { sendMessage } from "@/lib/telegram/notify";
 import { randomDelay } from "@/lib/scheduler/humanize";
 import { isBlocked } from "@/lib/blocklist";
-import { ensureWebhook } from "@/lib/telegram/setup";
 
 const KEYWORDS = [
   "founder personal brand",
@@ -21,27 +20,13 @@ const KEYWORDS = [
   "startup founder",
 ];
 
-function getISTHour(): number {
-  return parseInt(
-    new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata", hour: "numeric", hour12: false }),
-    10
-  );
-}
-
 export async function GET(req: Request) {
   const auth = req.headers.get("authorization");
   if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Day mode (7am–10pm): like + reply
-  // Night mode (10pm–7am): likes only — safe, quiet, still active
-  const hour = getISTHour();
-  const isDay = hour >= 7 && hour < 22;
-
   try {
-    void ensureWebhook(); // fire-and-forget — re-registers if URL changed or missing
-
     const me = await getMyProfile();
     const keyword = KEYWORDS[Math.floor(Math.random() * KEYWORDS.length)];
 
@@ -53,52 +38,55 @@ export async function GET(req: Request) {
       ...normalTweets.slice(0, Math.max(1, Math.floor(verifiedTweets.length / 10))),
     ];
 
-    let liked = 0, replied = 0;
+    let followed = 0, liked = 0, replied = 0;
     const seen = new Set<string>();
 
     for (const tweet of tweets) {
       if (!tweet.author_id || tweet.author_id === me.id || seen.has(tweet.author_id) || isBlocked(tweet.author_id)) continue;
       seen.add(tweet.author_id);
 
-      // Always like — day or night
-      try { await likeTweet(tweet.id, me.id); liked++; } catch { /* skip */ }
-      await randomDelay(800, 2000);
+      try { await followUser(tweet.author_id, me.id); followed++; } catch { /* already following */ }
+      await randomDelay(1000, 2500);
 
-      // Reply — 40% chance (day only)
-      if (isDay && Math.random() < 0.4) {
+      try { await likeTweet(tweet.id, me.id); liked++; } catch { /* skip */ }
+      await randomDelay(500, 1500);
+
+      // Reply to ~40% of followed accounts
+      if (Math.random() < 0.4) {
         try {
           const reply = await generateReply(tweet.text, tweet.author_id);
           await replyToTweet(tweet.id, reply);
           replied++;
           await prisma.activity.create({
-            data: { action: "Replied to tweet", detail: reply.slice(0, 80), icon: "💬" },
+            data: { action: "Replied to new follow", detail: reply.slice(0, 80), icon: "💬" },
           });
           await sendMessage(
-            `💬 *Comment posted on X*\n\n` +
-            `_In reply to:_ "${tweet.text.slice(0, 100)}"\n\n` +
+            `💬 *Commented on new follow*\n\n` +
+            `_Their tweet:_ "${tweet.text.slice(0, 100)}"\n\n` +
             `*Reply:* ${reply.slice(0, 200)}`
           );
-          await randomDelay(2000, 5000);
+          await randomDelay(2000, 4000);
         } catch { /* skip */ }
       }
     }
 
     await prisma.activity.create({
       data: {
-        action: isDay ? "Engagement (day)" : "Engagement (night — likes only)",
-        detail: `❤️ ${liked} · 💬 ${replied} · "${keyword}"`,
-        icon: "⚡",
+        action: `Follow run`,
+        detail: `👤 ${followed} followed · ❤️ ${liked} liked · 💬 ${replied} replied · "${keyword}"`,
+        icon: "🤝",
       },
     });
 
-    if (liked > 0) {
-      await notifyPosted(
-        isDay ? "Engagement complete" : "Night engagement (likes only)",
-        `❤️ ${liked} likes · 💬 ${replied} replies\n"${keyword}"`
-      );
-    }
+    await sendMessage(
+      `🤝 *Follow run complete*\n\n` +
+      `👤 Followed: *${followed}*\n` +
+      `❤️ Liked: *${liked}*\n` +
+      `💬 Replied: *${replied}*\n` +
+      `_Topic: "${keyword}"_`
+    );
 
-    return NextResponse.json({ ok: true, liked, replied, keyword, mode: isDay ? "day" : "night" });
+    return NextResponse.json({ ok: true, followed, liked, replied, keyword });
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }
