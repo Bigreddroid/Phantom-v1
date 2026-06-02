@@ -18,6 +18,16 @@ export async function POST(req: Request) {
     const keyword = (body.keyword as string | undefined)?.trim()
       || NICHE_KEYWORDS[Math.floor(Math.random() * NICHE_KEYWORDS.length)];
 
+    // Load 24h dedup memory — tweet IDs already replied to
+    const recentReplies = await prisma.activity.findMany({
+      where: { action: "Replied to tweet", createdAt: { gte: new Date(Date.now() - 86400000) } },
+      select: { detail: true },
+      take: 200,
+    });
+    const repliedIds = new Set(
+      recentReplies.map(a => a.detail?.match(/^tid:(\w+)/)?.[1]).filter(Boolean) as string[]
+    );
+
     // 10:1 verified:non-verified ratio, cap at 6 total to stay under function timeout
     const [verifiedTweets, normalTweets] = await Promise.all([
       searchTweets(`${keyword} -is:retweet lang:en is:verified`, 10),
@@ -29,13 +39,14 @@ export async function POST(req: Request) {
       ...normalTweets.slice(0, Math.max(1, Math.floor(verifiedTweets.length / 10))),
     ];
 
-    // Deduplicate authors and filter blocked/self, then rank by traction
+    // Deduplicate authors and filter blocked/self/already-replied, then rank by traction
     const seen = new Set<string>();
     const tweets = candidates
       .filter(t => {
         if (!t.author_id || t.author_id === me.id) return false;
         if (seen.has(t.author_id)) return false;
         if (isBlocked(t.author_id, t.author_username)) return false;
+        if (repliedIds.has(t.id)) return false;
         seen.add(t.author_id);
         return true;
       })
@@ -83,7 +94,7 @@ export async function POST(req: Request) {
         replied++;
         comments.push({ original: tweet.text.slice(0, 100), reply });
         await prisma.activity.create({
-          data: { action: "Replied to tweet", detail: reply.slice(0, 80), icon: "💬" },
+          data: { action: "Replied to tweet", detail: `tid:${tweet.id}|${reply.slice(0, 70)}`, icon: "💬" },
         });
         await sendMessage(
           `💬 *Comment posted on X*\n\n` +

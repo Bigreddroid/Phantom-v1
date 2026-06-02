@@ -10,14 +10,26 @@ import { NICHE_KEYWORDS } from "@/lib/config";
 
 export const maxDuration = 60;
 
-// AI/automation-focused comment targets
 const GOOUT_KEYWORDS = [
   "AI automation founders",
   "building in public tools",
   "solopreneur AI workflow",
   "personal brand AI",
   "automating content creation",
+  "AI tools for entrepreneurs",
+  "building AI products",
+  "no-code automation",
+  "founder building in public",
+  "productize yourself AI",
 ];
+
+// Parse dedup detail: "tid:<tweetId>|aid:<authorId>|<text>"
+function parseDedupDetail(detail: string | null | undefined) {
+  if (!detail?.startsWith("tid:")) return null;
+  const tweetId  = detail.match(/^tid:(\w+)/)?.[1];
+  const authorId = detail.match(/\|aid:(\w+)/)?.[1];
+  return { tweetId, authorId };
+}
 
 export async function GET(req: Request) {
   const auth = req.headers.get("authorization");
@@ -36,17 +48,52 @@ export async function GET(req: Request) {
     const isBlocked = await loadBlocklist();
     const me = await getMyProfile();
 
-    const allKeywords = [...GOOUT_KEYWORDS, ...NICHE_KEYWORDS.slice(0, 3)];
-    const keyword = allKeywords[Math.floor(Math.random() * allKeywords.length)];
+    // ── Load 7-day dedup memory (tweet IDs + author IDs already commented on) ──
+    const recentComments = await prisma.activity.findMany({
+      where: {
+        icon: "🗣️",
+        createdAt: { gte: new Date(Date.now() - 7 * 86400000) },
+      },
+      select: { detail: true },
+      take: 500,
+    });
 
-    const tweets = await searchTweets(`${keyword} -is:retweet lang:en`, 15);
+    const seenTweetIds  = new Set<string>();
+    const seenAuthorIds = new Set<string>();
+    for (const a of recentComments) {
+      const parsed = parseDedupDetail(a.detail);
+      if (parsed?.tweetId)  seenTweetIds.add(parsed.tweetId);
+      if (parsed?.authorId) seenAuthorIds.add(parsed.authorId);
+    }
 
-    // Only comment on posts with real traction — high-visibility threads
-    const targets = tweets
+    // ── Pick 2 different keywords this run for variety ─────────────────────────
+    const allKeywords = [...GOOUT_KEYWORDS, ...NICHE_KEYWORDS.slice(0, 5)];
+    const shuffled = allKeywords.sort(() => Math.random() - 0.5);
+    const keywords  = shuffled.slice(0, 2);
+
+    // ── Fetch candidates from both keywords in parallel ────────────────────────
+    const [batch1, batch2] = await Promise.all(
+      keywords.map(kw => searchTweets(`${kw} -is:retweet lang:en`, 20))
+    );
+
+    const allTweets = [...batch1, ...batch2];
+
+    // ── Deduplicate tweet IDs from both batches ────────────────────────────────
+    const seenInBatch = new Set<string>();
+    const unique = allTweets.filter(t => {
+      if (seenInBatch.has(t.id)) return false;
+      seenInBatch.add(t.id);
+      return true;
+    });
+
+    // ── Score, filter, and sort ────────────────────────────────────────────────
+    const targets = unique
       .filter(t =>
         t.author_id &&
         t.author_id !== me.id &&
-        !isBlocked(t.author_id, t.author_username)
+        !isBlocked(t.author_id, t.author_username) &&
+        !seenTweetIds.has(t.id) &&        // skip already-commented tweets
+        !seenAuthorIds.has(t.author_id)    // skip already-commented authors (7d)
       )
       .map(t => ({
         ...t,
@@ -56,10 +103,10 @@ export async function GET(req: Request) {
       }))
       .filter(t => t.score >= 10)
       .sort((a, b) => b.score - a.score)
-      .slice(0, 3); // max 3 comments per run to stay human
+      .slice(0, 3);
 
     if (!targets.length) {
-      return NextResponse.json({ skipped: true, reason: "no high-traction targets found" });
+      return NextResponse.json({ skipped: true, reason: "no unseen high-traction targets" });
     }
 
     const comments: Array<{ original: string; reply: string }> = [];
@@ -74,15 +121,22 @@ export async function GET(req: Request) {
         await replyToTweet(tweet.id, reply);
         comments.push({ original: tweet.text.slice(0, 100), reply });
 
+        // Store with dedup prefix so future runs can skip this tweet + author
         await prisma.activity.create({
-          data: { action: "Auto comment dropped", detail: reply.slice(0, 80), icon: "🗣️" },
+          data: {
+            action: "Auto comment dropped",
+            detail: `tid:${tweet.id}|aid:${tweet.author_id}|${reply.slice(0, 60)}`,
+            icon: "🗣️",
+          },
         });
+
         await sendMessage(
           `🗣️ *Auto-comment posted*\n\n` +
           `_"${tweet.text.slice(0, 120)}"_\n\n` +
           `↩ ${reply}\n\n` +
           `❤️ ${tweet.public_metrics?.like_count ?? 0} · 🔁 ${tweet.public_metrics?.retweet_count ?? 0}`
         );
+
         await randomDelay(3000, 6000);
       } catch (e) {
         errors.push(String(e).slice(0, 80));
@@ -90,10 +144,14 @@ export async function GET(req: Request) {
     }
 
     await prisma.activity.create({
-      data: { action: "Auto go-out run", detail: `🗣️ ${comments.length} comments · "${keyword}"`, icon: "🗣️" },
+      data: {
+        action: "Auto go-out run",
+        detail: `🗣️ ${comments.length} comments · ${keywords.join(", ").slice(0, 60)}`,
+        icon: "🗣️",
+      },
     });
 
-    return NextResponse.json({ ok: true, comments: comments.length, keyword, errors });
+    return NextResponse.json({ ok: true, comments: comments.length, keywords, errors });
   } catch (e) {
     await notifyError("Auto goout cron", String(e));
     return NextResponse.json({ error: String(e) }, { status: 500 });
