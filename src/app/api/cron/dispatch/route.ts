@@ -17,8 +17,9 @@ function hit(path: string) {
 }
 
 export async function GET(req: Request) {
-  const auth = req.headers.get("authorization");
-  if (auth !== `Bearer ${SECRET}`) {
+  const auth    = req.headers.get("authorization");
+  const qSecret = new URL(req.url).searchParams.get("secret");
+  if (auth !== `Bearer ${SECRET}` && qSecret !== SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
