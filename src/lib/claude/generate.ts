@@ -8,7 +8,8 @@ const grok = process.env.GROK_API_KEY
   ? new OpenAI({ baseURL: "https://api.x.ai/v1", apiKey: process.env.GROK_API_KEY })
   : null;
 
-const VOICE_SYSTEM_PROMPT = `You are a ghostwriter for a founder/creator named Varun (@BigRedDr0id).
+const HANDLE = process.env.X_HANDLE ?? "@BigRedDr0id";
+const VOICE_SYSTEM_PROMPT = `You are a ghostwriter for a founder/creator (${HANDLE}).
 Write in their voice: direct, confident, no fluff, no emojis unless natural,
 conversational but intelligent. Never sound like a bot or a marketing email.
 Vary sentence length. Sound like a real person thinking out loud.

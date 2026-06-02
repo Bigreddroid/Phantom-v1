@@ -55,7 +55,8 @@ export async function notifyNewFollower(username: string, followerCount: number)
 
 // Milestone reached
 export async function notifyMilestone(milestone: number) {
-  await send(`*🎯 Milestone Reached!*\n\n*${milestone} followers* on @BigRedDr0id\n\nPhantom is working.`);
+  const handle = process.env.X_HANDLE ?? "@BigRedDr0id";
+  await send(`*🎯 Milestone Reached!*\n\n*${milestone} followers* on ${handle}\n\nPhantom is working.`);
 }
 
 // New mention

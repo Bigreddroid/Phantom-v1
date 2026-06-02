@@ -124,7 +124,7 @@ export async function POST(req: NextRequest) {
 
       await send(chatId,
         `*📊 Phantom Dashboard*\n\n` +
-        `*X Account (@BigRedDr0id)*\n` +
+        `*X Account (${process.env.X_HANDLE ?? "@BigRedDr0id"})*\n` +
         `👥 Followers: ${statsRes.followers ?? "—"}\n` +
         `👤 Following: ${statsRes.following ?? "—"}\n` +
         `🐦 Tweets: ${statsRes.tweets ?? "—"}\n\n` +

@@ -74,11 +74,8 @@ export async function GET(req: Request) {
 
           {/* Name + handle */}
           <div style={{ display: "flex", flexDirection: "column" }}>
-            <div style={{ color: "#ffffff", fontSize: 22, fontWeight: 700, lineHeight: 1.2 }}>
-              Varun
-            </div>
-            <div style={{ color: "#6b7280", fontSize: 18, lineHeight: 1.2, marginTop: 2 }}>
-              @BigRedDr0id
+            <div style={{ color: "#6b7280", fontSize: 18, lineHeight: 1.2 }}>
+              {process.env.X_HANDLE ?? "@BigRedDr0id"}
             </div>
           </div>
 

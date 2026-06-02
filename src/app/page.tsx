@@ -95,7 +95,7 @@ export default function Dashboard() {
             <span className="text-black text-sm font-bold">P</span>
           </div>
           <span className="font-semibold text-lg tracking-tight">Phantom</span>
-          <span className="text-xs text-white/30 ml-1">@BigRedDr0id</span>
+          <span className="text-xs text-white/30 ml-1">{process.env.NEXT_PUBLIC_X_HANDLE ?? "@BigRedDr0id"}</span>
         </div>
         <div className="flex items-center gap-2">
           <span className={`w-2 h-2 rounded-full inline-block ${refreshing ? "bg-yellow-400 animate-pulse" : "bg-green-400 animate-pulse"}`} />
