@@ -21,8 +21,25 @@ export async function GET(req: Request) {
   await humanPause();
 
   try {
+    // Skip if there are already 2+ pending tweets waiting for approval
+    const pendingCount = await prisma.queueItem.count({
+      where: { type: "Tweet", status: "PENDING" },
+    });
+    if (pendingCount >= 2) {
+      return NextResponse.json({ skipped: true, reason: "queue backed up" });
+    }
+
+    // Fetch last 15 posted tweets to avoid repeating content
+    const recent = await prisma.activity.findMany({
+      where: { action: { contains: "Tweet posted" } },
+      orderBy: { createdAt: "desc" },
+      take: 15,
+      select: { detail: true },
+    });
+    const recentTweets = recent.map(r => r.detail).filter(Boolean) as string[];
+
     const pillar = CONTENT_TOPICS[Math.floor(Math.random() * CONTENT_TOPICS.length)];
-    const content = await generateTweet(pillar);
+    const content = await generateTweet(pillar, undefined, recentTweets);
     const withImage = Math.random() < 0.3;
 
     const item = await prisma.queueItem.create({

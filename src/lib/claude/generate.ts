@@ -39,15 +39,19 @@ async function generate(prompt: string, system: string, maxTokens: number): Prom
   return (msg.content[0] as { text: string }).text.trim();
 }
 
-export async function generateTweet(topic: string, context?: string) {
+export async function generateTweet(topic: string, context?: string, recentTweets?: string[]) {
+  const avoidBlock = recentTweets?.length
+    ? `\n\nDo NOT repeat or rephrase any of these recently posted tweets:\n${recentTweets.map((t, i) => `${i + 1}. ${t}`).join("\n")}`
+    : "";
   return generate(
-    `Write a single tweet about: ${topic}${context ? `\n\nContext: ${context}` : ""}
+    `Write a single tweet about: ${topic}${context ? `\n\nContext: ${context}` : ""}${avoidBlock}
 
 Rules:
 - Under 280 characters
 - No hashtags unless they add real value
 - No generic opener like "Hot take:" or "Thread:"
-- Sound like a real thought, not a post`,
+- Sound like a real thought, not a post
+- Must be meaningfully different from any tweets listed above`,
     VOICE_SYSTEM_PROMPT,
     300
   );

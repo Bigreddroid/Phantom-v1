@@ -9,8 +9,16 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}));
     const withImage = body.image === true || Math.random() < 0.3;
 
+    const recent = await prisma.activity.findMany({
+      where: { action: { contains: "Tweet posted" } },
+      orderBy: { createdAt: "desc" },
+      take: 15,
+      select: { detail: true },
+    });
+    const recentTweets = recent.map(r => r.detail).filter(Boolean) as string[];
+
     const pillar = CONTENT_TOPICS[Math.floor(Math.random() * CONTENT_TOPICS.length)];
-    const content = await generateTweet(pillar);
+    const content = await generateTweet(pillar, undefined, recentTweets);
 
     const item = await prisma.queueItem.create({
       data: { type: "Tweet", content, metadata: { withImage } },
