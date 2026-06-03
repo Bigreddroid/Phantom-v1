@@ -176,22 +176,28 @@ not growth-hacker tips. Each point should make someone think, not just nod.`,
   );
 }
 
-export async function generateBuildUpdate(product: string, context?: string) {
+export async function generateBuildUpdate(product: string, context?: string, recentTweets?: string[]) {
+  const avoidBlock = recentTweets?.length
+    ? `\n\nSTRICTLY FORBIDDEN — these have already been posted. Do NOT repeat the topic, angle, format, phrasing, or opening of ANY of these:\n${recentTweets.map((t, i) => `${i + 1}. ${t}`).join("\n")}\n\nIf you find yourself writing anything similar, stop and pick a completely different angle and format.`
+    : "";
   return generate(
-    `Write a short "building in public" tweet about ${product}.${context ? `\n\nContext: ${context}` : ""}
+    `Write a short "building in public" tweet about ${product}.${context ? `\n\nContext: ${context}` : ""}${avoidBlock}
 
-Formats to rotate between (pick one randomly):
+Formats to rotate between (pick one randomly, but NEVER reuse a format from the forbidden list above):
 - A specific thing that was shipped or fixed ("just shipped X — here's why it matters")
 - A lesson learned while building ("the thing I didn't expect when building X was...")
 - A behind-the-scenes detail ("here's how X actually works under the hood")
 - A raw honest take ("day N building X — this is what it actually looks like")
 - An engagement hook ("if you're building X, you need to know about...")
+- A contrast or surprising stat ("most founders do X manually — I automated it in Phantom")
+- A question that invites other builders to respond
 
 Rules:
 - Under 280 characters
 - Specific, not vague — name real features, real problems, real decisions
 - No "excited to share" or "thrilled to announce"
-- Sound like a builder talking to other builders`,
+- Sound like a builder talking to other builders
+- Every tweet must cover a completely different angle, format, and opening than all previous ones`,
     VOICE_SYSTEM_PROMPT,
     300
   );

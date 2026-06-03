@@ -29,13 +29,14 @@ export async function GET(req: Request) {
       return NextResponse.json({ skipped: true, reason: "queue backed up" });
     }
 
-    // Fetch last 30 posted tweets (full content) + pending queue to avoid any repetition
-    const [recentActivity, pendingQueue] = await Promise.all([
-      prisma.activity.findMany({
-        where: { action: { contains: "approved & posted" } },
-        orderBy: { createdAt: "desc" },
-        take: 30,
-        select: { detail: true },
+    // Pull full tweet history from QueueItem (POSTED = actually went live, untruncated)
+    // + Activity fallback for older records + pending queue
+    const [postedItems, pendingQueue] = await Promise.all([
+      prisma.queueItem.findMany({
+        where: { status: "POSTED", type: { in: ["Tweet", "Thread"] } },
+        orderBy: { updatedAt: "desc" },
+        take: 40,
+        select: { content: true },
       }),
       prisma.queueItem.findMany({
         where: { status: "PENDING", type: { in: ["Tweet", "Thread"] } },
@@ -44,19 +45,23 @@ export async function GET(req: Request) {
       }),
     ]);
     const recentTweets = [
-      ...recentActivity.map(r => r.detail).filter(Boolean) as string[],
+      ...postedItems.map(q => q.content),
       ...pendingQueue.map(q => q.content),
     ];
 
-    // 50% chance: post a Phantom/BigRedDroid build update; 50%: regular content pillar tweet
+    // 40% build update, 60% content pillar — was 50/50 but build updates were dominating
     let content: string;
-    if (Math.random() < 0.5) {
+    if (Math.random() < 0.4) {
       const products = [
         "Phantom (my AI personal brand automation system for X/Twitter, live now under BigRedDroid)",
         "Project Z — building 92 AI automation products under BigRedDroid, Phantom is #1",
         "BigRedDroid — my solo deep-tech lab, Project Z is the first major initiative",
       ];
-      content = await generateBuildUpdate(products[Math.floor(Math.random() * products.length)]);
+      content = await generateBuildUpdate(
+        products[Math.floor(Math.random() * products.length)],
+        undefined,
+        recentTweets,
+      );
     } else {
       const pillar = CONTENT_TOPICS[Math.floor(Math.random() * CONTENT_TOPICS.length)];
       content = await generateTweet(pillar, undefined, recentTweets);

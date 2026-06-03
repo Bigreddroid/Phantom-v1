@@ -60,7 +60,7 @@ async function postQueueItem(item: { id: string; type: string; content: string; 
   }
   await prisma.queueItem.update({ where: { id: item.id }, data: { status: "POSTED" } });
   await prisma.activity.create({
-    data: { action: `${item.type} approved & posted`, detail: item.content.slice(0, 250), icon: "✅" },
+    data: { action: `${item.type} approved & posted`, detail: item.content.slice(0, 280), icon: "✅" },
   });
 }
 
