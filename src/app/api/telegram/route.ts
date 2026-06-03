@@ -675,17 +675,21 @@ export async function POST(req: NextRequest) {
   else if (cmd === "/schedule") {
     await send(chatId,
       `*⏰ Automation Schedule (IST)*\n\n` +
-      `🐦 *Tweets* — 7:30am · 12:30pm · 6:30pm\n` +
-      `   _3x/day · 30% chance of branded image · 15% skip_\n\n` +
-      `🧵 *Threads* — Mon & Thu 2:30pm\n` +
-      `   _5 tweets · 20% skip chance_\n\n` +
-      `⚡ *Engagement* — Every 2h (7am–10pm)\n` +
-      `   _Like + follow + reply · 10:1 verified ratio_\n\n` +
-      `💬 *Mentions* — Every 30 minutes\n` +
-      `   _Auto-reply instantly_\n\n` +
-      `📊 *Daily summary* — 11:30pm\n` +
-      `   _Full Telegram report_\n\n` +
-      `_All running via GitHub Actions. Zero approval needed._`
+      `🐦 *Tweets* — 7:30am · 12:30pm · 6:30pm · 9:30pm\n` +
+      `   _4x/day · randomly: plain, image, thread, or resurface · 15% skip_\n\n` +
+      `🧵 *Bonus threads* — Mon & Thu 2:30pm\n` +
+      `   _On top of the daily posting slot_\n\n` +
+      `⚡ *Engagement* — Every 15 min, 24/7\n` +
+      `   _Likes all day, replies 7am–10pm · 10:1 verified ratio_\n\n` +
+      `🗣️ *Go-out comments* — 9am · 11am · 2pm · 5pm · 8pm\n` +
+      `   _Drops targeted comments on niche posts_\n\n` +
+      `💬 *Mentions* — Every 15 min\n` +
+      `   _Auto-reply to mentions_\n\n` +
+      `🤝 *Follow* — 9:30am · 3:30pm · 8:30pm\n\n` +
+      `💼 *LinkedIn* — Tue–Fri 8:30am\n` +
+      `   _Randomly: thought leadership, story, or list_\n\n` +
+      `📊 *Daily summary* — 11:30pm\n\n` +
+      `_Runs via cron-job.org → NEXTAUTH_URL/api/cron/dispatch_`
     );
   }
 

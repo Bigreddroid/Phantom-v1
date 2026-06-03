@@ -14,6 +14,9 @@ export const maxDuration = 60;
 export async function POST(req: Request) {
   if (DEMO) return NextResponse.json({ ok: true, demo: true, skipped: "demo mode" });
   try {
+    const pauseState = await prisma.stats.findUnique({ where: { id: "singleton" }, select: { paused: true } });
+    if (pauseState?.paused) return NextResponse.json({ skipped: true, reason: "paused" });
+
     const body = await req.json().catch(() => ({}));
     const isBlocked = await loadBlocklist();
     const me = await getMyProfile();

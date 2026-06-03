@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { DEMO } from "@/lib/demo-data";
 import { searchTweets, likeTweet, getMyProfile } from "@/lib/x/engage";
 import { replyToTweet } from "@/lib/x/post";
 import { generateReply } from "@/lib/claude/generate";
@@ -17,6 +18,8 @@ function getISTHour(): number {
 }
 
 export async function GET(req: Request) {
+  if (DEMO) return NextResponse.json({ ok: true, demo: true, skipped: "demo mode" });
+
   const auth = req.headers.get("authorization");
   if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -37,9 +40,21 @@ export async function GET(req: Request) {
     const me = await getMyProfile();
     const keyword = NICHE_KEYWORDS[Math.floor(Math.random() * NICHE_KEYWORDS.length)];
 
+    // Load 24h dedup — tweet IDs already replied to this run or recently
+    const recentReplies = await prisma.activity.findMany({
+      where: { action: "Replied to tweet", createdAt: { gte: new Date(Date.now() - 86400000) } },
+      select: { detail: true },
+      take: 200,
+    });
+    const repliedIds = new Set(
+      recentReplies.map(a => a.detail?.match(/^tid:(\w+)/)?.[1]).filter(Boolean) as string[]
+    );
+
     // 10:1 verified:non-verified ratio
-    const verifiedTweets = await searchTweets(`${keyword} -is:retweet lang:en is:verified`, 10);
-    const normalTweets = await searchTweets(`${keyword} -is:retweet lang:en -is:verified`, 10);
+    const [verifiedTweets, normalTweets] = await Promise.all([
+      searchTweets(`${keyword} -is:retweet lang:en is:verified`, 10),
+      searchTweets(`${keyword} -is:retweet lang:en -is:verified`, 10),
+    ]);
     const tweets = [
       ...verifiedTweets,
       ...normalTweets.slice(0, Math.max(1, Math.floor(verifiedTweets.length / 10))),
@@ -51,6 +66,7 @@ export async function GET(req: Request) {
 
     for (const tweet of tweets) {
       if (!tweet.author_id || tweet.author_id === me.id || seen.has(tweet.author_id) || isBlocked(tweet.author_id, tweet.author_username)) continue;
+      if (repliedIds.has(tweet.id)) continue;
       seen.add(tweet.author_id);
 
       // Always like — day or night
@@ -64,7 +80,7 @@ export async function GET(req: Request) {
           await replyToTweet(tweet.id, reply);
           replied++;
           await prisma.activity.create({
-            data: { action: "Replied to tweet", detail: reply.slice(0, 80), icon: "💬" },
+            data: { action: "Replied to tweet", detail: `tid:${tweet.id}|${reply.slice(0, 70)}`, icon: "💬" },
           });
           await sendMessage(
             `💬 *Comment posted on X*\n\n` +
@@ -74,7 +90,11 @@ export async function GET(req: Request) {
           await randomDelay(2000, 5000);
         } catch (e) {
           const msg = String(e);
-          if (msg.includes("403")) continue; // reply restricted on that tweet — skip silently
+          if (msg.includes("403")) {
+            // Reply restricted on this tweet — skip silently (replies not allowed or token needs Read+Write)
+            replyErrors.push(`403 on ${tweet.id} — check X token permissions`);
+            continue;
+          }
           replyErrors.push(msg.slice(0, 80));
           await prisma.activity.create({
             data: { action: "Reply failed", detail: msg.slice(0, 80), icon: "❌" },
@@ -84,7 +104,7 @@ export async function GET(req: Request) {
     }
 
     if (replyErrors.length > 0) {
-      await sendMessage(`⚠️ *Engage cron: ${replyErrors.length} reply(s) failed*\n\n\`${replyErrors[0]}\``);
+      await sendMessage(`⚠️ *Engage cron: ${replyErrors.length} reply(s) failed*\n\`${replyErrors[0]}\``);
     }
 
     await prisma.activity.create({

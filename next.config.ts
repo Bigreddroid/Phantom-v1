@@ -1,7 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  experimental: {
+    // Bundle public/templates into serverless functions so fs.readFileSync works on Vercel
+    outputFileTracingIncludes: {
+      "**": ["./public/templates/**"],
+    },
+  },
 };
 
 export default nextConfig;
