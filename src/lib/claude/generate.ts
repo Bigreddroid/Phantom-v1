@@ -163,6 +163,27 @@ not growth-hacker tips. Each point should make someone think, not just nod.`,
   );
 }
 
+export async function generateBuildUpdate(product: string, context?: string) {
+  return generate(
+    `Write a short "building in public" tweet about ${product}.${context ? `\n\nContext: ${context}` : ""}
+
+Formats to rotate between (pick one randomly):
+- A specific thing that was shipped or fixed ("just shipped X — here's why it matters")
+- A lesson learned while building ("the thing I didn't expect when building X was...")
+- A behind-the-scenes detail ("here's how X actually works under the hood")
+- A raw honest take ("day N building X — this is what it actually looks like")
+- An engagement hook ("if you're building X, you need to know about...")
+
+Rules:
+- Under 280 characters
+- Specific, not vague — name real features, real problems, real decisions
+- No "excited to share" or "thrilled to announce"
+- Sound like a builder talking to other builders`,
+    VOICE_SYSTEM_PROMPT,
+    300
+  );
+}
+
 export async function generateQuoteTweet(originalText: string) {
   return generate(
     `You're quote-tweeting your own old post to resurface it with fresh context:\n\n"${originalText}"\n\nWrite a 1–2 sentence quote-tweet comment that adds new insight, a update, or a punchy observation. Don't just repeat the original. Under 200 characters. No "back to this" or "still relevant" openers.`,

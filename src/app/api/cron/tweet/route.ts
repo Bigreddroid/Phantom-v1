@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { generateTweet } from "@/lib/claude/generate";
+import { generateTweet, generateBuildUpdate } from "@/lib/claude/generate";
 import { prisma } from "@/lib/db";
 import { requestApproval, notifyError } from "@/lib/telegram/notify";
 import { shouldSkip, humanPause } from "@/lib/scheduler/humanize";
@@ -38,8 +38,14 @@ export async function GET(req: Request) {
     });
     const recentTweets = recent.map(r => r.detail).filter(Boolean) as string[];
 
-    const pillar = CONTENT_TOPICS[Math.floor(Math.random() * CONTENT_TOPICS.length)];
-    const content = await generateTweet(pillar, undefined, recentTweets);
+    // 30% chance: post a Phantom build update; 70%: regular content pillar tweet
+    let content: string;
+    if (Math.random() < 0.3) {
+      content = await generateBuildUpdate("Phantom (my AI personal brand automation system for X/Twitter)");
+    } else {
+      const pillar = CONTENT_TOPICS[Math.floor(Math.random() * CONTENT_TOPICS.length)];
+      content = await generateTweet(pillar, undefined, recentTweets);
+    }
     // Dispatch passes ?image=true|false to signal content type; fallback to 30% chance
     const imageParam = new URL(req.url).searchParams.get("image");
     const withImage = imageParam === "true" ? true : imageParam === "false" ? false : Math.random() < 0.3;

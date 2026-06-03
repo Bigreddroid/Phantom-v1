@@ -1,5 +1,6 @@
 import { xRW } from "./client";
 import { EUploadMimeType } from "twitter-api-v2";
+import { pickTemplate } from "./templates";
 
 export async function postTweet(text: string) {
   const tweet = await xRW.v2.tweet(text);
@@ -8,16 +9,29 @@ export async function postTweet(text: string) {
 
 export async function postTweetWithImage(text: string): Promise<{ id: string; hasImage: boolean }> {
   try {
-    const ogUrl = `${process.env.NEXTAUTH_URL}/api/og?text=${encodeURIComponent(text.slice(0, 220))}`;
-    const imgRes = await fetch(ogUrl, { signal: AbortSignal.timeout(8000) });
-    if (!imgRes.ok) throw new Error("og fetch failed");
+    // 70% chance: use a branded template image matched to the tweet topic
+    // 30% chance: use the generated OG card
+    const useTemplate = Math.random() < 0.7;
+    let imgBuffer: Buffer | null = null;
+    let mimeType: EUploadMimeType = EUploadMimeType.Png;
 
-    const imgBuffer = Buffer.from(await imgRes.arrayBuffer());
-    const mediaId = await xRW.v1.uploadMedia(imgBuffer, { mimeType: EUploadMimeType.Png });
+    if (useTemplate) {
+      imgBuffer = pickTemplate(text);
+      if (imgBuffer) mimeType = EUploadMimeType.Jpeg;
+    }
+
+    if (!imgBuffer) {
+      // Fallback to OG card
+      const ogUrl = `${process.env.NEXTAUTH_URL}/api/og?text=${encodeURIComponent(text.slice(0, 220))}`;
+      const imgRes = await fetch(ogUrl, { signal: AbortSignal.timeout(8000) });
+      if (!imgRes.ok) throw new Error("og fetch failed");
+      imgBuffer = Buffer.from(await imgRes.arrayBuffer());
+    }
+
+    const mediaId = await xRW.v1.uploadMedia(imgBuffer, { mimeType });
     const tweet = await xRW.v2.tweet({ text, media: { media_ids: [mediaId] } });
     return { ...tweet.data, hasImage: true };
   } catch {
-    // Graceful fallback: post text-only if media upload unavailable
     const tweet = await xRW.v2.tweet(text);
     return { ...tweet.data, hasImage: false };
   }
@@ -41,6 +55,12 @@ export async function deleteTweet(tweetId: string) {
 
 async function uploadOgImage(text: string): Promise<string | null> {
   try {
+    // Try branded template first
+    const tplBuffer = pickTemplate(text);
+    if (tplBuffer) {
+      return await xRW.v1.uploadMedia(tplBuffer, { mimeType: EUploadMimeType.Jpeg });
+    }
+    // Fallback to generated OG card
     const ogUrl = `${process.env.NEXTAUTH_URL}/api/og?text=${encodeURIComponent(text.slice(0, 220))}`;
     const imgRes = await fetch(ogUrl, { signal: AbortSignal.timeout(8000) });
     if (!imgRes.ok) throw new Error("og fetch failed");

@@ -10,16 +10,21 @@ function list(env: string | undefined, fallback: string[]): string[] {
 export const NICHE_KEYWORDS = list(
   process.env.NICHE_KEYWORDS,
   [
-    "founder personal brand",
+    "what are you building",
     "building in public",
+    "Claude AI automation",
+    "Notion second brain",
+    "Obsidian PKM",
+    "AI personal brand",
     "solopreneur automation",
-    "AI tools for creators",
+    "shipping in public",
     "indiehacker",
-    "personal brand tips",
-    "indie founder growth",
-    "content creator tools",
-    "creator economy",
-    "startup founder",
+    "founder personal brand",
+    "AI tools for founders",
+    "content automation",
+    "personal brand X Twitter",
+    "building 100 products",
+    "indie builder",
   ]
 );
 
@@ -27,11 +32,18 @@ export const NICHE_KEYWORDS = list(
 export const CONTENT_TOPICS = list(
   process.env.CONTENT_TOPICS,
   [
-    "building a personal brand as a founder",
-    "AI automation for solopreneurs",
-    "lessons from building in public",
-    "growing an audience without spending money on ads",
-    "the intersection of tech and personal branding",
+    "Phantom — the AI system I built to automate my entire personal brand on X",
+    "building Project Z in public — 92 products, starting with Phantom",
+    "how Phantom uses Claude AI to write tweets, threads and replies in my voice",
+    "shipping Phantom: what I learned building an X automation system without the paid API",
+    "the Phantom stack: Next.js, Claude, Telegram bot, cookie-based X auth, Vercel crons",
+    "why I built Phantom instead of paying for a social media tool",
+    "building in public: what Phantom looks like after 30 days live",
+    "how I use Claude AI + Obsidian + Notion as my second brain while building",
+    "Phantom update: what shipped this week and what's next",
+    "the honest truth about automating your personal brand with AI",
+    "how Phantom handles tweet deduplication, approval flows and rate limits",
+    "building 92 products alone — the system behind Project Z",
   ]
 );
 
@@ -39,18 +51,22 @@ export const CONTENT_TOPICS = list(
 export const THREAD_TOPICS = list(
   process.env.THREAD_TOPICS,
   [
-    "how I'm building a personal brand from scratch using AI",
-    "5 automation tools every founder should know about",
-    "what building in public actually looks like day to day",
-    "the solopreneur's guide to content without burning out",
-    "the exact system I use to automate my personal brand",
-    "why most founders fail at content — and how to fix it",
+    "how I built Phantom — an AI system that runs my entire X presence automatically",
+    "the full Phantom tech stack: every tool, every decision, and why",
+    "building Project Z: 92 products, one founder, no team",
+    "how I use Claude AI to generate content that sounds like me (not a bot)",
+    "Phantom's approval system: how I stay in control while automating everything",
+    "5 things I learned building an X automation system from scratch",
+    "how to build a personal brand on X without spending 3 hours a day on it",
+    "the Obsidian + Notion + Claude workflow I use to build and document everything",
+    "what building in public actually does for your audience — data from 30 days of Phantom",
+    "why cookie-based X auth beats the paid API for indie builders",
   ]
 );
 
 // Comma-separated topics injected into the AI voice prompt
 export const VOICE_TOPICS = process.env.VOICE_TOPICS
-  ?? "personal branding, AI automation, building in public, solopreneur life";
+  ?? "Phantom (AI personal brand system), Project Z (building 92 products), Claude AI, Obsidian, Notion, building in public, solopreneur automation";
 
 // Single letter shown in the OG image avatar circle
 export const DISPLAY_INITIAL = (process.env.DISPLAY_INITIAL ?? "P")[0].toUpperCase();
