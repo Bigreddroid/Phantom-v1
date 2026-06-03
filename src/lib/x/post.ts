@@ -1,7 +1,7 @@
 import { getXClient } from "./client";
 import { xRW } from "./client";
 import { EUploadMimeType } from "twitter-api-v2";
-import { pickTemplate } from "./templates";
+import { pickTemplate, pickTemplateByStyle } from "./templates";
 
 // ── Helper: extract tweet ID from agent-twitter-client response ──────────────
 async function extractTweetId(res: Response): Promise<string> {
@@ -22,14 +22,16 @@ export async function postTweet(text: string): Promise<{ id: string }> {
   return { id };
 }
 
-export async function postTweetWithImage(text: string): Promise<{ id: string; hasImage: boolean }> {
+export async function postTweetWithImage(text: string, style?: string): Promise<{ id: string; hasImage: boolean }> {
   try {
-    const useTemplate = Math.random() < 0.7;
     let imgBuffer: Buffer | null = null;
     let mimeType = "image/jpeg";
 
-    if (useTemplate) {
-      imgBuffer = pickTemplate(text);
+    if (style && style !== "auto") {
+      imgBuffer = pickTemplateByStyle(style, text);
+    } else {
+      const useTemplate = Math.random() < 0.7;
+      if (useTemplate) imgBuffer = pickTemplate(text);
     }
 
     if (!imgBuffer) {
@@ -90,7 +92,8 @@ export async function deleteTweet(tweetId: string) {
 // imageMode: "none" | "first" | "all"
 export async function postThread(
   tweets: string[],
-  imageMode: "none" | "first" | "all" = "none"
+  imageMode: "none" | "first" | "all" = "none",
+  imageStyle?: string,
 ): Promise<Array<{ id: string; hasImage?: boolean }>> {
   const client = await getXClient();
   const posted: Array<{ id: string; hasImage?: boolean }> = [];
@@ -103,7 +106,9 @@ export async function postThread(
     let imgBuffer: Buffer | null = null;
     let mimeType = "image/jpeg";
     if (wantsImage) {
-      imgBuffer = pickTemplate(text);
+      imgBuffer = imageStyle && imageStyle !== "auto"
+        ? pickTemplateByStyle(imageStyle, text)
+        : pickTemplate(text);
       if (!imgBuffer) {
         try {
           const ogUrl = `${process.env.NEXTAUTH_URL}/api/og?text=${encodeURIComponent(text.slice(0, 220))}`;

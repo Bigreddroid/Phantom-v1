@@ -47,15 +47,16 @@ import { NICHE_KEYWORDS } from "@/lib/config";
 // ── Shared: post an approved queue item ──────────────────────────────────────
 async function postQueueItem(item: { id: string; type: string; content: string; metadata: unknown }) {
   const meta = (item.metadata as Record<string, unknown>) ?? {};
+  const imageStyle = (meta.imageStyle as string | undefined) ?? "auto";
   if (item.type === "Thread") {
     const tweets = item.content.split("---").map((t: string) => t.trim()).filter(Boolean);
     const imageMode = (["none", "first", "all"].includes(meta.imageMode as string)
       ? meta.imageMode
       : "none") as "none" | "first" | "all";
-    await postThread(tweets, imageMode);
+    await postThread(tweets, imageMode, imageStyle);
   } else {
     if (meta.withImage) {
-      await postTweetWithImage(item.content);
+      await postTweetWithImage(item.content, imageStyle);
     } else {
       await postTweet(item.content);
     }
@@ -260,15 +261,64 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "tweet_image") {
-      await send(chatId, "✍️ Generating preview...");
+      await send(chatId, "✍️ Generating tweet...");
       try {
         const pillar = CONTENT_TOPICS[Math.floor(Math.random() * CONTENT_TOPICS.length)];
         const content = await generateTweet(pillar);
         const item = await prisma.queueItem.create({
-          data: { type: "Tweet", content, metadata: { withImage: true } },
+          data: { type: "Tweet", content, metadata: { withImage: true, imageStyle: "auto" } },
         });
-        await requestApproval("Tweet + branded image", content, { id: item.id });
+        await send(chatId,
+          `*Pick an image style:*\n\n${content}`,
+          {
+            reply_markup: {
+              inline_keyboard: [
+                [
+                  { text: "🌑 Dark",     callback_data: `img_style:dark:${item.id}` },
+                  { text: "☀️ Light",    callback_data: `img_style:light:${item.id}` },
+                  { text: "🏷️ Branded",  callback_data: `img_style:branded:${item.id}` },
+                ],
+                [
+                  { text: "📰 Article",  callback_data: `img_style:article:${item.id}` },
+                  { text: "📊 Data",     callback_data: `img_style:data:${item.id}` },
+                  { text: "🎲 Auto",     callback_data: `img_style:auto:${item.id}` },
+                ],
+                [
+                  { text: "❌ No image", callback_data: `img_style:none:${item.id}` },
+                ],
+              ],
+            },
+          }
+        );
       } catch (e) { await send(chatId, `❌ ${String(e).slice(0, 100)}`); }
+    }
+
+    // ── Image style picker result ─────────────────────────────────────────────
+    if (action === "img_style") {
+      const [style, itemId] = [param.split(":")[0], param.split(":").slice(1).join(":")];
+      const item = await prisma.queueItem.findUnique({ where: { id: itemId } });
+      if (!item || item.status !== "PENDING") {
+        await send(chatId, "⚠️ Item expired or already handled.");
+        return NextResponse.json({ ok: true });
+      }
+      if (style === "none") {
+        await prisma.queueItem.update({ where: { id: itemId }, data: { metadata: { ...(item.metadata as object), withImage: false, imageStyle: "none" } } });
+      } else {
+        await prisma.queueItem.update({ where: { id: itemId }, data: { metadata: { ...(item.metadata as object), withImage: true, imageStyle: style } } });
+      }
+      const styleLabel: Record<string, string> = { dark: "🌑 Dark", light: "☀️ Light", branded: "🏷️ Branded", article: "📰 Article", data: "📊 Data", auto: "🎲 Auto", none: "❌ No image" };
+      await send(chatId,
+        `*Style: ${styleLabel[style] ?? style}*\n\n${item.content}`,
+        {
+          reply_markup: {
+            inline_keyboard: [[
+              { text: "✅ Post →",  callback_data: `approve:${itemId}` },
+              { text: "✏️ Edit",   callback_data: `edit:${itemId}` },
+              { text: "❌ Skip",   callback_data: `reject:${itemId}` },
+            ]],
+          },
+        }
+      );
     }
 
     if (action === "tweet_image_only") {
@@ -301,36 +351,67 @@ export async function POST(req: NextRequest) {
       } catch (e) { await send(chatId, `❌ ${String(e).slice(0, 100)}`); }
     }
 
-    if (action === "thread_img_first") {
-      await send(chatId, "✍️ Generating thread preview...");
+    if (action === "thread_img_first" || action === "thread_img_all") {
+      const existingId = param; // non-empty when called from article/existing item
+      if (existingId) {
+        // Existing item — just show style picker
+        const existing = await prisma.queueItem.findUnique({ where: { id: existingId } });
+        if (existing && existing.status === "PENDING") {
+          const mode = action === "thread_img_all" ? "all" : "first";
+          await prisma.queueItem.update({ where: { id: existingId }, data: { metadata: { ...(existing.metadata as object), imageMode: mode, imageStyle: "auto" } } });
+          await send(chatId,
+            `*Thread image style — pick one:*\n\n_${existing.content.slice(0, 200)}_`,
+            {
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    { text: "🌑 Dark",     callback_data: `img_style:dark:${existingId}` },
+                    { text: "☀️ Light",    callback_data: `img_style:light:${existingId}` },
+                    { text: "🏷️ Branded",  callback_data: `img_style:branded:${existingId}` },
+                  ],
+                  [
+                    { text: "📰 Article",  callback_data: `img_style:article:${existingId}` },
+                    { text: "📊 Data",     callback_data: `img_style:data:${existingId}` },
+                    { text: "🎲 Auto",     callback_data: `img_style:auto:${existingId}` },
+                  ],
+                ],
+              },
+            }
+          );
+        }
+        return NextResponse.json({ ok: true });
+      }
+      // No existing item — generate new thread, then show style picker
+      await send(chatId, "✍️ Generating thread...");
       try {
         const pillar = THREAD_TOPICS[Math.floor(Math.random() * THREAD_TOPICS.length)];
         const tweets = await generateThread(pillar);
         const content = tweets.join("\n---\n");
+        const mode = action === "thread_img_all" ? "all" : "first";
         const item = await prisma.queueItem.create({
-          data: { type: "Thread", content, metadata: { imageMode: "first" } },
+          data: { type: "Thread", content, metadata: { imageMode: mode, imageStyle: "auto" } },
         });
-        await requestApproval(
-          `Thread — ${tweets.length} tweets · image on #1`,
-          `*${pillar}*\n\n${tweets[0]}\n\n[+ ${tweets.length - 1} more tweets]`,
-          { id: item.id }
-        );
-      } catch (e) { await send(chatId, `❌ ${String(e).slice(0, 100)}`); }
-    }
-
-    if (action === "thread_img_all") {
-      await send(chatId, "✍️ Generating thread preview...");
-      try {
-        const pillar = THREAD_TOPICS[Math.floor(Math.random() * THREAD_TOPICS.length)];
-        const tweets = await generateThread(pillar);
-        const content = tweets.join("\n---\n");
-        const item = await prisma.queueItem.create({
-          data: { type: "Thread", content, metadata: { imageMode: "all" } },
-        });
-        await requestApproval(
-          `Thread — ${tweets.length} tweets · image on all`,
-          `*${pillar}*\n\n${tweets[0]}\n\n[+ ${tweets.length - 1} more tweets]`,
-          { id: item.id }
+        await send(chatId,
+          `*Thread ready — pick image style:*\n\n*${pillar}*\n\n${tweets[0]}\n\n_[+ ${tweets.length - 1} more]_`,
+          {
+            reply_markup: {
+              inline_keyboard: [
+                [
+                  { text: "🌑 Dark",     callback_data: `img_style:dark:${item.id}` },
+                  { text: "☀️ Light",    callback_data: `img_style:light:${item.id}` },
+                  { text: "🏷️ Branded",  callback_data: `img_style:branded:${item.id}` },
+                ],
+                [
+                  { text: "📰 Article",  callback_data: `img_style:article:${item.id}` },
+                  { text: "📊 Data",     callback_data: `img_style:data:${item.id}` },
+                  { text: "🎲 Auto",     callback_data: `img_style:auto:${item.id}` },
+                ],
+                [
+                  { text: "❌ No image", callback_data: `img_style:none:${item.id}` },
+                ],
+              ],
+            },
+          }
         );
       } catch (e) { await send(chatId, `❌ ${String(e).slice(0, 100)}`); }
     }

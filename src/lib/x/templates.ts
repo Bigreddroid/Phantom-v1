@@ -82,6 +82,59 @@ const GENERIC_POOL = [
   "Code_snippet_background_white_red.jpg",
 ];
 
+// Style-based template pools — used when user picks a style from Telegram
+const STYLE_TEMPLATES: Record<string, string[]> = {
+  dark: [
+    "Minimalist_Twitter_quote_card_da….jpg",
+    "Data_visualization_background_da….jpg",
+    "Tech_wrench_icon_black_background.jpg",
+    "Glowing_red_01_tech_header.jpg",
+    "Software_update_template_Dark_Mode.jpg",
+    "Tech_event_background_red_patterns.jpg",
+    "Abstract_red_geometric_lines.jpg",
+    "BigRedDroid_Claude_logo_charcoal.jpg",
+    "Minimalist_poll_background_dark_….jpg",
+  ],
+  light: [
+    "Minimalist_Twitter_quote_card_white.jpg",
+    "Minimalist_Twitter_quote_template.jpg",
+    "Software_update_template_Light_Mode.jpg",
+    "Twitter_thread_header_white_back….jpg",
+    "Minimalist_code_snippet_white_ba….jpg",
+    "Red_robot_logo_on_white.jpg",
+    "Sleek_tech_giveaway_background,_Light.jpg",
+    "Milestone_Achieved_template_ligh….jpg",
+    "Minimalist_poll_background_split….jpg",
+  ],
+  branded: [
+    "BigRedDroid_Claude_article_cover.jpg",
+    "BigRedDroid_x_Claude_cover.jpg",
+    "BigRedDroid_x_Notion_cover.jpg",
+    "BigRedDroid_branding_code_snippet.jpg",
+    "Tech_announcement_BigRedDroid_br….jpg",
+    "Tech_announcement_card_BigRedDro….jpg",
+    "Minimalist_card_BigRedDroid_bran….jpg",
+    "Software_UI_frame_BigRedDroid_br….jpg",
+    "Twitter_quote_card_BigRedDroid_b….jpg",
+    "Community_spotlight_template_Big….jpg",
+  ],
+  article: [
+    "Twitter_article_cover_white_red.jpg",
+    "Twitter_article_cover_Obsidian_logo.jpg",
+    "BigRedDroid_Claude_article_cover.jpg",
+    "Minimalist_Twitter_thread_header.jpg",
+    "Minimalist_Twitter_thread_starte….jpg",
+    "Twitter_thread_header_white_back….jpg",
+  ],
+  data: [
+    "Data_visualization_template_Twit….jpg",
+    "Red_grid_minimalist_line_chart.jpg",
+    "Red_minimalist_bar_chart.jpg",
+    "Infographic_data_chart_backgroun….jpg",
+    "Red_grid_on_white_background.jpg",
+  ],
+};
+
 const TEMPLATES_DIR = path.join(process.cwd(), "public", "templates");
 
 function exists(filename: string): boolean {
@@ -90,6 +143,18 @@ function exists(filename: string): boolean {
 
 function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
+}
+
+// Pick a template by explicit style name. Falls back to keyword-match when style is "auto".
+export function pickTemplateByStyle(style: string, tweetText: string): Buffer | null {
+  if (style !== "auto" && STYLE_TEMPLATES[style]) {
+    const available = STYLE_TEMPLATES[style].filter(exists);
+    if (available.length > 0) {
+      const chosen = pick(available);
+      return fs.readFileSync(path.join(TEMPLATES_DIR, chosen));
+    }
+  }
+  return pickTemplate(tweetText);
 }
 
 export function pickTemplate(tweetText: string): Buffer | null {
