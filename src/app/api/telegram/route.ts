@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { postTweet, postTweetWithImage, postThread, quoteTweet } from "@/lib/x/post";
+import { postTweet, postTweetWithImage, postThread, quoteTweet, replyToTweet } from "@/lib/x/post";
 import { generateTweet, generateThread, generateDM, generateQuoteTweet, generateLinkedInPost, generateReply } from "@/lib/claude/generate";
 import { notifyPosted, requestApproval, sendMessage } from "@/lib/telegram/notify";
 import { ensureWebhook, ensureCommands } from "@/lib/telegram/setup";
 import { xRO } from "@/lib/x/client";
 import { sendDM, getDMConversations } from "@/lib/x/dm";
-import { searchTweets, getMyProfile, retweet, getMyTweets } from "@/lib/x/engage";
+import { searchTweets, getMyProfile, retweet, getMyTweets, getMentions } from "@/lib/x/engage";
 import { getLinkedInAuth } from "@/lib/linkedin/client";
 import { postToLinkedIn } from "@/lib/linkedin/post";
 import { CONTENT_TOPICS, THREAD_TOPICS } from "@/lib/config";
@@ -1133,7 +1133,7 @@ export async function POST(req: NextRequest) {
         recentReplied.map(a => a.detail?.match(/^mid:(\w+)/)?.[1]).filter(Boolean) as string[]
       );
 
-      const unread = mentions.filter(m => m.id && !repliedIds.has(m.id)).slice(0, 5);
+      const unread = mentions.filter((m: { id: string }) => m.id && !repliedIds.has(m.id)).slice(0, 5);
 
       if (!unread.length) {
         await send(chatId, "📭 No new mentions.");
