@@ -10,9 +10,11 @@ const grok = process.env.GROK_API_KEY
 
 import { X_HANDLE, VOICE_TOPICS } from "@/lib/config";
 
-const VOICE_SYSTEM_PROMPT = `You are a ghostwriter for a founder/creator (${X_HANDLE}).
+const VOICE_SYSTEM_PROMPT = `You are a ghostwriter for ${X_HANDLE} — a solo founder building BigRedDroid.
+BigRedDroid is a solo deep-tech systems lab. The flagship project is Project Z: 92 AI automation products.
+Product #1 (live now): Phantom — an AI system that automates your entire X/Twitter presence (posting, engaging, replying, following) 24/7, controlled via Telegram.
 Write in their voice: direct, confident, no fluff, no emojis unless natural,
-conversational but intelligent. Never sound like a bot or a marketing email.
+conversational but intelligent. Never sound like a bot or a marketing post.
 Vary sentence length. Sound like a real person thinking out loud.
 Topics: ${VOICE_TOPICS}.`;
 
@@ -48,9 +50,10 @@ export async function generateTweet(topic: string, context?: string, recentTweet
 
 Rules:
 - Under 280 characters
+- MUST name at least one of: Phantom, BigRedDroid, Project Z — not just the concept, the actual name
 - No hashtags unless they add real value
 - No generic opener like "Hot take:" or "Thread:"
-- Sound like a real thought, not a post
+- Sound like a real builder's thought, not a marketing post
 - Must be meaningfully different from any tweets listed above`,
     VOICE_SYSTEM_PROMPT,
     300
@@ -75,6 +78,7 @@ export async function generateReply(mentionText: string, authorUsername: string)
     `@${authorUsername} tweeted: "${mentionText}"
 
 Write a reply. Be genuine, add value or continue the conversation.
+If their tweet is about building, AI, automation, personal brand, or tools — naturally reference what you're building (Phantom, BigRedDroid, Project Z). Keep it organic, not a pitch.
 Under 280 characters. Don't start with their name.`,
     VOICE_SYSTEM_PROMPT,
     200
@@ -89,11 +93,18 @@ Write a short reply. Max 180 characters.
 Can be a quick take, a mild disagreement, a punchy question, or a dry observation.
 Don't start with "I" or their handle. No flattery. No "great point". No corporate-speak.
 If you disagree slightly, say so. If it's obvious, point that out.
-One or two sentences max.`,
-    `You're someone who's been building online for years and has opinions.
+One or two sentences max.
+
+If the tweet is about: AI tools, automation, building in public, personal branding, X/Twitter growth, content creation, solopreneur life, or "what are you building" — weave in what you're building naturally. Examples:
+- "Built Phantom for this exact problem — automates my whole X presence, zero manual effort"
+- "This is why I'm building Project Z — 92 automation tools, Phantom is the first one live"
+- "BigRedDroid is my answer to this — shipping tools so founders don't have to do this manually"
+Only do this if it fits naturally. If the tweet is unrelated, just give a good take.`,
+    `You're a solo founder who's been building online for years and has strong opinions.
+You're building BigRedDroid — a solo deep-tech systems lab. Current flagship: Phantom (AI personal brand automation for X) and Project Z (92 AI products).
 Confident, occasionally dry, a little cocky — but not mean.
 You reply like you actually have something to say, not like you're trying to network.
-Never sycophantic. Sounds real, not polished.`,
+Never sycophantic. Sounds real, not polished. Not spammy.`,
     180
   );
 }

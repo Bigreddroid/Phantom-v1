@@ -12,19 +12,19 @@ export const NICHE_KEYWORDS = list(
   [
     "what are you building",
     "building in public",
+    "BigRedDroid",
+    "AI personal brand automation",
     "Claude AI automation",
+    "X Twitter automation tool",
+    "solopreneur AI tools",
     "Notion second brain",
     "Obsidian PKM",
-    "AI personal brand",
-    "solopreneur automation",
-    "shipping in public",
-    "indiehacker",
     "founder personal brand",
+    "automating content creation",
+    "shipping 100 products",
+    "indie builder AI",
     "AI tools for founders",
-    "content automation",
-    "personal brand X Twitter",
-    "building 100 products",
-    "indie builder",
+    "personal brand on autopilot",
   ]
 );
 

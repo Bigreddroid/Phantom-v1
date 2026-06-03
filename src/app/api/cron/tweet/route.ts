@@ -38,10 +38,15 @@ export async function GET(req: Request) {
     });
     const recentTweets = recent.map(r => r.detail).filter(Boolean) as string[];
 
-    // 30% chance: post a Phantom build update; 70%: regular content pillar tweet
+    // 50% chance: post a Phantom/BigRedDroid build update; 50%: regular content pillar tweet
     let content: string;
-    if (Math.random() < 0.3) {
-      content = await generateBuildUpdate("Phantom (my AI personal brand automation system for X/Twitter)");
+    if (Math.random() < 0.5) {
+      const products = [
+        "Phantom (my AI personal brand automation system for X/Twitter, live now under BigRedDroid)",
+        "Project Z — building 92 AI automation products under BigRedDroid, Phantom is #1",
+        "BigRedDroid — my solo deep-tech lab, Project Z is the first major initiative",
+      ];
+      content = await generateBuildUpdate(products[Math.floor(Math.random() * products.length)]);
     } else {
       const pillar = CONTENT_TOPICS[Math.floor(Math.random() * CONTENT_TOPICS.length)];
       content = await generateTweet(pillar, undefined, recentTweets);
