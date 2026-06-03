@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { searchTweets, likeTweet, getMyProfile } from "@/lib/x/engage";
+import { searchTweets, likeTweet, retweet, getMyProfile } from "@/lib/x/engage";
 import { replyToTweet } from "@/lib/x/post";
 import { generateReply } from "@/lib/claude/generate";
 import { prisma } from "@/lib/db";
@@ -18,14 +18,24 @@ export async function POST(req: Request) {
     const keyword = (body.keyword as string | undefined)?.trim()
       || NICHE_KEYWORDS[Math.floor(Math.random() * NICHE_KEYWORDS.length)];
 
-    // Load 24h dedup memory — tweet IDs already replied to
-    const recentReplies = await prisma.activity.findMany({
-      where: { action: "Replied to tweet", createdAt: { gte: new Date(Date.now() - 86400000) } },
-      select: { detail: true },
-      take: 200,
-    });
+    // Load 24h dedup memory — tweet IDs already replied to or retweeted
+    const [recentReplies, recentRetweets] = await Promise.all([
+      prisma.activity.findMany({
+        where: { action: "Replied to tweet", createdAt: { gte: new Date(Date.now() - 86400000) } },
+        select: { detail: true },
+        take: 200,
+      }),
+      prisma.activity.findMany({
+        where: { action: "Retweeted", createdAt: { gte: new Date(Date.now() - 7 * 86400000) } },
+        select: { detail: true },
+        take: 200,
+      }),
+    ]);
     const repliedIds = new Set(
       recentReplies.map(a => a.detail?.match(/^tid:(\w+)/)?.[1]).filter(Boolean) as string[]
+    );
+    const retweetedIds = new Set(
+      recentRetweets.map(a => a.detail?.match(/^rt:(\w+)/)?.[1]).filter(Boolean) as string[]
     );
 
     // 10:1 verified:non-verified ratio, cap at 6 total to stay under function timeout
@@ -62,6 +72,7 @@ export async function POST(req: Request) {
 
     // ── Phase 1: like all tweets quickly ────────────────────────────────────
     let liked = 0;
+    let retweeted = 0;
     const errors: string[] = [];
 
     for (const tweet of tweets) {
@@ -69,6 +80,22 @@ export async function POST(req: Request) {
         errors.push(`like: ${String(e).slice(0, 60)}`);
       }
       await randomDelay(400, 800); // short — likes are low-risk
+    }
+
+    // ── Phase 1b: retweet top tweets selectively (max 2 per run, 25% chance each) ──
+    const rtCandidates = tweets.filter(t => !retweetedIds.has(t.id) && t.score >= 20).slice(0, 2);
+    for (const tweet of rtCandidates) {
+      if (Math.random() > 0.25) continue;
+      try {
+        await retweet(tweet.id);
+        retweeted++;
+        await prisma.activity.create({
+          data: { action: "Retweeted", detail: `rt:${tweet.id}|${tweet.text.slice(0, 70)}`, icon: "🔁" },
+        });
+        await randomDelay(600, 1200);
+      } catch (e) {
+        errors.push(`rt: ${String(e).slice(0, 60)}`);
+      }
     }
 
     // ── Phase 2: pick reply targets + generate all in parallel ──────────────
@@ -120,17 +147,17 @@ export async function POST(req: Request) {
     await prisma.activity.create({
       data: {
         action: "Engagement run",
-        detail: `❤️ ${liked} · 💬 ${replied} · "${keyword}"`,
+        detail: `❤️ ${liked} · 🔁 ${retweeted} · 💬 ${replied} · "${keyword}"`,
         icon: "⚡",
       },
     });
 
     await notifyPosted(
       "Engagement complete",
-      `❤️ ${liked} likes · 💬 ${replied} replies\nTopic: "${keyword}"`
+      `❤️ ${liked} likes · 🔁 ${retweeted} retweets · 💬 ${replied} replies\nTopic: "${keyword}"`
     );
 
-    return NextResponse.json({ ok: true, liked, replied, keyword, comments, errors });
+    return NextResponse.json({ ok: true, liked, retweeted, replied, keyword, comments, errors });
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }
