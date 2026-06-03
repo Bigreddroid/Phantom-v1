@@ -494,7 +494,8 @@ export async function POST(req: NextRequest) {
       `/queue — view pending approvals\n` +
       `/schedule — automation schedule\n\n` +
       `*Control*\n` +
-      `/pause — pause all automation\n` +
+      `/pause — pause all automation (queue kept)\n` +
+      `/kill — hard stop: pause + wipe entire pending queue\n` +
       `/resume — resume automation\n` +
       `/blacklist <username> — silently ignore an account\n` +
       `/setup — register webhook & command menu\n` +
@@ -753,7 +754,44 @@ export async function POST(req: NextRequest) {
       create: { paused: true },
     });
     await prisma.activity.create({ data: { action: "Automation paused", icon: "⏸️" } });
-    await send(chatId, "⏸️ *Paused.* All cron jobs will skip until you /resume.\n\n_(GitHub Actions still fires but Phantom does nothing.)_");
+    await send(chatId,
+      "⏸️ *Paused.*\n\nAll cron jobs will skip until you /resume.\nQueue and existing content untouched.\n\n_Use /kill to also wipe the pending queue._"
+    );
+  }
+
+  // ── /kill — hard stop: pause + clear entire queue ─────────────────────────
+  else if (cmd === "/kill") {
+    await send(chatId, "🛑 Shutting everything down...");
+    try {
+      // 1. Pause all automation
+      await prisma.stats.upsert({
+        where: { id: "singleton" },
+        update: { paused: true },
+        create: { paused: true },
+      });
+
+      // 2. Reject all pending queue items so nothing fires on resume
+      const wiped = await prisma.queueItem.updateMany({
+        where: { status: "PENDING" },
+        data: { status: "REJECTED" },
+      });
+
+      // 3. Log it
+      await prisma.activity.create({
+        data: { action: "Hard stop — all automation killed", detail: `${wiped.count} pending items cleared`, icon: "🛑" },
+      });
+
+      await send(chatId,
+        `🛑 *Everything stopped.*\n\n` +
+        `✓ Automation paused\n` +
+        `✓ ${wiped.count} pending queue items cleared\n` +
+        `✓ No posts, replies, likes, or DMs will fire\n\n` +
+        `Send /resume when you're ready to restart.\n` +
+        `_New content will need to be generated fresh._`
+      );
+    } catch (e) {
+      await send(chatId, `❌ Kill failed: ${String(e).slice(0, 120)}`);
+    }
   }
 
   // ── /resume ───────────────────────────────────────────────────────────────
