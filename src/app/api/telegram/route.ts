@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { postTweet, postTweetWithImage, postThread, quoteTweet } from "@/lib/x/post";
-import { generateTweet, generateThread, generateDM, generateQuoteTweet, generateLinkedInPost } from "@/lib/claude/generate";
+import { generateTweet, generateThread, generateDM, generateQuoteTweet, generateLinkedInPost, generateReply } from "@/lib/claude/generate";
 import { notifyPosted, requestApproval, sendMessage } from "@/lib/telegram/notify";
 import { ensureWebhook, ensureCommands } from "@/lib/telegram/setup";
 import { xRO } from "@/lib/x/client";
