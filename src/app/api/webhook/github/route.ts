@@ -22,13 +22,13 @@ export async function POST(req: NextRequest) {
 
   // Validate X-Hub-Signature-256
   const secret = process.env.GITHUB_WEBHOOK_SECRET;
-  if (secret) {
-    const sig = req.headers.get("x-hub-signature-256") ?? "";
-    const expected =
-      "sha256=" + crypto.createHmac("sha256", secret).update(rawBody).digest("hex");
-    if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) {
-      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
-    }
+  if (!secret) {
+    return NextResponse.json({ error: "Webhook secret not configured" }, { status: 401 });
+  }
+  const sig = req.headers.get("x-hub-signature-256") ?? "";
+  const expected = "sha256=" + crypto.createHmac("sha256", secret).update(rawBody).digest("hex");
+  if (sig.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) {
+    return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 
   const event = req.headers.get("x-github-event") ?? "";

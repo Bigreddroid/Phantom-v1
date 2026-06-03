@@ -15,6 +15,15 @@ const BOT = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
 const CHAT = process.env.TELEGRAM_CHAT_ID!;
 const APP = process.env.NEXTAUTH_URL!;
 
+// Internal job fetches must carry CRON_SECRET so middleware allows them through
+function cronFetch(path: string, options?: RequestInit) {
+  const headers: Record<string, string> = {
+    ...(options?.headers as Record<string, string>),
+    "Authorization": `Bearer ${process.env.CRON_SECRET}`,
+  };
+  return fetch(`${APP}${path}`, { ...options, headers });
+}
+
 async function send(chatId: string, text: string, extra?: object) {
   await fetch(`${BOT}/sendMessage`, {
     method: "POST",
@@ -56,6 +65,15 @@ async function postQueueItem(item: { id: string; type: string; content: string; 
 }
 
 export async function POST(req: NextRequest) {
+  // Verify Telegram webhook secret token (set via TELEGRAM_WEBHOOK_SECRET + setWebhook secret_token)
+  const webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
+  if (webhookSecret) {
+    const incoming = req.headers.get("x-telegram-bot-api-secret-token") ?? "";
+    if (incoming !== webhookSecret) {
+      return NextResponse.json({ ok: true }); // silent 200 — don't reveal endpoint existence
+    }
+  }
+
   const body = await req.json();
 
   // ── Inline button callbacks ──────────────────────────────────────────────
@@ -316,7 +334,7 @@ export async function POST(req: NextRequest) {
     if (action === "li_post") {
       await send(chatId, "💼 Generating & publishing LinkedIn post...");
       try {
-        const res = await fetch(`${APP}/api/jobs/linkedin`, { method: "POST" });
+        const res = await cronFetch(`/api/jobs/linkedin`, { method: "POST" });
         const r = await res.json();
         if (r.error) throw new Error(r.error);
         await send(chatId, `✅ *LinkedIn post published*\n\n${(r.content as string)?.slice(0, 500) ?? ""}`);
@@ -326,7 +344,7 @@ export async function POST(req: NextRequest) {
     if (action === "li_story") {
       await send(chatId, "📖 Writing LinkedIn story post (draws from recent X content)...");
       try {
-        const res = await fetch(`${APP}/api/jobs/linkedin-story`, { method: "POST" });
+        const res = await cronFetch(`/api/jobs/linkedin-story`, { method: "POST" });
         const r = await res.json();
         if (r.error) throw new Error(r.error);
         await send(chatId, `✅ *LinkedIn story published*\n\n${(r.content as string)?.slice(0, 500) ?? ""}`);
@@ -336,7 +354,7 @@ export async function POST(req: NextRequest) {
     if (action === "li_list") {
       await send(chatId, "📋 Writing LinkedIn 5-lesson list post...");
       try {
-        const res = await fetch(`${APP}/api/jobs/linkedin-list`, { method: "POST" });
+        const res = await cronFetch(`/api/jobs/linkedin-list`, { method: "POST" });
         const r = await res.json();
         if (r.error) throw new Error(r.error);
         await send(chatId, `✅ *LinkedIn list published*\n\n${(r.content as string)?.slice(0, 500) ?? ""}`);
@@ -449,7 +467,7 @@ export async function POST(req: NextRequest) {
   else if (cmd === "/status") {
     try {
       const [statsRes, recentActivity, totalPosted, totalReplied] = await Promise.all([
-        fetch(`${APP}/api/stats`).then(r => r.json()).catch(() => ({})),
+        cronFetch(`/api/stats`).then(r => r.json()).catch(() => ({})),
         prisma.activity.findMany({ orderBy: { createdAt: "desc" }, take: 3 }),
         prisma.activity.count({ where: { icon: { in: ["🐦", "🧵", "🖼️"] } } }),
         prisma.activity.count({ where: { icon: "💬" } }),
@@ -556,7 +574,7 @@ export async function POST(req: NextRequest) {
   else if (cmd === "/engage") {
     await send(chatId, "⚡ Running engagement (10:1 verified ratio)...");
     try {
-      const res = await fetch(`${APP}/api/jobs/engage`, { method: "POST" });
+      const res = await cronFetch(`/api/jobs/engage`, { method: "POST" });
       const r = await res.json();
       if (!res.ok || r.error) {
         await send(chatId, `❌ Engagement failed: ${r.error ?? "Unknown error"}`);
@@ -584,7 +602,7 @@ export async function POST(req: NextRequest) {
   else if (cmd === "/goout") {
     await send(chatId, "🗣️ Going out to drop some comments...");
     try {
-      const res = await fetch(`${APP}/api/jobs/goout`, { method: "POST" });
+      const res = await cronFetch(`/api/jobs/goout`, { method: "POST" });
       const r = await res.json();
       if (!res.ok || r.error) {
         await send(chatId, `❌ Go-out failed: ${r.error ?? "Unknown error"}`);
@@ -613,7 +631,7 @@ export async function POST(req: NextRequest) {
     const count = Math.min(parseInt(args || "5", 10) || 5, 20);
     await send(chatId, `🤝 Following ${count} niche accounts (like + reply included)...`);
     try {
-      const res = await fetch(`${APP}/api/jobs/follow`, {
+      const res = await cronFetch(`/api/jobs/follow`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ count }),
@@ -639,7 +657,7 @@ export async function POST(req: NextRequest) {
   else if (cmd === "/mentions") {
     await send(chatId, "🔍 Checking & replying to mentions...");
     try {
-      const res = await fetch(`${APP}/api/jobs/mentions`, { method: "POST" });
+      const res = await cronFetch(`/api/jobs/mentions`, { method: "POST" });
       const r = await res.json();
       if (!res.ok || r.error) {
         await send(chatId, `❌ Mentions failed: ${r.error ?? "Unknown error"}`);
@@ -821,7 +839,7 @@ export async function POST(req: NextRequest) {
   else if (cmd === "/resurface") {
     await send(chatId, "🔍 Finding an old tweet to resurface...");
     try {
-      const res = await fetch(`${APP}/api/jobs/resurface`, { method: "POST" });
+      const res = await cronFetch(`/api/jobs/resurface`, { method: "POST" });
       const r = await res.json();
       if (!res.ok || r.error) {
         await send(chatId, `❌ ${r.error ?? r.reason ?? "No old tweets found."}`);
@@ -932,7 +950,7 @@ export async function POST(req: NextRequest) {
     } else {
       await send(chatId, `🎯 Engaging on: *"${args}"*...`);
       try {
-        const res = await fetch(`${APP}/api/jobs/engage`, {
+        const res = await cronFetch(`/api/jobs/engage`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ keyword: args }),

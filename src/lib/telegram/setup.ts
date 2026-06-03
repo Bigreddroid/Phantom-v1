@@ -21,10 +21,14 @@ export async function ensureWebhook(): Promise<boolean> {
     const info = await api("/getWebhookInfo");
     if (info.result?.url === target) return true; // already correct
 
-    const result = await api("/setWebhook", {
+    const webhookBody: Record<string, unknown> = {
       url: target,
       allowed_updates: ["message", "callback_query"],
-    });
+    };
+    if (process.env.TELEGRAM_WEBHOOK_SECRET) {
+      webhookBody.secret_token = process.env.TELEGRAM_WEBHOOK_SECRET;
+    }
+    const result = await api("/setWebhook", webhookBody);
     return result.ok === true;
   } catch {
     return false;

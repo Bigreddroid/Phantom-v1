@@ -19,16 +19,13 @@ async function tg(text: string) {
 export async function POST(req: NextRequest) {
   // Validate secret — Vercel passes it as a query param or Authorization header
   const secret = process.env.VERCEL_WEBHOOK_SECRET;
-  if (secret) {
-    const url = new URL(req.url);
-    const querySecret = url.searchParams.get("secret");
-    const authHeader = req.headers.get("authorization") ?? "";
-    const headerSecret = authHeader.startsWith("Bearer ")
-      ? authHeader.slice(7)
-      : authHeader;
-    if (querySecret !== secret && headerSecret !== secret) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  if (!secret) {
+    return NextResponse.json({ error: "Webhook secret not configured" }, { status: 401 });
+  }
+  const authHeader = req.headers.get("authorization") ?? "";
+  const headerSecret = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : authHeader;
+  if (headerSecret !== secret) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   let body: Record<string, unknown>;

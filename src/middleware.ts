@@ -29,15 +29,28 @@ export async function middleware(request: NextRequest) {
   const isPublic = PUBLIC.some(p => pathname === p || pathname.startsWith(p + "/") || pathname.startsWith(p + "?"));
   if (isPublic) return NextResponse.next();
 
+  // Allow internal cron/job calls authenticated with CRON_SECRET
+  const cronSecret = process.env.CRON_SECRET;
+  if (cronSecret) {
+    const auth = request.headers.get("authorization");
+    if (auth === `Bearer ${cronSecret}`) return NextResponse.next();
+  }
+
   const secret = process.env.NEXTAUTH_SECRET;
-  if (!secret) return NextResponse.next();
+  if (!secret) {
+    // Fail closed — never silently expose the app if secret is misconfigured
+    const loginUrl = new URL("/login", request.url);
+    return NextResponse.redirect(loginUrl);
+  }
 
   const expected = await deriveToken(secret);
   const token = request.cookies.get(AUTH_COOKIE)?.value;
 
   if (token !== expected) {
     const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("from", pathname);
+    // Validate from param: only allow same-origin paths
+    const safePath = pathname.startsWith("/") && !pathname.startsWith("//") ? pathname : "/dashboard";
+    loginUrl.searchParams.set("from", safePath);
     return NextResponse.redirect(loginUrl);
   }
 

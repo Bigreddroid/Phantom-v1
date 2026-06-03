@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import crypto from "crypto";
 
 const AUTH_COOKIE = "phantom_auth";
 
@@ -28,14 +29,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "DASHBOARD_PASSWORD not configured" }, { status: 500 });
   }
 
-  if (!password || password !== expected) {
+  // Constant-time comparison to prevent timing attacks
+  const pwdBuf = Buffer.from(password ?? "");
+  const expBuf = Buffer.from(expected);
+  const valid = pwdBuf.length === expBuf.length &&
+    crypto.timingSafeEqual(pwdBuf, expBuf);
+
+  if (!valid) {
+    // Fixed delay to slow brute-force
+    await new Promise(r => setTimeout(r, 500));
     return NextResponse.json({ error: "Wrong password" }, { status: 401 });
   }
 
   const secret = process.env.NEXTAUTH_SECRET!;
   const token = await deriveToken(secret);
 
-  const from = req.nextUrl.searchParams.get("from") ?? "/dashboard";
+  // Validate redirect target — only allow same-origin paths
+  const raw = req.nextUrl.searchParams.get("from") ?? "/dashboard";
+  const from = raw.startsWith("/") && !raw.startsWith("//") ? raw : "/dashboard";
   const res = NextResponse.redirect(new URL(from, req.url));
   res.cookies.set(AUTH_COOKIE, token, {
     httpOnly: true,
