@@ -4,7 +4,7 @@ const SCHEDULE = [
   { emoji: "🐦", job: "Tweets",        freq: "4×/day",   times: "7:30 · 12:30 · 18:30 · 21:30 IST", note: "AI-written, approval-gated" },
   { emoji: "🧵", job: "Threads",       freq: "2×/week",  times: "Mon & Thu · 14:30 IST",            note: "Long-form, approval-gated" },
   { emoji: "⚡", job: "Engagement",    freq: "96×/day",  times: "Every 15 min · 24/7",              note: "Likes + replies, traction ≥5" },
-  { emoji: "🤝", job: "Follow",        freq: "3×/day",   times: "9:30 · 15:30 · 20:30 IST",         note: "Niche accounts only" },
+  { emoji: "🤝", job: "Follow",        freq: "1×/day",   times: "10:30 IST",                        note: "3 verified + 2 engaged accounts" },
   { emoji: "💬", job: "Mentions",      freq: "96×/day",  times: "Every 15 min",                     note: "Auto-replies to all @mentions" },
   { emoji: "💼", job: "LinkedIn",      freq: "4×/week",  times: "Tue–Fri · 8:30 IST",               note: "Original thought leadership" },
   { emoji: "🔁", job: "Resurface",     freq: "1×/day",   times: "10:30 IST",                        note: "Quote-tweet top old content" },
@@ -207,12 +207,15 @@ export default function LandingPage() {
               <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
               GitHub
             </a>
-            <a
-              href="/login"
-              className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-sm font-bold rounded-xl transition-colors shadow-sm shadow-red-900/40"
-            >
-              Open Dashboard →
-            </a>
+            <div className="flex flex-col items-center gap-0.5">
+              <a
+                href="/login"
+                className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-sm font-bold rounded-xl transition-colors shadow-sm shadow-red-900/40"
+              >
+                Open Dashboard →
+              </a>
+              <span className="text-[10px] text-white/25 font-medium">Admin access only</span>
+            </div>
           </div>
         </div>
       </nav>
@@ -252,13 +255,16 @@ export default function LandingPage() {
           ))}
         </div>
 
-        <a
-          href="/login"
-          className="inline-flex items-center gap-2 px-8 py-4 bg-red-600 hover:bg-red-500 text-white font-bold text-base rounded-2xl transition-all shadow-xl shadow-red-900/30 hover:shadow-red-900/50 hover:scale-[1.02] active:scale-[0.98]"
-        >
-          Open your dashboard
-          <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd"/></svg>
-        </a>
+        <div className="flex flex-col items-center gap-2">
+          <a
+            href="/login"
+            className="inline-flex items-center gap-2 px-8 py-4 bg-red-600 hover:bg-red-500 text-white font-bold text-base rounded-2xl transition-all shadow-xl shadow-red-900/30 hover:shadow-red-900/50 hover:scale-[1.02] active:scale-[0.98]"
+          >
+            Open your dashboard
+            <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd"/></svg>
+          </a>
+          <p className="text-xs text-white/30 font-medium">Admin access only</p>
+        </div>
       </section>
 
       {/* ── DASHBOARD PREVIEW ── */}
@@ -372,12 +378,15 @@ export default function LandingPage() {
               Fork the repo, set your env vars, and your personal brand runs itself from day one.
             </p>
             <div className="flex flex-wrap justify-center gap-3">
-              <a
-                href="/login"
-                className="px-8 py-4 bg-red-600 hover:bg-red-500 text-white font-bold rounded-2xl transition-all shadow-xl shadow-red-900/30 hover:scale-[1.02] active:scale-[0.98]"
-              >
-                Open Dashboard →
-              </a>
+              <div className="flex flex-col items-center gap-1.5">
+                <a
+                  href="/login"
+                  className="px-8 py-4 bg-red-600 hover:bg-red-500 text-white font-bold rounded-2xl transition-all shadow-xl shadow-red-900/30 hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  Open Dashboard →
+                </a>
+                <span className="text-xs text-white/30 font-medium">Admin access only</span>
+              </div>
               <a
                 href="https://github.com/Bigreddroid/Phantom-v1"
                 target="_blank" rel="noreferrer"
