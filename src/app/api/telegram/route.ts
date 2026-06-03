@@ -60,7 +60,7 @@ async function postQueueItem(item: { id: string; type: string; content: string; 
   }
   await prisma.queueItem.update({ where: { id: item.id }, data: { status: "POSTED" } });
   await prisma.activity.create({
-    data: { action: `${item.type} approved & posted`, detail: item.content.slice(0, 80), icon: "✅" },
+    data: { action: `${item.type} approved & posted`, detail: item.content.slice(0, 250), icon: "✅" },
   });
 }
 
@@ -389,6 +389,57 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // ── Mention reply callbacks ───────────────────────────────────────────────
+    if (action === "reply_mention") {
+      const item = await prisma.queueItem.findUnique({ where: { id: param } });
+      if (!item || item.status !== "PENDING") {
+        await send(chatId, "⚠️ Mention already handled.");
+        return NextResponse.json({ ok: true });
+      }
+      await send(chatId, "💬 Generating reply...");
+      try {
+        const meta = (item.metadata as Record<string, unknown>) ?? {};
+        const reply = await generateReply(item.content, String(meta.authorUsername || "user"));
+        await replyToTweet(String(meta.tweetId), reply);
+        await prisma.queueItem.update({ where: { id: param }, data: { status: "POSTED" } });
+        await prisma.activity.create({
+          data: { action: "Replied to mention", detail: `mid:${meta.tweetId}|${reply.slice(0, 70)}`, icon: "💬" },
+        });
+        await send(chatId,
+          `✅ *Reply sent!*\n\n` +
+          `_They said:_ "${item.content.slice(0, 150)}"\n\n` +
+          `↩ ${reply}`
+        );
+      } catch (e) {
+        await send(chatId, `❌ Failed: ${String(e).slice(0, 120)}`);
+      }
+    }
+
+    if (action === "custom_mention") {
+      const item = await prisma.queueItem.findUnique({ where: { id: param } });
+      if (!item || item.status !== "PENDING") {
+        await send(chatId, "⚠️ Mention already handled.");
+        return NextResponse.json({ ok: true });
+      }
+      const existingMeta = (item.metadata as Record<string, unknown>) ?? {};
+      await prisma.queueItem.update({
+        where: { id: param },
+        data: { metadata: { ...existingMeta, awaitingMentionReply: true } },
+      });
+      await send(chatId,
+        `✏️ *Type your reply to @${existingMeta.authorUsername || "them"}:*\n\n_"${item.content.slice(0, 200)}"_`,
+        { reply_markup: { force_reply: true, selective: true } }
+      );
+    }
+
+    if (action === "skip_mention") {
+      await prisma.queueItem.updateMany({
+        where: { id: param, status: "PENDING" },
+        data: { status: "REJECTED" },
+      });
+      await send(chatId, "⏭️ Skipped.");
+    }
+
     if (action === "dm_send") {
       await send(chatId,
         `📨 *Send a DM*\n\nReply with this format:\n\n` +
@@ -434,7 +485,8 @@ export async function POST(req: NextRequest) {
       `/topic <keyword> — engage on a specific topic\n` +
       `/goout — drop comments on 5 tweets (human mode)\n` +
       `/follow [n] — follow + like + reply to n accounts\n` +
-      `/mentions — check & auto-reply to mentions\n` +
+      `/inbox — see unread mentions, reply or skip each one\n` +
+      `/mentions — auto-reply to all mentions instantly\n` +
       `/dm @username [context] — send a personalised cold DM\n\n` +
       `*Dashboard*\n` +
       `/status — live stats (both platforms)\n` +
@@ -1027,22 +1079,96 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // ── Edit response: non-command text sent after tapping Edit ──────────────
+  // ── /inbox — show unread mentions with reply/skip buttons ────────────────
+  else if (cmd === "/inbox") {
+    await send(chatId, "🔍 Fetching unread mentions...");
+    try {
+      const me = await getMyProfile();
+      const mentions = await getMentions(me.id);
+
+      const recentReplied = await prisma.activity.findMany({
+        where: { action: "Replied to mention", createdAt: { gte: new Date(Date.now() - 7 * 86400000) } },
+        select: { detail: true },
+        take: 500,
+      });
+      const repliedIds = new Set(
+        recentReplied.map(a => a.detail?.match(/^mid:(\w+)/)?.[1]).filter(Boolean) as string[]
+      );
+
+      const unread = mentions.filter(m => m.id && !repliedIds.has(m.id)).slice(0, 5);
+
+      if (!unread.length) {
+        await send(chatId, "📭 No new mentions.");
+        return NextResponse.json({ ok: true });
+      }
+
+      await send(chatId, `📬 *${unread.length} unread mention${unread.length > 1 ? "s" : ""}* — tap to reply or skip each one:`);
+
+      for (const mention of unread) {
+        // Reuse existing queue item if already created for this mention
+        const existing = await prisma.queueItem.findFirst({
+          where: { type: "Mention", status: "PENDING", metadata: { path: ["tweetId"], equals: mention.id } },
+        });
+        const item = existing ?? await prisma.queueItem.create({
+          data: {
+            type: "Mention",
+            content: mention.text,
+            metadata: { tweetId: mention.id, authorUsername: mention.author_username, authorId: mention.author_id },
+          },
+        });
+
+        await send(chatId,
+          `💬 *@${mention.author_username || mention.author_id}:*\n\n_"${mention.text.slice(0, 280)}"_`,
+          {
+            reply_markup: {
+              inline_keyboard: [[
+                { text: "🤖 Auto-reply", callback_data: `reply_mention:${item.id}` },
+                { text: "✏️ Custom",     callback_data: `custom_mention:${item.id}` },
+                { text: "❌ Skip",       callback_data: `skip_mention:${item.id}` },
+              ]],
+            },
+          }
+        );
+      }
+    } catch (e) {
+      await send(chatId, `❌ Error: ${String(e).slice(0, 100)}`);
+    }
+  }
+
+  // ── Edit response / custom mention reply: non-command text ───────────────
   else if (!cmd.startsWith("/")) {
+    // Priority 1: pending tweet edit
     const pendingEdit = await prisma.queueItem.findFirst({
-      where: {
-        status: "PENDING",
-        metadata: { path: ["awaitingEdit"], equals: true },
-      },
+      where: { status: "PENDING", metadata: { path: ["awaitingEdit"], equals: true } },
     });
     if (pendingEdit) {
       await send(chatId, "⚡ Posting your edited version...");
       try {
         await postQueueItem({ ...pendingEdit, content: raw });
         await prisma.activity.create({
-          data: { action: "Edited content posted", detail: raw.slice(0, 80), icon: "✏️" },
+          data: { action: "Edited content posted", detail: raw.slice(0, 250), icon: "✏️" },
         });
         await send(chatId, `✅ *Edited version posted!*\n\n${raw.slice(0, 280)}`);
+      } catch (e) {
+        await send(chatId, `❌ Failed: ${String(e).slice(0, 120)}`);
+      }
+      return NextResponse.json({ ok: true });
+    }
+
+    // Priority 2: pending custom mention reply
+    const pendingMentionReply = await prisma.queueItem.findFirst({
+      where: { type: "Mention", status: "PENDING", metadata: { path: ["awaitingMentionReply"], equals: true } },
+    });
+    if (pendingMentionReply) {
+      const meta = (pendingMentionReply.metadata as Record<string, unknown>) ?? {};
+      await send(chatId, "⚡ Sending your reply...");
+      try {
+        await replyToTweet(String(meta.tweetId), raw);
+        await prisma.queueItem.update({ where: { id: pendingMentionReply.id }, data: { status: "POSTED" } });
+        await prisma.activity.create({
+          data: { action: "Replied to mention", detail: `mid:${meta.tweetId}|${raw.slice(0, 70)}`, icon: "💬" },
+        });
+        await send(chatId, `✅ *Reply sent!*\n\n↩ ${raw.slice(0, 280)}`);
       } catch (e) {
         await send(chatId, `❌ Failed: ${String(e).slice(0, 120)}`);
       }

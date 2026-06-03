@@ -43,7 +43,7 @@ async function generate(prompt: string, system: string, maxTokens: number): Prom
 
 export async function generateTweet(topic: string, context?: string, recentTweets?: string[]) {
   const avoidBlock = recentTweets?.length
-    ? `\n\nDo NOT repeat or rephrase any of these recently posted tweets:\n${recentTweets.map((t, i) => `${i + 1}. ${t}`).join("\n")}`
+    ? `\n\nSTRICTLY FORBIDDEN — these have already been posted. Do not repeat the topic, angle, phrasing, or structure of ANY of these:\n${recentTweets.map((t, i) => `${i + 1}. ${t}`).join("\n")}\n\nIf you find yourself writing anything similar to the above, stop and pick a completely different angle.`
     : "";
   return generate(
     `Write a single tweet about: ${topic}${context ? `\n\nContext: ${context}` : ""}${avoidBlock}
@@ -54,7 +54,7 @@ Rules:
 - No hashtags unless they add real value
 - No generic opener like "Hot take:" or "Thread:"
 - Sound like a real builder's thought, not a marketing post
-- Must be meaningfully different from any tweets listed above`,
+- Every tweet must cover a different angle than what's been posted before`,
     VOICE_SYSTEM_PROMPT,
     300
   );
@@ -79,9 +79,10 @@ export async function generateReply(mentionText: string, authorUsername: string)
 
 Write a reply. Be genuine, add value or continue the conversation.
 If their tweet is about building, AI, automation, personal brand, or tools — naturally reference what you're building (Phantom, BigRedDroid, Project Z). Keep it organic, not a pitch.
-Under 280 characters. Don't start with their name.`,
+Under 260 characters. Don't start with their name.
+CRITICAL: Write the complete reply — never cut off mid-sentence. Plan it to fit before writing.`,
     VOICE_SYSTEM_PROMPT,
-    200
+    300
   );
 }
 
@@ -89,11 +90,11 @@ export async function generateGoOutComment(tweetText: string) {
   return generate(
     `Someone tweeted: "${tweetText}"
 
-Write a short reply. Max 180 characters.
+Write a short reply. Hard limit: 200 characters. Write the COMPLETE thought — never cut off mid-sentence.
 Can be a quick take, a mild disagreement, a punchy question, or a dry observation.
 Don't start with "I" or their handle. No flattery. No "great point". No corporate-speak.
 If you disagree slightly, say so. If it's obvious, point that out.
-One or two sentences max.
+One or two SHORT sentences max — plan the whole reply before writing it so it fits.
 
 If the tweet is about: AI tools, automation, building in public, personal branding, X/Twitter growth, content creation, solopreneur life, or "what are you building" — weave in what you're building naturally. Examples:
 - "Built Phantom for this exact problem — automates my whole X presence, zero manual effort"
@@ -104,8 +105,9 @@ Only do this if it fits naturally. If the tweet is unrelated, just give a good t
 You're building BigRedDroid — a solo deep-tech systems lab. Current flagship: Phantom (AI personal brand automation for X) and Project Z (92 AI products).
 Confident, occasionally dry, a little cocky — but not mean.
 You reply like you actually have something to say, not like you're trying to network.
-Never sycophantic. Sounds real, not polished. Not spammy.`,
-    180
+Never sycophantic. Sounds real, not polished. Not spammy.
+CRITICAL: Always write complete sentences. Never trail off. If 2 sentences don't fit in 200 chars, write 1 great sentence.`,
+    280
   );
 }
 

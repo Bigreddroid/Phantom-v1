@@ -29,14 +29,24 @@ export async function GET(req: Request) {
       return NextResponse.json({ skipped: true, reason: "queue backed up" });
     }
 
-    // Fetch last 15 posted tweets to avoid repeating content
-    const recent = await prisma.activity.findMany({
-      where: { action: { contains: "Tweet posted" } },
-      orderBy: { createdAt: "desc" },
-      take: 15,
-      select: { detail: true },
-    });
-    const recentTweets = recent.map(r => r.detail).filter(Boolean) as string[];
+    // Fetch last 30 posted tweets (full content) + pending queue to avoid any repetition
+    const [recentActivity, pendingQueue] = await Promise.all([
+      prisma.activity.findMany({
+        where: { action: { contains: "approved & posted" } },
+        orderBy: { createdAt: "desc" },
+        take: 30,
+        select: { detail: true },
+      }),
+      prisma.queueItem.findMany({
+        where: { status: "PENDING", type: { in: ["Tweet", "Thread"] } },
+        select: { content: true },
+        take: 10,
+      }),
+    ]);
+    const recentTweets = [
+      ...recentActivity.map(r => r.detail).filter(Boolean) as string[],
+      ...pendingQueue.map(q => q.content),
+    ];
 
     // 50% chance: post a Phantom/BigRedDroid build update; 50%: regular content pillar tweet
     let content: string;
