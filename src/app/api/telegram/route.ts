@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+
+export const maxDuration = 60;
 import { prisma } from "@/lib/db";
 import { postTweet, postTweetWithImage, postThread, quoteTweet, replyToTweet } from "@/lib/x/post";
 import { generateTweet, generateThread, generateDM, generateQuoteTweet, generateLinkedInPost, generateReply } from "@/lib/claude/generate";
@@ -65,6 +67,7 @@ async function postQueueItem(item: { id: string; type: string; content: string; 
 }
 
 export async function POST(req: NextRequest) {
+  try {
   // Verify Telegram webhook secret — only reject if BOTH a secret is configured
   // AND Telegram sent a non-empty header that doesn't match (prevents lockout when
   // webhook was registered without a secret but env var still has an old value).
@@ -1216,4 +1219,16 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ ok: true });
+  } catch (e) {
+    // Surface any uncaught handler error back to the user in Telegram
+    const chatId = process.env.TELEGRAM_CHAT_ID ?? "";
+    if (chatId) {
+      await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: chatId, text: `⚠️ Bot error: ${String(e).slice(0, 200)}` }),
+      }).catch(() => null);
+    }
+    return NextResponse.json({ ok: true });
+  }
 }
