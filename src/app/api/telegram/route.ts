@@ -799,29 +799,18 @@ export async function POST(req: NextRequest) {
 
   // ── /follow [n] ───────────────────────────────────────────────────────────
   else if (cmd === "/follow") {
-    const count = Math.min(parseInt(args || "5", 10) || 5, 20);
-    await send(chatId, `🤝 Following ${count} niche accounts (like + reply included)...`);
-    try {
-      const res = await cronFetch(`/api/jobs/follow`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ count }),
-      });
-      const r = await res.json();
-      if (!res.ok || r.error) {
-        await send(chatId, `❌ Follow failed: ${r.error ?? "Unknown error"}`);
-      } else {
-        await send(chatId,
-          `✅ *Follow run done*\n\n` +
-          `👤 Followed: *${r.followed}*\n` +
-          `❤️ Liked: *${r.liked}*\n` +
-          `💬 Replied: *${r.replied}*\n\n` +
-          `_Each reply also sent to this chat._`
-        );
-      }
-    } catch (e) {
-      await send(chatId, `❌ Error: ${String(e).slice(0, 100)}`);
-    }
+    const count = Math.min(parseInt(args || "3", 10) || 3, 5);
+    // Fire-and-forget — follow takes 40-60s due to human-paced delays.
+    // Respond immediately; the job sends its own Telegram notification when done.
+    cronFetch(`/api/jobs/follow`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ count }),
+    }).catch(() => null);
+    await send(chatId,
+      `🤝 *Follow run started* — following up to ${count} accounts.\n\n` +
+      `_Takes ~1 min (human-paced delays). You'll get a report when it's done._`
+    );
   }
 
   // ── /mentions ─────────────────────────────────────────────────────────────

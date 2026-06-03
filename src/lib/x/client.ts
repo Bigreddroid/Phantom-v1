@@ -121,11 +121,35 @@ export { ConvoSearchMode };
 export async function getConvoScraper(): Promise<ConvoScraper> {
   if (_convoScraper) return _convoScraper;
   const s = new ConvoScraper();
+
+  // Priority 1: X_COOKIES env var
+  let cookieStrings: string[] | null = null;
   if (process.env.X_COOKIES) {
-    const raw: string[] = JSON.parse(process.env.X_COOKIES);
-    const normalized = raw.map(c => c.replace(/Domain=\.?twitter\.com/gi, "Domain=.x.com"));
-    await s.setCookies(normalized);
+    cookieStrings = JSON.parse(process.env.X_COOKIES);
+  } else {
+    // Priority 2: XSession DB (same session that getXClient() creates/uses)
+    const session = await prisma.xSession.findUnique({ where: { id: "singleton" } });
+    if (session?.cookies) cookieStrings = JSON.parse(session.cookies);
   }
+
+  if (cookieStrings?.length) {
+    const normalized = cookieStrings.map(c =>
+      c.replace(/Domain=\.?twitter\.com/gi, "Domain=.x.com")
+    );
+    await s.setCookies(normalized);
+  } else {
+    // No cookies at all — prime getXClient() so it logs in and stores the session,
+    // then retry with the freshly saved cookies.
+    await getXClient();
+    const session = await prisma.xSession.findUnique({ where: { id: "singleton" } });
+    if (session?.cookies) {
+      const normalized = (JSON.parse(session.cookies) as string[]).map(c =>
+        c.replace(/Domain=\.?twitter\.com/gi, "Domain=.x.com")
+      );
+      await s.setCookies(normalized);
+    }
+  }
+
   _convoScraper = s;
   return s;
 }
