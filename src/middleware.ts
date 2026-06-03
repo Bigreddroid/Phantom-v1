@@ -21,20 +21,13 @@ async function deriveToken(secret: string): Promise<string> {
     .join("");
 }
 
-const PROTECTED = [
-  "/dashboard",
-  "/api/queue",
-  "/api/stats",
-  "/api/activity",
-  "/api/jobs",
-  "/api/setup",
-];
+const PUBLIC = ["/login", "/api/auth/login"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  const needsAuth = PROTECTED.some(p => pathname === p || pathname.startsWith(p + "/") || pathname.startsWith(p + "?"));
-  if (!needsAuth) return NextResponse.next();
+  const isPublic = PUBLIC.some(p => pathname === p || pathname.startsWith(p + "/") || pathname.startsWith(p + "?"));
+  if (isPublic) return NextResponse.next();
 
   const secret = process.env.NEXTAUTH_SECRET;
   if (!secret) return NextResponse.next();
