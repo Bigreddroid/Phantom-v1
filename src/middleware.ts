@@ -21,24 +21,23 @@ async function deriveToken(secret: string): Promise<string> {
     .join("");
 }
 
+const PROTECTED = [
+  "/dashboard",
+  "/api/queue",
+  "/api/stats",
+  "/api/activity",
+  "/api/jobs",
+  "/api/setup",
+];
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // These routes are called by external services with their own auth
-  if (
-    pathname.startsWith("/login") ||
-    pathname.startsWith("/api/auth/login") ||
-    pathname.startsWith("/api/telegram") ||
-    pathname.startsWith("/api/cron") ||
-    pathname.startsWith("/api/webhook") ||
-    pathname.startsWith("/_next") ||
-    pathname.startsWith("/favicon")
-  ) {
-    return NextResponse.next();
-  }
+  const needsAuth = PROTECTED.some(p => pathname === p || pathname.startsWith(p + "/") || pathname.startsWith(p + "?"));
+  if (!needsAuth) return NextResponse.next();
 
   const secret = process.env.NEXTAUTH_SECRET;
-  if (!secret) return NextResponse.next(); // misconfigured — fail open
+  if (!secret) return NextResponse.next();
 
   const expected = await deriveToken(secret);
   const token = request.cookies.get(AUTH_COOKIE)?.value;

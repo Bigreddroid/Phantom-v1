@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
   const secret = process.env.NEXTAUTH_SECRET!;
   const token = await deriveToken(secret);
 
-  const from = req.nextUrl.searchParams.get("from") ?? "/";
+  const from = req.nextUrl.searchParams.get("from") ?? "/dashboard";
   const res = NextResponse.redirect(new URL(from, req.url));
   res.cookies.set(AUTH_COOKIE, token, {
     httpOnly: true,
