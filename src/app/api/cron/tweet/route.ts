@@ -40,7 +40,9 @@ export async function GET(req: Request) {
 
     const pillar = CONTENT_TOPICS[Math.floor(Math.random() * CONTENT_TOPICS.length)];
     const content = await generateTweet(pillar, undefined, recentTweets);
-    const withImage = Math.random() < 0.3;
+    // Dispatch passes ?image=true|false to signal content type; fallback to 30% chance
+    const imageParam = new URL(req.url).searchParams.get("image");
+    const withImage = imageParam === "true" ? true : imageParam === "false" ? false : Math.random() < 0.3;
 
     const item = await prisma.queueItem.create({
       data: { type: "Tweet", content, metadata: { withImage, cron: true } },
