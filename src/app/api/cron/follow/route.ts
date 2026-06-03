@@ -22,42 +22,58 @@ export async function GET(req: Request) {
     const me = await getMyProfile();
     const keyword = NICHE_KEYWORDS[Math.floor(Math.random() * NICHE_KEYWORDS.length)];
 
-    // 10:1 verified:non-verified ratio
-    const verifiedTweets = await searchTweets(`${keyword} -is:retweet lang:en is:verified`, 10);
-    const normalTweets = await searchTweets(`${keyword} -is:retweet lang:en -is:verified`, 10);
-    const tweets = [
-      ...verifiedTweets,
-      ...normalTweets.slice(0, Math.max(1, Math.floor(verifiedTweets.length / 10))),
-    ];
+    // Load accounts followed in the last 24h to avoid re-following
+    const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const recentFollows = await prisma.activity.findMany({
+      where: { action: "Followed", createdAt: { gte: since24h } },
+      select: { detail: true },
+    });
+    const recentlyFollowed = new Set(recentFollows.map((a) => a.detail ?? ""));
 
+    // Only verified — reduces automation signal vs scraping normal accounts
+    const verifiedTweets = await searchTweets(`${keyword} -is:retweet lang:en is:verified`, 15);
+    const tweets = verifiedTweets;
+
+    // Hard cap: max 3 follows per cron run to stay well under X's limits
+    const MAX_FOLLOWS = 3;
     let followed = 0, liked = 0, replied = 0;
     const seen = new Set<string>();
 
     for (const tweet of tweets) {
+      if (followed >= MAX_FOLLOWS) break;
       if (!tweet.author_id || tweet.author_id === me.id || seen.has(tweet.author_id) || isBlocked(tweet.author_id, tweet.author_username)) continue;
+      if (recentlyFollowed.has(tweet.author_username ?? tweet.author_id)) continue;
       seen.add(tweet.author_id);
 
-      try { await followUser(tweet.author_id, me.id); followed++; } catch { /* already following */ }
-      await randomDelay(1000, 2500);
+      try {
+        await followUser(tweet.author_id, me.id);
+        followed++;
+        // Record follow with username for 24h dedup
+        await prisma.activity.create({
+          data: { action: "Followed", detail: tweet.author_username ?? tweet.author_id, icon: "👤" },
+        });
+      } catch { /* already following or rate limited */ }
+      // 8-18s human-paced delay between follows
+      await randomDelay(8000, 18000);
 
       try { await likeTweet(tweet.id, me.id); liked++; } catch { /* skip */ }
-      await randomDelay(500, 1500);
+      await randomDelay(3000, 7000);
 
-      // Reply to ~40% of followed accounts
-      if (Math.random() < 0.4) {
+      // Reply to ~30% of followed accounts
+      if (Math.random() < 0.3) {
         try {
           const reply = await generateReply(tweet.text, tweet.author_username || tweet.author_id);
           await replyToTweet(tweet.id, reply);
           replied++;
           await prisma.activity.create({
-            data: { action: "Replied to new follow", detail: reply.slice(0, 80), icon: "💬" },
+            data: { action: "Replied to new follow", detail: reply.slice(0, 250), icon: "💬" },
           });
           await sendMessage(
             `💬 *Commented on new follow*\n\n` +
             `_Their tweet:_ "${tweet.text.slice(0, 100)}"\n\n` +
             `*Reply:* ${reply.slice(0, 200)}`
           );
-          await randomDelay(2000, 4000);
+          await randomDelay(5000, 12000);
         } catch { /* skip */ }
       }
     }

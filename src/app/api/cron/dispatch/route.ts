@@ -71,8 +71,8 @@ export async function GET(req: Request) {
     jobs.push(hit("/api/cron/thread")); fired.push("bonus-thread");
   }
 
-  // ── Follow — 9:30, 15:30, 20:30 IST ────────────────────────────────────────
-  if (at(9, 28) || at(15, 28) || at(20, 28)) {
+  // ── Follow — 1×/day at 10:30 IST (rate-limit safe: max 3 follows per run)
+  if (at(10, 28)) {
     jobs.push(hit("/api/cron/follow")); fired.push("follow");
   }
 
