@@ -36,7 +36,24 @@ export async function POST() {
       return NextResponse.json({ ok: false, reason: "No tweets older than 7 days found" });
     }
 
-    const tweet = oldTweets[Math.floor(Math.random() * oldTweets.length)];
+    // Skip tweets already resurface-queued in the last 30 days
+    const recentlySurfaced = await prisma.queueItem.findMany({
+      where: {
+        type: "Resurface",
+        createdAt: { gte: new Date(Date.now() - 30 * 86400000) },
+        status: { not: "REJECTED" },
+      },
+      select: { metadata: true },
+    });
+    const surfacedIds = new Set(
+      recentlySurfaced.map(r => (r.metadata as Record<string, string> | null)?.tweetId).filter(Boolean) as string[]
+    );
+    const freshTweets = oldTweets.filter(t => !surfacedIds.has(t.id));
+    if (!freshTweets.length) {
+      return NextResponse.json({ ok: false, reason: "All old tweets already resurfaced recently" });
+    }
+
+    const tweet = freshTweets[Math.floor(Math.random() * freshTweets.length)];
 
     const item = await prisma.queueItem.create({
       data: {

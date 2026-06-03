@@ -15,12 +15,23 @@ export async function POST() {
     const keyword = NICHE_KEYWORDS[Math.floor(Math.random() * NICHE_KEYWORDS.length)];
     const tweets = await searchTweets(`${keyword} -is:retweet lang:en`, 10);
 
+    // Load tweet IDs already commented on in the last 48h
+    const recentGoout = await prisma.activity.findMany({
+      where: { action: "Go-out comment", createdAt: { gte: new Date(Date.now() - 48 * 3600000) } },
+      select: { detail: true },
+      take: 200,
+    });
+    const gooutIds = new Set(
+      recentGoout.map(a => a.detail?.match(/^tid:(\w+)/)?.[1]).filter(Boolean) as string[]
+    );
+
     const comments: Array<{ original: string; reply: string }> = [];
     const errors: string[] = [];
     const seen = new Set<string>();
 
     for (const tweet of tweets.slice(0, 5)) {
       if (!tweet.author_id || tweet.author_id === me.id || seen.has(tweet.author_id) || isBlocked(tweet.author_id, tweet.author_username)) continue;
+      if (gooutIds.has(tweet.id)) continue; // already commented on this tweet
       seen.add(tweet.author_id);
 
       try {
@@ -32,7 +43,7 @@ export async function POST() {
         comments.push({ original: tweet.text.slice(0, 100), reply });
 
         await prisma.activity.create({
-          data: { action: "Go-out comment", detail: reply.slice(0, 80), icon: "🗣️" },
+          data: { action: "Go-out comment", detail: `tid:${tweet.id}|${reply.slice(0, 70)}`, icon: "🗣️" },
         });
         await sendMessage(
           `🗣️ *Dropped a comment*\n\n` +

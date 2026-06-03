@@ -44,8 +44,25 @@ export async function GET(req: Request) {
       return NextResponse.json({ skipped: true, reason: "no high-traction candidates" });
     }
 
+    // Skip tweets already queued in the last 7 days
+    const recentNicheRt = await prisma.queueItem.findMany({
+      where: {
+        type: "NicheRT",
+        createdAt: { gte: new Date(Date.now() - 7 * 86400000) },
+        status: { not: "REJECTED" },
+      },
+      select: { metadata: true },
+    });
+    const recentNicheIds = new Set(
+      recentNicheRt.map(r => (r.metadata as Record<string, string> | null)?.tweetId).filter(Boolean) as string[]
+    );
+    const freshCandidates = scored.filter(t => !recentNicheIds.has(t.id));
+    if (!freshCandidates.length) {
+      return NextResponse.json({ skipped: true, reason: "all top candidates already queued recently" });
+    }
+
     // Pick randomly from top 3 so it's not always the same viral post
-    const tweet = scored[Math.floor(Math.random() * Math.min(scored.length, 3))];
+    const tweet = freshCandidates[Math.floor(Math.random() * Math.min(freshCandidates.length, 3))];
     const stats = `❤️ ${tweet.public_metrics?.like_count ?? 0} · 🔁 ${tweet.public_metrics?.retweet_count ?? 0}`;
 
     const item = await prisma.queueItem.create({

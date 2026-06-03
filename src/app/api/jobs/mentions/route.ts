@@ -18,9 +18,20 @@ export async function POST() {
       return NextResponse.json({ ok: true, mentions: 0 });
     }
 
+    // Load mention IDs already replied to in the last 7 days — prevents re-replying on every run
+    const recentReplied = await prisma.activity.findMany({
+      where: { action: "Replied to mention", createdAt: { gte: new Date(Date.now() - 7 * 86400000) } },
+      select: { detail: true },
+      take: 500,
+    });
+    const repliedMentionIds = new Set(
+      recentReplied.map(a => a.detail?.match(/^mid:(\w+)/)?.[1]).filter(Boolean) as string[]
+    );
+
     let replied = 0;
     for (const mention of mentions) {
       if (isBlocked(mention.author_id)) continue;
+      if (repliedMentionIds.has(mention.id)) continue; // already replied
       await humanPause();
 
       try {
@@ -29,7 +40,7 @@ export async function POST() {
         replied++;
 
         await prisma.activity.create({
-          data: { action: "Replied to mention", detail: reply.slice(0, 80), icon: "💬" },
+          data: { action: "Replied to mention", detail: `mid:${mention.id}|${reply.slice(0, 70)}`, icon: "💬" },
         });
         await sendMessage(
           `💬 *Replied to mention on X*\n\n` +
