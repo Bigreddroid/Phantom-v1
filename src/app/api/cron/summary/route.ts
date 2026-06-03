@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { xClient } from "@/lib/x/client";
+import { getMyProfile } from "@/lib/x/engage";
 import { prisma } from "@/lib/db";
 import { notifyDailySummary, notifyMilestone } from "@/lib/telegram/notify";
 
@@ -11,8 +11,9 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const me = await xClient.v2.me({ "user.fields": ["public_metrics"] });
-  const m = { followers_count: 0, tweet_count: 0, ...me.data.public_metrics };
+  const me = await getMyProfile();
+  const pm = me.public_metrics;
+  const m = { followers_count: pm?.followers_count ?? 0, tweet_count: pm?.tweet_count ?? 0 };
   const currentFollowers = m.followers_count;
 
   const since = new Date(Date.now() - 86400000); // last 24h
@@ -48,7 +49,7 @@ export async function GET(req: Request) {
 
   // Check milestones
   for (const ms of MILESTONES) {
-    if (m.followers_count >= ms) {
+    if ((m.followers_count ?? 0) >= ms) {
       const key = `milestone_${ms}`;
       const hit = await prisma.activity.findFirst({ where: { action: key } });
       if (!hit) {

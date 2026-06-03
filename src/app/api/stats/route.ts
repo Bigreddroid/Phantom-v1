@@ -1,17 +1,17 @@
 import { NextResponse } from "next/server";
-import { xClient } from "@/lib/x/client";
+import { getMyProfile } from "@/lib/x/engage";
 import { prisma } from "@/lib/db";
 import { getLinkedInAuth } from "@/lib/linkedin/client";
 
 export async function GET() {
   try {
     const [me, statsRow, liAuth] = await Promise.all([
-      xClient.v2.me({ "user.fields": ["public_metrics"] }),
+      getMyProfile(),
       prisma.stats.findUnique({ where: { id: "singleton" } }),
       getLinkedInAuth(),
     ]);
 
-    const m = me.data.public_metrics ?? { followers_count: 0, following_count: 0, tweet_count: 0 };
+    const m = me.public_metrics ?? { followers_count: 0, following_count: 0, tweet_count: 0 };
 
     const [dmsSent, liPostsCount, engagements] = await Promise.all([
       prisma.activity.count({ where: { action: { contains: "DM" } } }),

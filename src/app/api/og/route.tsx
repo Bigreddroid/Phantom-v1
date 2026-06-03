@@ -5,41 +5,136 @@ export const runtime = "edge";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
-  const text = searchParams.get("text") ?? "Building in public.";
+  const raw = searchParams.get("text") ?? "Building in public.";
+  // Strip trailing hashtags — they clutter the image
+  const text = raw.replace(/(#\w+\s*)+$/, "").trim();
+
+  const len = text.length;
+  const fontSize = len < 80 ? 58 : len < 140 ? 50 : len < 220 ? 42 : 36;
 
   return new ImageResponse(
     (
       <div
         style={{
-          background: "linear-gradient(135deg, #000000 0%, #0d0d0d 60%, #111827 100%)",
+          background: "#0a0a0a",
           width: "100%",
           height: "100%",
           display: "flex",
           flexDirection: "column",
-          padding: "64px 80px 56px",
+          position: "relative",
+          overflow: "hidden",
           fontFamily: "sans-serif",
         }}
       >
-        {/* Accent bar */}
-        <div style={{ display: "flex", marginBottom: 40 }}>
-          <div style={{ width: 48, height: 4, background: "#1d9bf0", borderRadius: 2 }} />
-        </div>
-
-        {/* Tweet text */}
+        {/* Red glow — top-left corner */}
         <div
           style={{
-            color: "#ffffff",
-            fontSize: 46,
-            fontWeight: 700,
-            lineHeight: 1.35,
-            flex: 1,
-            wordBreak: "break-word",
-            width: "100%",
+            position: "absolute",
+            top: -160,
+            left: -160,
+            width: 520,
+            height: 520,
+            borderRadius: "50%",
+            background:
+              "radial-gradient(circle, rgba(220,38,38,0.22) 0%, rgba(220,38,38,0.05) 50%, transparent 70%)",
             display: "flex",
-            alignItems: "center",
+          }}
+        />
+
+        {/* Subtle bottom-right glow */}
+        <div
+          style={{
+            position: "absolute",
+            bottom: -120,
+            right: -120,
+            width: 380,
+            height: 380,
+            borderRadius: "50%",
+            background:
+              "radial-gradient(circle, rgba(220,38,38,0.10) 0%, transparent 65%)",
+            display: "flex",
+          }}
+        />
+
+        {/* Top accent bar — red gradient */}
+        <div
+          style={{
+            height: 3,
+            background:
+              "linear-gradient(90deg, #dc2626 0%, #b91c1c 40%, rgba(185,28,28,0.3) 80%, transparent 100%)",
+            display: "flex",
+          }}
+        />
+
+        {/* Main content */}
+        <div
+          style={{
+            flex: 1,
+            padding: "52px 80px 36px",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
           }}
         >
-          {text}
+          {/* Left red accent + quote text */}
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "row",
+              alignItems: "stretch",
+              gap: 32,
+            }}
+          >
+            {/* Red left bar */}
+            <div
+              style={{
+                width: 4,
+                borderRadius: 2,
+                background:
+                  "linear-gradient(180deg, #dc2626 0%, #7f1d1d 100%)",
+                display: "flex",
+                flexShrink: 0,
+              }}
+            />
+
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                flex: 1,
+                gap: 0,
+              }}
+            >
+              {/* Opening quote mark */}
+              <div
+                style={{
+                  color: "#dc2626",
+                  fontSize: 72,
+                  fontWeight: 900,
+                  lineHeight: 0.6,
+                  marginBottom: 20,
+                  opacity: 0.7,
+                  display: "flex",
+                }}
+              >
+                "
+              </div>
+
+              {/* Tweet text */}
+              <div
+                style={{
+                  color: "#f9fafb",
+                  fontSize,
+                  fontWeight: 700,
+                  lineHeight: 1.45,
+                  letterSpacing: -0.5,
+                  display: "flex",
+                }}
+              >
+                {text}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Bottom bar */}
@@ -47,50 +142,84 @@ export async function GET(req: Request) {
           style={{
             display: "flex",
             alignItems: "center",
-            marginTop: 48,
-            paddingTop: 28,
-            borderTop: "1px solid #1f2937",
-            width: "100%",
+            padding: "22px 80px 28px",
+            borderTop: "1px solid rgba(255,255,255,0.07)",
           }}
         >
-          {/* Avatar */}
+          {/* Avatar circle */}
           <div
             style={{
-              width: 52,
-              height: 52,
+              width: 54,
+              height: 54,
               borderRadius: "50%",
-              background: "linear-gradient(135deg, #1d9bf0 0%, #0052cc 100%)",
+              background:
+                "linear-gradient(135deg, #dc2626 0%, #7f1d1d 100%)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               color: "#fff",
               fontSize: 22,
-              fontWeight: 800,
+              fontWeight: 900,
               marginRight: 16,
               flexShrink: 0,
+              boxShadow: "0 0 16px rgba(220,38,38,0.4)",
             }}
           >
             {DISPLAY_INITIAL}
           </div>
 
-          {/* Handle */}
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            <div style={{ color: "#6b7280", fontSize: 18, lineHeight: 1.2 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <div
+              style={{
+                color: "#f3f4f6",
+                fontSize: 19,
+                fontWeight: 700,
+                display: "flex",
+              }}
+            >
               {X_HANDLE}
+            </div>
+            <div
+              style={{
+                color: "rgba(156,163,175,0.6)",
+                fontSize: 14,
+                display: "flex",
+                letterSpacing: 1,
+              }}
+            >
+              PHANTOM · AI PERSONAL BRAND
             </div>
           </div>
 
-          {/* X logo */}
+          {/* Right: X mark */}
           <div
             style={{
               marginLeft: "auto",
-              color: "#374151",
-              fontSize: 42,
-              fontWeight: 900,
-              letterSpacing: -2,
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
             }}
           >
-            𝕏
+            <div
+              style={{
+                width: 7,
+                height: 7,
+                borderRadius: "50%",
+                background: "#dc2626",
+                display: "flex",
+                boxShadow: "0 0 8px rgba(220,38,38,0.8)",
+              }}
+            />
+            <div
+              style={{
+                color: "rgba(255,255,255,0.25)",
+                fontSize: 36,
+                fontWeight: 900,
+                display: "flex",
+              }}
+            >
+              𝕏
+            </div>
           </div>
         </div>
       </div>

@@ -1,65 +1,116 @@
-import { xRW, xRO } from "./client";
+import { getXClient, getConvoScraper, ConvoSearchMode } from "./client";
 
-export async function likeTweet(tweetId: string, userId: string) {
-  return xRW.v2.like(userId, tweetId);
+export async function likeTweet(tweetId: string, _userId?: string) {
+  const scraper = await getXClient();
+  return scraper.likeTweet(tweetId);
 }
 
-export async function unlikeTweet(tweetId: string, userId: string) {
-  return xRW.v2.unlike(userId, tweetId);
+export async function unlikeTweet(_tweetId: string, _userId?: string) {
+  // Not available in agent-twitter-client — no-op
 }
 
-export async function retweet(tweetId: string, userId: string) {
-  return xRW.v2.retweet(userId, tweetId);
+export async function retweet(tweetId: string, _userId?: string) {
+  const scraper = await getXClient();
+  return scraper.retweet(tweetId);
 }
 
-export async function followUser(targetUserId: string, sourceUserId: string) {
-  return xRW.v2.follow(sourceUserId, targetUserId);
+export async function followUser(targetUsername: string, _sourceUserId?: string) {
+  const scraper = await getXClient();
+  return scraper.followUser(targetUsername);
 }
 
-export async function unfollowUser(targetUserId: string, sourceUserId: string) {
-  return xRW.v2.unfollow(sourceUserId, targetUserId);
-}
-
-export async function getMentions(userId: string, sinceId?: string) {
-  const params: Record<string, unknown> = {
-    max_results: 20,
-    "tweet.fields": ["author_id", "created_at", "text", "conversation_id"],
-    "user.fields": ["username", "name", "public_metrics"],
-    expansions: ["author_id"],
-  };
-  if (sinceId) params.since_id = sinceId;
-
-  const mentions = await xRO.v2.userMentionTimeline(userId, params);
-  return mentions.data?.data ?? [];
+export async function getMentions(_userId?: string, _sinceId?: string) {
+  const s = await getConvoScraper();
+  const username = process.env.X_USERNAME!;
+  const tweets: Awaited<ReturnType<typeof searchTweets>> = [];
+  for await (const t of s.searchTweets(
+    `@${username} -from:${username} -is:retweet`,
+    20,
+    ConvoSearchMode.Latest
+  )) {
+    tweets.push({
+      id: t.id ?? "",
+      text: t.text ?? "",
+      author_id: t.userId ?? "",
+      author_username: t.username ?? "",
+      conversation_id: (t as unknown as Record<string, unknown>).conversationId as string ?? t.id ?? "",
+      public_metrics: { like_count: t.likes ?? 0, retweet_count: t.retweets ?? 0, reply_count: t.replies ?? 0, quote_count: 0 },
+      reply_settings: "everyone",
+    });
+  }
+  return tweets;
 }
 
 export async function searchTweets(query: string, maxResults = 10) {
-  const results = await xRO.v2.search(query, {
-    max_results: maxResults,
-    "tweet.fields": ["author_id", "created_at", "public_metrics", "reply_settings"],
-    "user.fields": ["username", "name"],
-    expansions: ["author_id"],
-  });
-  const tweets = results.data?.data ?? [];
-  const users: Array<{ id: string; username: string }> = (results.data?.includes?.users as Array<{ id: string; username: string }>) ?? [];
-  const userMap = new Map(users.map(u => [u.id, u.username]));
-  return tweets
-    .filter(t => !t.reply_settings || t.reply_settings === "everyone")
-    .map(t => ({ ...t, author_username: userMap.get(t.author_id ?? "") ?? "" }));
+  const s = await getConvoScraper();
+  const tweets: Array<{
+    id: string; text: string; author_id: string; author_username: string;
+    conversation_id: string;
+    public_metrics: { like_count: number; retweet_count: number; reply_count: number; quote_count: number };
+    reply_settings: string;
+  }> = [];
+  for await (const t of s.searchTweets(query, maxResults, ConvoSearchMode.Latest)) {
+    tweets.push({
+      id: t.id ?? "",
+      text: t.text ?? "",
+      author_id: t.userId ?? "",
+      author_username: t.username ?? "",
+      conversation_id: (t as unknown as Record<string, unknown>).conversationId as string ?? t.id ?? "",
+      public_metrics: { like_count: t.likes ?? 0, retweet_count: t.retweets ?? 0, reply_count: t.replies ?? 0, quote_count: 0 },
+      reply_settings: "everyone",
+    });
+  }
+  return tweets;
 }
 
 export async function getMyProfile() {
-  const me = await xRO.v2.me({
-    "user.fields": ["public_metrics", "description"],
-  });
-  return me.data;
+  const username = process.env.X_USERNAME!;
+  const s = await getConvoScraper();
+  const profile = await s.getProfile(username);
+  if (!profile) throw new Error("Failed to fetch own X profile");
+  return {
+    id: profile.userId ?? "",
+    username: profile.username ?? username,
+    public_metrics: {
+      followers_count: profile.followersCount ?? 0,
+      following_count: profile.followingCount ?? 0,
+      tweet_count: profile.tweetsCount ?? 0,
+    },
+  };
 }
 
-export async function getMyTweets(userId: string, maxResults = 20) {
-  const timeline = await xRO.v2.userTimeline(userId, {
-    max_results: maxResults,
-    "tweet.fields": ["created_at", "text", "public_metrics"],
-    exclude: ["retweets", "replies"],
-  });
-  return timeline.data?.data ?? [];
+export async function getMyTweets(_userId: string, maxResults = 20) {
+  const scraper = await getXClient();
+  const username = process.env.X_USERNAME!;
+  const tweets: Array<{
+    id: string;
+    text: string;
+    created_at: string;
+    public_metrics: { like_count: number; retweet_count: number; reply_count: number; quote_count: number };
+  }> = [];
+
+  for await (const tweet of scraper.getTweets(username, maxResults)) {
+    if (tweet.isRetweet || tweet.isReply) continue;
+    tweets.push({
+      id: tweet.id ?? "",
+      text: tweet.text ?? "",
+      created_at: tweet.timeParsed?.toISOString()
+        ?? (tweet.timestamp ? new Date(tweet.timestamp * 1000).toISOString() : new Date().toISOString()),
+      public_metrics: {
+        like_count: tweet.likes ?? 0,
+        retweet_count: tweet.retweets ?? 0,
+        reply_count: tweet.replies ?? 0,
+        quote_count: 0,
+      },
+    });
+    if (tweets.length >= maxResults) break;
+  }
+
+  return tweets;
+}
+
+export async function getUserByUsername(username: string) {
+  const s = await getConvoScraper();
+  const profile = await s.getProfile(username);
+  return { id: profile.userId ?? "", username: profile.username ?? username };
 }
