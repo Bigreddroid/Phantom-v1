@@ -1,9 +1,9 @@
 name: Phantom Scheduler
 
 on:
-  schedule:
-    - cron: "*/15 * * * *"
   workflow_dispatch:
+  # schedule disabled — cron-job.org → /api/cron/dispatch is the sole scheduler.
+  # Having both GitHub Actions + cron-job.org running caused every job to fire twice.
 
 jobs:
   run-phantom:
