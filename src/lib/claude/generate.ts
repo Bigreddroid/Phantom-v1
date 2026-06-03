@@ -176,6 +176,28 @@ not growth-hacker tips. Each point should make someone think, not just nod.`,
   );
 }
 
+export async function generateArticleThread(topic: string, recentTweets?: string[]) {
+  const avoidBlock = recentTweets?.length
+    ? `\n\nSTRICTLY FORBIDDEN — do not repeat the topic, angle, or opening of any of these:\n${recentTweets.map((t, i) => `${i + 1}. ${t}`).join("\n")}`
+    : "";
+  const raw = await generate(
+    `Write a 6-tweet educational thread about: "${topic}"${avoidBlock}
+
+This should read like a genuinely useful article broken into tweets. Format:
+- Tweet 1: Hook. One punchy sentence that stops the scroll. No "Thread:" or "1/".
+- Tweets 2–5: The meat. Each tweet = one clear insight, tip, or step. Specific, not vague.
+- Tweet 6: The honest takeaway or CTA. What to do next or why it matters.
+
+Each tweet separated by "---"
+Each tweet under 280 chars.
+Write as ${X_HANDLE} — direct, confident, sounds like earned experience not generic advice.
+Reference your own tools (Phantom, BigRedDroid, Project Z) only where it fits naturally.`,
+    VOICE_SYSTEM_PROMPT,
+    2000,
+  );
+  return raw.split("---").map(t => t.trim()).filter(Boolean);
+}
+
 export async function generateBuildUpdate(product: string, context?: string, recentTweets?: string[]) {
   const avoidBlock = recentTweets?.length
     ? `\n\nSTRICTLY FORBIDDEN — these have already been posted. Do NOT repeat the topic, angle, format, phrasing, or opening of ANY of these:\n${recentTweets.map((t, i) => `${i + 1}. ${t}`).join("\n")}\n\nIf you find yourself writing anything similar, stop and pick a completely different angle and format.`

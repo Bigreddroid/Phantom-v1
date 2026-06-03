@@ -1,101 +1,123 @@
+import { getXClient } from "./client";
 import { xRW } from "./client";
 import { EUploadMimeType } from "twitter-api-v2";
 import { pickTemplate } from "./templates";
 
-export async function postTweet(text: string) {
-  const tweet = await xRW.v2.tweet(text);
-  return tweet.data;
+// ── Helper: extract tweet ID from agent-twitter-client response ──────────────
+async function extractTweetId(res: Response): Promise<string> {
+  const json = await res.json().catch(() => ({})) as Record<string, unknown>;
+  const data = json.data as Record<string, unknown> | undefined;
+  const createTweet = data?.create_tweet as Record<string, unknown> | undefined;
+  const tweetResults = createTweet?.tweet_results as Record<string, unknown> | undefined;
+  const result = tweetResults?.result as Record<string, unknown> | undefined;
+  const id = result?.rest_id as string | undefined;
+  if (id) return id;
+  throw new Error(`Unexpected tweet response: ${JSON.stringify(json).slice(0, 200)}`);
+}
+
+export async function postTweet(text: string): Promise<{ id: string }> {
+  const client = await getXClient();
+  const res = await client.sendTweet(text);
+  const id = await extractTweetId(res);
+  return { id };
 }
 
 export async function postTweetWithImage(text: string): Promise<{ id: string; hasImage: boolean }> {
   try {
-    // 70% chance: use a branded template image matched to the tweet topic
-    // 30% chance: use the generated OG card
     const useTemplate = Math.random() < 0.7;
     let imgBuffer: Buffer | null = null;
-    let mimeType: EUploadMimeType = EUploadMimeType.Png;
+    let mimeType = "image/jpeg";
 
     if (useTemplate) {
       imgBuffer = pickTemplate(text);
-      if (imgBuffer) mimeType = EUploadMimeType.Jpeg;
     }
 
     if (!imgBuffer) {
-      // Fallback to OG card
       const ogUrl = `${process.env.NEXTAUTH_URL}/api/og?text=${encodeURIComponent(text.slice(0, 220))}`;
       const imgRes = await fetch(ogUrl, { signal: AbortSignal.timeout(8000) });
-      if (!imgRes.ok) throw new Error("og fetch failed");
-      imgBuffer = Buffer.from(await imgRes.arrayBuffer());
+      if (imgRes.ok) {
+        imgBuffer = Buffer.from(await imgRes.arrayBuffer());
+        mimeType = "image/png";
+      }
     }
 
-    const mediaId = await xRW.v1.uploadMedia(imgBuffer, { mimeType });
-    const tweet = await xRW.v2.tweet({ text, media: { media_ids: [mediaId] } });
-    return { ...tweet.data, hasImage: true };
+    const client = await getXClient();
+    if (imgBuffer) {
+      const res = await client.sendTweet(text, undefined, [{ data: imgBuffer, mediaType: mimeType }]);
+      const id = await extractTweetId(res);
+      return { id, hasImage: true };
+    }
+
+    const res = await client.sendTweet(text);
+    const id = await extractTweetId(res);
+    return { id, hasImage: false };
   } catch {
-    const tweet = await xRW.v2.tweet(text);
-    return { ...tweet.data, hasImage: false };
+    // Fallback: post without image
+    const client = await getXClient();
+    const res = await client.sendTweet(text);
+    const id = await extractTweetId(res);
+    return { id, hasImage: false };
   }
 }
 
-export async function replyToTweet(tweetId: string, text: string) {
-  // Twitter hard limit is 280 chars — truncate defensively
+export async function replyToTweet(tweetId: string, text: string): Promise<{ id: string }> {
   const safe = text.length > 275 ? text.slice(0, 272) + "…" : text;
-  const reply = await xRW.v2.reply(safe, tweetId);
-  return reply.data;
+  const client = await getXClient();
+  const res = await client.sendTweet(safe, tweetId);
+  const id = await extractTweetId(res);
+  return { id };
 }
 
-export async function quoteTweet(tweetId: string, text: string) {
-  const quote = await xRW.v2.tweet({ text, quote_tweet_id: tweetId });
-  return quote.data;
+export async function quoteTweet(tweetId: string, text: string): Promise<{ id: string }> {
+  const client = await getXClient();
+  // agent-twitter-client sendQuoteTweet
+  const res = await (client as unknown as {
+    sendQuoteTweet: (text: string, quotedTweetId: string) => Promise<Response>;
+  }).sendQuoteTweet(text, tweetId);
+  const id = await extractTweetId(res);
+  return { id };
 }
 
 export async function deleteTweet(tweetId: string) {
-  return xRW.v2.deleteTweet(tweetId);
-}
-
-async function uploadOgImage(text: string): Promise<string | null> {
+  // Fallback to official API for delete (requires write scope)
   try {
-    // Try branded template first
-    const tplBuffer = pickTemplate(text);
-    if (tplBuffer) {
-      return await xRW.v1.uploadMedia(tplBuffer, { mimeType: EUploadMimeType.Jpeg });
-    }
-    // Fallback to generated OG card
-    const ogUrl = `${process.env.NEXTAUTH_URL}/api/og?text=${encodeURIComponent(text.slice(0, 220))}`;
-    const imgRes = await fetch(ogUrl, { signal: AbortSignal.timeout(8000) });
-    if (!imgRes.ok) throw new Error("og fetch failed");
-    const imgBuffer = Buffer.from(await imgRes.arrayBuffer());
-    return await xRW.v1.uploadMedia(imgBuffer, { mimeType: EUploadMimeType.Png });
+    return await xRW.v2.deleteTweet(tweetId);
   } catch {
     return null;
   }
 }
 
-// imageMode: "none" | "first" (image on tweet 1 only) | "all" (image on every tweet)
+// imageMode: "none" | "first" | "all"
 export async function postThread(
   tweets: string[],
   imageMode: "none" | "first" | "all" = "none"
-) {
+): Promise<Array<{ id: string; hasImage?: boolean }>> {
+  const client = await getXClient();
   const posted: Array<{ id: string; hasImage?: boolean }> = [];
   let lastId: string | undefined;
 
   for (let i = 0; i < tweets.length; i++) {
     const text = tweets[i];
     const wantsImage = imageMode === "all" || (imageMode === "first" && i === 0);
-    let mediaId: string | null = null;
 
-    if (wantsImage) mediaId = await uploadOgImage(text);
+    let imgBuffer: Buffer | null = null;
+    let mimeType = "image/jpeg";
+    if (wantsImage) {
+      imgBuffer = pickTemplate(text);
+      if (!imgBuffer) {
+        try {
+          const ogUrl = `${process.env.NEXTAUTH_URL}/api/og?text=${encodeURIComponent(text.slice(0, 220))}`;
+          const imgRes = await fetch(ogUrl, { signal: AbortSignal.timeout(8000) });
+          if (imgRes.ok) { imgBuffer = Buffer.from(await imgRes.arrayBuffer()); mimeType = "image/png"; }
+        } catch { /* skip image */ }
+      }
+    }
 
-    const mediaIds = mediaId ? [mediaId] as [string] : undefined;
-
-    const tweet = lastId
-      ? await xRW.v2.reply(text, lastId, mediaIds ? { media: { media_ids: mediaIds } } : undefined)
-      : mediaIds
-        ? await xRW.v2.tweet({ text, media: { media_ids: mediaIds } })
-        : await xRW.v2.tweet(text);
-
-    posted.push({ ...tweet.data, hasImage: !!mediaId });
-    lastId = tweet.data.id;
+    const mediaData = imgBuffer ? [{ data: imgBuffer, mediaType: mimeType }] : undefined;
+    const res = await client.sendTweet(text, lastId, mediaData);
+    const id = await extractTweetId(res);
+    posted.push({ id, hasImage: !!imgBuffer });
+    lastId = id;
   }
 
   return posted;

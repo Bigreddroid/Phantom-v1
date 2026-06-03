@@ -64,6 +64,43 @@ export const THREAD_TOPICS = list(
   ]
 );
 
+// Article thread topics — research-backed for traction in AI/automation/tools space
+// Topics modelled on what consistently performs: Claude tips, Notion/Obsidian workflows,
+// founder productivity, AI tool comparisons, building-in-public behind-the-scenes.
+export const ARTICLE_TOPICS = [
+  // Claude AI
+  "5 Claude prompts that replaced an entire VA for me (with examples)",
+  "Claude vs GPT-4 for building products: what I actually found after months of use",
+  "how to write a Claude system prompt that sounds like you, not a robot",
+  "the Claude workflow I use to go from idea to shipped feature in one sitting",
+  "Claude + code: how I use it to build entire features without senior dev experience",
+  // Notion
+  "the Notion setup that runs my entire product studio (template inside)",
+  "how I use Notion AI to turn raw notes into published content in 10 minutes",
+  "stop building complex Notion systems — here is the only structure you need as a solopreneur",
+  "Notion as a second brain: the exact database setup I use for Project Z",
+  // Obsidian
+  "why I switched from Notion to Obsidian for thinking — and use both for different things",
+  "the Obsidian + Claude workflow that replaced journaling, note-taking, and planning apps",
+  "how to build a personal knowledge graph in Obsidian without spending days on setup",
+  "Obsidian for founders: how I never lose a product idea or customer insight",
+  // AI Automation
+  "the 7 things I automated first as a solo founder (and what order to do it in)",
+  "how to build an AI agent that runs your Twitter while you sleep — what I actually did",
+  "AI automation stack for indie builders: what I use, what I dropped, and what I am building",
+  "building a personal brand on autopilot: the full system behind Phantom",
+  "why most founders fail at AI automation (and the one shift that changes everything)",
+  // X / Personal Brand
+  "how to grow on X in 2025 without posting 5 times a day manually",
+  "the content system that lets me post 4 times a day without thinking about it",
+  "building in public: what actually works vs. what just gets likes",
+  "how I approach X engagement differently from everyone else (and why it compounds)",
+  // Solopreneur / Founder
+  "shipping 92 products alone: the mindset and systems behind Project Z",
+  "the solopreneur productivity stack I run on $50/month",
+  "why I chose depth over breadth when building under BigRedDroid",
+];
+
 // Comma-separated topics injected into the AI voice prompt
 export const VOICE_TOPICS = process.env.VOICE_TOPICS
   ?? "Phantom (AI personal brand system), Project Z (building 92 products), Claude AI, Obsidian, Notion, building in public, solopreneur automation";

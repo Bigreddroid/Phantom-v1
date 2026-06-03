@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 export const maxDuration = 60;
 import { prisma } from "@/lib/db";
 import { postTweet, postTweetWithImage, postThread, quoteTweet, replyToTweet } from "@/lib/x/post";
-import { generateTweet, generateThread, generateDM, generateQuoteTweet, generateLinkedInPost, generateReply } from "@/lib/claude/generate";
+import { generateTweet, generateThread, generateArticleThread, generateDM, generateQuoteTweet, generateLinkedInPost, generateReply } from "@/lib/claude/generate";
 import { notifyPosted, requestApproval, sendMessage } from "@/lib/telegram/notify";
 import { ensureWebhook, ensureCommands } from "@/lib/telegram/setup";
 import { xRO } from "@/lib/x/client";
@@ -11,7 +11,7 @@ import { sendDM, getDMConversations } from "@/lib/x/dm";
 import { searchTweets, getMyProfile, retweet, getMyTweets, getMentions } from "@/lib/x/engage";
 import { getLinkedInAuth } from "@/lib/linkedin/client";
 import { postToLinkedIn } from "@/lib/linkedin/post";
-import { CONTENT_TOPICS, THREAD_TOPICS } from "@/lib/config";
+import { CONTENT_TOPICS, THREAD_TOPICS, ARTICLE_TOPICS } from "@/lib/config";
 
 const BOT = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
 const CHAT = process.env.TELEGRAM_CHAT_ID!;
@@ -607,6 +607,38 @@ export async function POST(req: NextRequest) {
         },
       }
     );
+  }
+
+  // ── /article ──────────────────────────────────────────────────────────────
+  else if (cmd === "/article") {
+    await send(chatId, "📝 Generating article thread...");
+    try {
+      const [postedItems, pendingItems] = await Promise.all([
+        prisma.queueItem.findMany({ where: { status: "POSTED", type: { in: ["Tweet", "Thread", "Article"] } }, orderBy: { updatedAt: "desc" }, take: 30, select: { content: true } }),
+        prisma.queueItem.findMany({ where: { status: "PENDING" }, select: { content: true }, take: 10 }),
+      ]);
+      const recentTweets = [...postedItems.map(q => q.content), ...pendingItems.map(q => q.content)];
+      const topic = args || ARTICLE_TOPICS[Math.floor(Math.random() * ARTICLE_TOPICS.length)];
+      const tweets = await generateArticleThread(topic, recentTweets);
+      const content = tweets.join("\n---\n");
+      const item = await prisma.queueItem.create({
+        data: { type: "Thread", content, metadata: { imageMode: "none", article: true, topic } },
+      });
+      await send(chatId,
+        `*📝 Article Thread — ${tweets.length} tweets*\n\n_Topic: ${topic}_\n\n${tweets.map((t, i) => `*${i + 1}.* ${t}`).join("\n\n")}`,
+        {
+          reply_markup: {
+            inline_keyboard: [[
+              { text: "✅ Post thread", callback_data: `approve:${item.id}` },
+              { text: "🖼️ Post with images", callback_data: `thread_img_first:${item.id}` },
+              { text: "❌ Skip", callback_data: `reject:${item.id}` },
+            ]],
+          },
+        }
+      );
+    } catch (e) {
+      await send(chatId, `❌ Article generation failed: ${String(e).slice(0, 120)}`);
+    }
   }
 
   // ── /post <custom text> ───────────────────────────────────────────────────
