@@ -53,6 +53,13 @@ model LinkedInAuth {
   updatedAt    DateTime  @updatedAt
 }
 
+model XSession {
+  id        String   @id @default("singleton")
+  cookies   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 enum QueueStatus {
   PENDING
   APPROVED
