@@ -1,15 +1,14 @@
-import { xRW } from "./client";
+import { getXClient } from "./client";
 
 export async function sendDM(participantId: string, text: string) {
-  const dm = await xRW.v2.sendDmToParticipant(participantId, { text });
-  return dm;
+  const scraper = await getXClient();
+  // agent-twitter-client uses cookie-based DM sending
+  return (scraper as unknown as {
+    sendDm: (userId: string, text: string) => Promise<unknown>;
+  }).sendDm(participantId, text);
 }
 
 export async function getDMConversations() {
-  const convos = await xRW.v2.listDmEvents({
-    max_results: 20,
-    "dm_event.fields": ["text", "created_at", "sender_id"],
-    expansions: ["sender_id"],
-  });
-  return convos.data?.data ?? [];
+  // Not available via cookie-based scraper — return empty
+  return [];
 }

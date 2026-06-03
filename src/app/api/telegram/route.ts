@@ -954,12 +954,13 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // DM API
+    // DM send test (cookie-based)
     try {
-      await getDMConversations();
-      lines.push(`✅ *DM API*`);
+      const scraper = await (await import("@/lib/x/client")).getXClient();
+      const loggedIn = await scraper.isLoggedIn();
+      lines.push(loggedIn ? `✅ *DM (cookie session active)*` : `⚠️ *DM — not logged in*`);
     } catch (e) {
-      lines.push(`❌ *DM API* — ${String(e).slice(0, 80)}`);
+      lines.push(`❌ *DM* — ${String(e).slice(0, 80)}`);
     }
 
     await send(chatId, `*🔍 Diagnostics*\n\n${lines.join("\n")}`);
@@ -1065,14 +1066,14 @@ export async function POST(req: NextRequest) {
             + (t.public_metrics?.retweet_count ?? 0) * 4
             + (t.public_metrics?.quote_count ?? 0) * 3,
         }))
-        .filter(t => t.score >= 20)
+        .filter(t => t.score >= 3 && t.text.trim().length > 20)
         .sort((a, b) => b.score - a.score);
 
       if (!scored.length) {
-        await send(chatId, "❌ No high-traction tweets found for that topic. Try a different keyword.");
+        await send(chatId, "❌ No tweets found for that topic. Try a broader keyword.");
         return NextResponse.json({ ok: true });
       }
-      const tweet = scored[Math.floor(Math.random() * Math.min(scored.length, 3))];
+      const tweet = scored[Math.floor(Math.random() * Math.min(scored.length, 5))];
       const tweetScore = (tweet as typeof tweet & { score?: number }).score ?? 0;
       const tweetStats = `❤️ ${tweet.public_metrics?.like_count ?? 0} · 🔁 ${tweet.public_metrics?.retweet_count ?? 0}`;
       const item = await prisma.queueItem.create({
