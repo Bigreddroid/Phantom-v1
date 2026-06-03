@@ -21,7 +21,7 @@ async function deriveToken(secret: string): Promise<string> {
     .join("");
 }
 
-const PUBLIC = ["/", "/login", "/api/auth/login"];
+const PUBLIC = ["/", "/login", "/api/auth/login", "/api/telegram"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
