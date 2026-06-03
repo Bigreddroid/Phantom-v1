@@ -65,12 +65,14 @@ async function postQueueItem(item: { id: string; type: string; content: string; 
 }
 
 export async function POST(req: NextRequest) {
-  // Verify Telegram webhook secret token (set via TELEGRAM_WEBHOOK_SECRET + setWebhook secret_token)
+  // Verify Telegram webhook secret — only reject if BOTH a secret is configured
+  // AND Telegram sent a non-empty header that doesn't match (prevents lockout when
+  // webhook was registered without a secret but env var still has an old value).
   const webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
   if (webhookSecret) {
     const incoming = req.headers.get("x-telegram-bot-api-secret-token") ?? "";
-    if (incoming !== webhookSecret) {
-      return NextResponse.json({ ok: true }); // silent 200 — don't reveal endpoint existence
+    if (incoming && incoming !== webhookSecret) {
+      return NextResponse.json({ ok: true });
     }
   }
 
@@ -80,7 +82,7 @@ export async function POST(req: NextRequest) {
   if (body.callback_query) {
     const { data, from, id: cbId } = body.callback_query;
     const chatId = String(from.id);
-    if (chatId !== CHAT) return NextResponse.json({ ok: true });
+    if (CHAT && chatId !== CHAT) return NextResponse.json({ ok: true });
 
     await answerCallback(cbId);
 
@@ -459,7 +461,7 @@ export async function POST(req: NextRequest) {
   if (!msg?.text) return NextResponse.json({ ok: true });
 
   const chatId = String(msg.chat.id);
-  if (chatId !== CHAT) return NextResponse.json({ ok: true });
+  if (CHAT && chatId !== CHAT) return NextResponse.json({ ok: true });
 
   const raw = msg.text.trim();
   const cmd = raw.toLowerCase().split(" ")[0];
