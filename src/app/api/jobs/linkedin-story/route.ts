@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
+import { DEMO } from "@/lib/demo-data";
 import { generateLinkedInStory } from "@/lib/claude/generate";
 import { postToLinkedIn } from "@/lib/linkedin/post";
 import { prisma } from "@/lib/db";
 import { notifyPosted } from "@/lib/telegram/notify";
 
 export async function POST() {
+  if (DEMO) return NextResponse.json({ ok: true, demo: true, skipped: "demo mode" });
   try {
     // Pull the last 3 X posts as source material for the story
     const recentPosts = await prisma.activity.findMany({

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { DEMO } from "@/lib/demo-data";
 import { searchTweets, likeTweet, retweet, getMyProfile } from "@/lib/x/engage";
 import { replyToTweet } from "@/lib/x/post";
 import { generateReply } from "@/lib/claude/generate";
@@ -11,6 +12,7 @@ import { NICHE_KEYWORDS } from "@/lib/config";
 export const maxDuration = 60;
 
 export async function POST(req: Request) {
+  if (DEMO) return NextResponse.json({ ok: true, demo: true, skipped: "demo mode" });
   try {
     const body = await req.json().catch(() => ({}));
     const isBlocked = await loadBlocklist();

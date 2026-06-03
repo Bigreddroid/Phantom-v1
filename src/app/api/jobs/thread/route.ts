@@ -3,8 +3,10 @@ import { generateThread } from "@/lib/claude/generate";
 import { prisma } from "@/lib/db";
 import { requestApproval } from "@/lib/telegram/notify";
 import { THREAD_TOPICS } from "@/lib/config";
+import { DEMO } from "@/lib/demo-data";
 
 export async function POST(req: Request) {
+  if (DEMO) return NextResponse.json({ ok: true, demo: true, skipped: "demo mode" });
   try {
     const body = await req.json().catch(() => ({}));
     const imageMode = (["none", "first", "all"].includes(body.images) ? body.images : "none") as "none" | "first" | "all";

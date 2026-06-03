@@ -2,8 +2,11 @@ import { NextResponse } from "next/server";
 import { getMyProfile } from "@/lib/x/engage";
 import { prisma } from "@/lib/db";
 import { getLinkedInAuth } from "@/lib/linkedin/client";
+import { DEMO, DEMO_STATS } from "@/lib/demo-data";
 
 export async function GET() {
+  if (DEMO) return NextResponse.json(DEMO_STATS);
+
   try {
     const [me, statsRow, liAuth] = await Promise.all([
       getMyProfile(),

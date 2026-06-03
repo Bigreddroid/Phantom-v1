@@ -7,8 +7,10 @@ import { notifyPosted } from "@/lib/telegram/notify";
 import { humanPause, randomDelay } from "@/lib/scheduler/humanize";
 import { loadBlocklist } from "@/lib/blocklist";
 import { sendMessage } from "@/lib/telegram/notify";
+import { DEMO } from "@/lib/demo-data";
 
 export async function POST() {
+  if (DEMO) return NextResponse.json({ ok: true, demo: true, skipped: "demo mode" });
   try {
     const isBlocked = await loadBlocklist();
     const me = await getMyProfile();

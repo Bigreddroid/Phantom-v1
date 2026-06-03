@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { DEMO } from "@/lib/demo-data";
 import { searchTweets, followUser, likeTweet, getMyProfile } from "@/lib/x/engage";
 import { generateReply } from "@/lib/claude/generate";
 import { replyToTweet } from "@/lib/x/post";
@@ -9,6 +10,7 @@ import { loadBlocklist } from "@/lib/blocklist";
 import { NICHE_KEYWORDS } from "@/lib/config";
 
 export async function POST(req: Request) {
+  if (DEMO) return NextResponse.json({ ok: true, demo: true, skipped: "demo mode" });
   const body = await req.json().catch(() => ({}));
   const count = Math.min(Number(body.count) || 5, 20);
 

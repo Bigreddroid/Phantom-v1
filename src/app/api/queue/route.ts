@@ -2,8 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { postTweet, postThread } from "@/lib/x/post";
 import { notifyPosted } from "@/lib/telegram/notify";
+import { DEMO, DEMO_QUEUE } from "@/lib/demo-data";
 
 export async function GET() {
+  if (DEMO) return NextResponse.json(DEMO_QUEUE);
+
   const items = await prisma.queueItem.findMany({
     where: { status: "PENDING" },
     orderBy: { createdAt: "desc" },
@@ -13,6 +16,8 @@ export async function GET() {
 }
 
 export async function PATCH(req: NextRequest) {
+  if (DEMO) return NextResponse.json({ ok: true, demo: true });
+
   const { id, action, editedContent } = await req.json();
 
   if (action === "reject") {

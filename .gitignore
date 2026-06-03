@@ -32,11 +32,14 @@ yarn-error.log*
 
 # env files
 .env
-.env.local
-.env.staging
-.env.production
-# committed intentionally:
-# .env.example is safe to commit
+.env*
+!.env.example
+# scripts with tokens
+scripts/set-env.mjs
+get-cookies.js
+scripts/patch-agent-twitter.js
+# session exports / PDFs
+*.pdf
 
 # vercel
 .vercel

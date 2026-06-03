@@ -53,6 +53,11 @@ function LoginForm() {
         <form onSubmit={submit} className="bg-[#111] border border-white/[0.08] rounded-2xl p-6 space-y-4">
           <div>
             <p className="text-sm font-semibold text-white/70 mb-1">Dashboard password</p>
+            {process.env.NEXT_PUBLIC_DEMO_MODE === "true" && (
+              <p className="text-xs text-amber-400 bg-amber-400/10 border border-amber-400/20 rounded-lg px-3 py-2 mb-3">
+                Demo mode — use password <code className="font-mono font-bold">demo</code>
+              </p>
+            )}
             <p className="text-xs text-white/30 mb-4">Set via <code className="font-mono text-white/40">DASHBOARD_PASSWORD</code> env var</p>
             <input
               type="password"

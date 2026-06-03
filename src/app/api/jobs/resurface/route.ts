@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { DEMO } from "@/lib/demo-data";
 import { getMyProfile, getMyTweets } from "@/lib/x/engage";
 import { prisma } from "@/lib/db";
 
@@ -23,6 +24,7 @@ async function sendApproval(text: string, itemId: string) {
 }
 
 export async function POST() {
+  if (DEMO) return NextResponse.json({ ok: true, demo: true, skipped: "demo mode" });
   try {
     const me = await getMyProfile();
     const tweets = await getMyTweets(me.id, 50);

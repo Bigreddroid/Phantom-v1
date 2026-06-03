@@ -4,8 +4,10 @@ import { postToLinkedIn } from "@/lib/linkedin/post";
 import { prisma } from "@/lib/db";
 import { notifyPosted } from "@/lib/telegram/notify";
 import { CONTENT_TOPICS } from "@/lib/config";
+import { DEMO } from "@/lib/demo-data";
 
 export async function POST() {
+  if (DEMO) return NextResponse.json({ ok: true, demo: true, skipped: "demo mode" });
   try {
     const topic = CONTENT_TOPICS[Math.floor(Math.random() * CONTENT_TOPICS.length)];
     const content = await generateLinkedInPost(topic);
