@@ -6,6 +6,18 @@ import { pickTemplate, pickTemplateByStyle } from "./templates";
 // ── Helper: extract tweet ID from agent-twitter-client response ──────────────
 async function extractTweetId(res: Response): Promise<string> {
   const json = await res.json().catch(() => ({})) as Record<string, unknown>;
+
+  // Surface Twitter API errors before checking for a tweet ID
+  const errors = json.errors as Array<{ code?: number; message?: string }> | undefined;
+  if (errors?.length) {
+    const first = errors[0];
+    const code = first?.code;
+    // 226 = automated-content / duplicate block — not a hard failure for us,
+    // but the post didn't go through, so throw so callers can handle it
+    if (code === 226) throw new Error(`Twitter blocked post (code 226 — automated/duplicate content)`);
+    throw new Error(`Twitter API error ${code ?? "?"}: ${first?.message ?? JSON.stringify(errors).slice(0, 120)}`);
+  }
+
   const data = json.data as Record<string, unknown> | undefined;
   const createTweet = data?.create_tweet as Record<string, unknown> | undefined;
   const tweetResults = createTweet?.tweet_results as Record<string, unknown> | undefined;
@@ -57,8 +69,11 @@ export async function postTweetWithImage(text: string, style?: string): Promise<
     const res = await client.sendTweet(text);
     const id = await extractTweetId(res);
     return { id, hasImage: false };
-  } catch {
-    // Fallback: post without image
+  } catch (err) {
+    // Don't retry on a Twitter-level block — it will fail again without the image too
+    const msg = String(err);
+    if (msg.includes("code 226") || msg.includes("Twitter API error")) throw err;
+    // Fallback: post without image (image upload/fetch failure only)
     const client = await getXClient();
     const res = await client.sendTweet(text);
     const id = await extractTweetId(res);
