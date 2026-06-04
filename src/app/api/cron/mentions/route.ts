@@ -8,6 +8,7 @@ import { prisma } from "@/lib/db";
 import { notifyPosted, sendMessage } from "@/lib/telegram/notify";
 import { humanPause, randomDelay } from "@/lib/scheduler/humanize";
 import { loadBlocklist } from "@/lib/blocklist";
+import { getRepliedTweetIds, buildReplyDetail } from "@/lib/reply-dedup";
 
 function isSpam(text: string): boolean {
   const t = text.toLowerCase();
@@ -34,17 +35,10 @@ export async function GET(req: Request) {
 
     // Only fetch mentions newer than the last one we already replied to
     const sinceId = statsRow?.lastMentionId ?? undefined;
-    const mentions = await getMentions(me.id, sinceId);
-
-    // Backup dedup: also check activity log in case sinceId cursor drifts
-    const recentMentionReplies = await prisma.activity.findMany({
-      where: { action: "Replied to mention", createdAt: { gte: new Date(Date.now() - 7 * 86400000) } },
-      select: { detail: true },
-      take: 500,
-    });
-    const repliedMentionIds = new Set(
-      recentMentionReplies.map(a => a.detail?.match(/^mid:(\w+)/)?.[1]).filter(Boolean) as string[]
-    );
+    const [mentions, repliedTweetIds] = await Promise.all([
+      getMentions(me.id, sinceId),
+      getRepliedTweetIds(), // shared dedup — covers mentions + engage + goout
+    ]);
 
     if (!mentions.length) {
       return NextResponse.json({ ok: true, mentions: 0 });
@@ -65,7 +59,7 @@ export async function GET(req: Request) {
     for (const mention of mentions) {
       if (isBlocked(mention.author_id)) continue;
       if (isSpam(mention.text)) continue;
-      if (repliedMentionIds.has(mention.id)) continue; // backup dedup
+      if (repliedTweetIds.has(mention.id)) continue; // shared dedup across all reply crons
       await humanPause();
 
       try {
@@ -74,7 +68,7 @@ export async function GET(req: Request) {
         replied++;
 
         await prisma.activity.create({
-          data: { action: "Replied to mention", detail: `mid:${mention.id}|${reply.slice(0, 70)}`, icon: "💬" },
+          data: { action: "Replied to mention", detail: buildReplyDetail(mention.id, mention.author_id ?? "", reply), icon: "💬" },
         });
         await sendMessage(
           `💬 *Replied to mention*\n\n` +

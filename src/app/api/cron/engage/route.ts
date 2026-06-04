@@ -9,6 +9,7 @@ import { randomDelay } from "@/lib/scheduler/humanize";
 import { loadBlocklist } from "@/lib/blocklist";
 import { ensureWebhook } from "@/lib/telegram/setup";
 import { NICHE_KEYWORDS } from "@/lib/config";
+import { getRepliedTweetIds, getRepliedAuthorIds, buildReplyDetail } from "@/lib/reply-dedup";
 
 function getISTHour(): number {
   return parseInt(
@@ -78,18 +79,11 @@ export async function GET(req: Request) {
     const me = await getMyProfile();
     const keyword = NICHE_KEYWORDS[Math.floor(Math.random() * NICHE_KEYWORDS.length)];
 
-    const recentReplies = await prisma.activity.findMany({
-      where: { action: "Replied to tweet", createdAt: { gte: new Date(Date.now() - 7 * 86400000) } },
-      select: { detail: true },
-      take: 1000,
-    });
-    const repliedIds = new Set(
-      recentReplies.map(a => a.detail?.match(/^tid:(\w+)/)?.[1]).filter(Boolean) as string[]
-    );
-    // Author-level dedup across runs — don't reply to same author twice in 7 days
-    const repliedAuthorIds = new Set(
-      recentReplies.map(a => a.detail?.match(/\|aid:(\w+)/)?.[1]).filter(Boolean) as string[]
-    );
+    // Shared dedup — covers tweets replied to by engage, mentions, AND goout
+    const [repliedIds, repliedAuthorIds] = await Promise.all([
+      getRepliedTweetIds(),
+      getRepliedAuthorIds(),
+    ]);
 
     const [verifiedTweets, normalTweets] = await Promise.all([
       searchTweets(`${keyword} -is:retweet lang:en is:verified`, Math.ceil(maxTweets * 0.9)),
@@ -125,7 +119,7 @@ export async function GET(req: Request) {
           await replyToTweet(tweet.id, reply);
           replied++;
           await prisma.activity.create({
-            data: { action: "Replied to tweet", detail: `tid:${tweet.id}|aid:${tweet.author_id ?? ""}|${reply.slice(0, 60)}`, icon: "💬" },
+            data: { action: "Replied to tweet", detail: buildReplyDetail(tweet.id, tweet.author_id ?? "", reply), icon: "💬" },
           });
           await sendMessage(
             `💬 *Comment posted on X*\n\n` +

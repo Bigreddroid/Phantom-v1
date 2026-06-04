@@ -7,6 +7,7 @@ import { notifyError, sendMessage } from "@/lib/telegram/notify";
 import { shouldSkip, isActiveHour, randomDelay, humanPause } from "@/lib/scheduler/humanize";
 import { loadBlocklist } from "@/lib/blocklist";
 import { NICHE_KEYWORDS } from "@/lib/config";
+import { getRepliedTweetIds, getRepliedAuthorIds, buildReplyDetail } from "@/lib/reply-dedup";
 
 export const maxDuration = 60;
 
@@ -31,13 +32,6 @@ const GOOUT_KEYWORDS = [
   "the mistake founders make",
 ];
 
-// Parse dedup detail: "tid:<tweetId>|aid:<authorId>|<text>"
-function parseDedupDetail(detail: string | null | undefined) {
-  if (!detail?.startsWith("tid:")) return null;
-  const tweetId  = detail.match(/^tid:(\w+)/)?.[1];
-  const authorId = detail.match(/\|aid:(\w+)/)?.[1];
-  return { tweetId, authorId };
-}
 
 export async function GET(req: Request) {
   const auth = req.headers.get("authorization");
@@ -56,23 +50,11 @@ export async function GET(req: Request) {
     const isBlocked = await loadBlocklist();
     const me = await getMyProfile();
 
-    // ── Load 7-day dedup memory (tweet IDs + author IDs already commented on) ──
-    const recentComments = await prisma.activity.findMany({
-      where: {
-        icon: "🗣️",
-        createdAt: { gte: new Date(Date.now() - 7 * 86400000) },
-      },
-      select: { detail: true },
-      take: 500,
-    });
-
-    const seenTweetIds  = new Set<string>();
-    const seenAuthorIds = new Set<string>();
-    for (const a of recentComments) {
-      const parsed = parseDedupDetail(a.detail);
-      if (parsed?.tweetId)  seenTweetIds.add(parsed.tweetId);
-      if (parsed?.authorId) seenAuthorIds.add(parsed.authorId);
-    }
+    // Shared dedup — tweet IDs replied to by mentions, engage, AND goout (30d for tweets, 7d for authors)
+    const [seenTweetIds, seenAuthorIds] = await Promise.all([
+      getRepliedTweetIds(),
+      getRepliedAuthorIds(),
+    ]);
 
     // ── Pick 2 different keywords this run for variety ─────────────────────────
     const allKeywords = [...GOOUT_KEYWORDS, ...NICHE_KEYWORDS.slice(0, 5)];
@@ -131,11 +113,10 @@ export async function GET(req: Request) {
         await replyToTweet(tweet.id, reply);
         comments.push({ original: tweet.text.slice(0, 100), reply });
 
-        // Store with dedup prefix so future runs can skip this tweet + author
         await prisma.activity.create({
           data: {
             action: "Auto comment dropped",
-            detail: `tid:${tweet.id}|aid:${tweet.author_id}|${reply.slice(0, 60)}`,
+            detail: buildReplyDetail(tweet.id, tweet.author_id ?? "", reply),
             icon: "🗣️",
           },
         });
