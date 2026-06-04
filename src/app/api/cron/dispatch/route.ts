@@ -38,7 +38,8 @@ export async function GET(req: Request) {
   const minute = now.getMinutes();
   const dow    = now.getDay(); // 0=Sun … 6=Sat
 
-  const at = (h: number, m: number, window = 10) =>
+  // window=15 matches cron interval — guarantees exactly one hit regardless of firing offset
+  const at = (h: number, m: number, window = 15) =>
     hour === h && minute >= m && minute < m + window;
 
   const jobs: Promise<unknown>[] = [];

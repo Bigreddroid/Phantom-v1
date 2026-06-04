@@ -7,6 +7,9 @@ import { sendMessage } from "@/lib/telegram/notify";
 import { randomDelay } from "@/lib/scheduler/humanize";
 import { loadBlocklist } from "@/lib/blocklist";
 import { NICHE_KEYWORDS } from "@/lib/config";
+import { getRepliedTweetIds, buildReplyDetail } from "@/lib/reply-dedup";
+
+export const maxDuration = 60;
 
 export async function GET(req: Request) {
   const auth = req.headers.get("authorization");
@@ -21,6 +24,7 @@ export async function GET(req: Request) {
     const isBlocked = await loadBlocklist();
     const me = await getMyProfile();
     const keyword = NICHE_KEYWORDS[Math.floor(Math.random() * NICHE_KEYWORDS.length)];
+    const repliedTweetIds = await getRepliedTweetIds();
 
     // Load accounts followed in the last 24h to avoid re-following
     const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -59,14 +63,14 @@ export async function GET(req: Request) {
       try { await likeTweet(tweet.id, me.id); liked++; } catch { /* skip */ }
       await randomDelay(3000, 7000);
 
-      // Reply to ~30% of followed accounts
-      if (Math.random() < 0.3) {
+      // Reply to ~30% of followed accounts — skip if already replied to this tweet
+      if (Math.random() < 0.3 && !repliedTweetIds.has(tweet.id)) {
         try {
           const reply = await generateReply(tweet.text, tweet.author_username || tweet.author_id);
           await replyToTweet(tweet.id, reply);
           replied++;
           await prisma.activity.create({
-            data: { action: "Replied to new follow", detail: reply.slice(0, 250), icon: "💬" },
+            data: { action: "Replied to tweet", detail: buildReplyDetail(tweet.id, tweet.author_id ?? "", reply), icon: "💬" },
           });
           await sendMessage(
             `💬 *Commented on new follow*\n\n` +

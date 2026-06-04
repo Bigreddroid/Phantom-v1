@@ -2,13 +2,14 @@ import { NextResponse } from "next/server";
 
 export const maxDuration = 55;
 import { getMentions, getMyProfile } from "@/lib/x/engage";
-import { replyToTweet } from "@/lib/x/post";
 import { generateReply } from "@/lib/claude/generate";
 import { prisma } from "@/lib/db";
-import { notifyPosted, sendMessage } from "@/lib/telegram/notify";
+import { sendMessage } from "@/lib/telegram/notify";
 import { humanPause, randomDelay } from "@/lib/scheduler/humanize";
 import { loadBlocklist } from "@/lib/blocklist";
-import { getRepliedTweetIds, buildReplyDetail } from "@/lib/reply-dedup";
+import { getRepliedTweetIds } from "@/lib/reply-dedup";
+
+const BOT = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
 
 function isSpam(text: string): boolean {
   const t = text.toLowerCase();
@@ -33,66 +34,96 @@ export async function GET(req: Request) {
 
     if (statsRow?.paused) return NextResponse.json({ skipped: true, reason: "paused" });
 
-    // Only fetch mentions newer than the last one we already replied to
     const sinceId = statsRow?.lastMentionId ?? undefined;
     const [mentions, repliedTweetIds] = await Promise.all([
       getMentions(me.id, sinceId),
-      getRepliedTweetIds(true), // allTime=true — never reply to the same mention twice, ever
+      getRepliedTweetIds(true), // permanent — never queue a mention we already replied to
     ]);
 
     if (!mentions.length) {
       return NextResponse.json({ ok: true, mentions: 0 });
     }
 
-    // Save the newest mention ID as the cursor for next run
-    // Twitter returns newest first, so index 0 is the most recent
+    // Only advance cursor if newestId is a valid non-empty snowflake
     const newestId = mentions[0].id;
-    await prisma.stats.upsert({
-      where:  { id: "singleton" },
-      update: { lastMentionId: newestId },
-      create: { id: "singleton", lastMentionId: newestId },
-    });
+    if (newestId) {
+      await prisma.stats.upsert({
+        where:  { id: "singleton" },
+        update: { lastMentionId: newestId },
+        create: { id: "singleton", lastMentionId: newestId },
+      });
+    }
 
-    let replied = 0;
-    const replyErrors: string[] = [];
+    let queued = 0;
 
     for (const mention of mentions) {
       if (isBlocked(mention.author_id)) continue;
       if (isSpam(mention.text)) continue;
-      if (repliedTweetIds.has(mention.id)) continue; // shared dedup across all reply crons
+      if (repliedTweetIds.has(mention.id)) continue; // already replied — permanent dedup
+
+      // Skip if already in queue waiting for approval
+      const alreadyQueued = await prisma.queueItem.findFirst({
+        where: {
+          type: "Mention",
+          status: { in: ["PENDING", "APPROVED"] },
+          metadata: { path: ["tweetId"], equals: mention.id },
+        },
+      });
+      if (alreadyQueued) continue;
+
       await humanPause();
 
       try {
+        // Pre-generate reply so user sees exactly what will be sent
         const reply = await generateReply(mention.text, mention.author_username ?? "user");
-        await replyToTweet(mention.id, reply);
-        replied++;
 
-        await prisma.activity.create({
-          data: { action: "Replied to mention", detail: buildReplyDetail(mention.id, mention.author_id ?? "", reply), icon: "💬" },
+        const item = await prisma.queueItem.create({
+          data: {
+            type: "Mention",
+            content: reply,
+            metadata: {
+              tweetId: mention.id,
+              authorUsername: mention.author_username ?? "",
+              authorId: mention.author_id ?? "",
+              originalText: mention.text.slice(0, 280),
+            },
+          },
         });
-        await sendMessage(
-          `💬 *Replied to mention*\n\n` +
-          `_They said:_ "${mention.text.slice(0, 120)}"\n\n` +
-          `*Reply:* ${reply.slice(0, 200)}`
-        );
-        await randomDelay(2000, 5000);
+
+        // Send to Telegram for approval — user must tap Send before it posts
+        await fetch(`${BOT}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: process.env.TELEGRAM_CHAT_ID,
+            text:
+              `💬 *Mention from @${mention.author_username || mention.author_id}*\n\n` +
+              `_"${mention.text.slice(0, 280)}"_\n\n` +
+              `*Phantom's reply:*\n${reply}`,
+            parse_mode: "Markdown",
+            reply_markup: {
+              inline_keyboard: [[
+                { text: "✅ Send",       callback_data: `approve_mention:${item.id}` },
+                { text: "🔄 New reply",  callback_data: `regenerate:${item.id}` },
+                { text: "✏️ Edit",       callback_data: `custom_mention:${item.id}` },
+                { text: "❌ Skip",       callback_data: `skip_mention:${item.id}` },
+              ]],
+            },
+          }),
+        });
+
+        queued++;
+        await randomDelay(1500, 3000);
       } catch (e) {
-        replyErrors.push(String(e).slice(0, 80));
-        await prisma.activity.create({
-          data: { action: "Mention reply failed", detail: String(e).slice(0, 80), icon: "❌" },
-        });
+        await sendMessage(`⚠️ *Mention queue failed*\n\`${String(e).slice(0, 80)}\``);
       }
     }
 
-    if (replyErrors.length > 0) {
-      await sendMessage(`⚠️ *Mentions: ${replyErrors.length} reply(s) failed*\n\`${replyErrors[0]}\``);
+    if (queued > 0) {
+      await sendMessage(`📬 *${queued} new mention${queued > 1 ? "s" : ""} waiting for your approval.*`);
     }
 
-    if (replied > 0) {
-      await notifyPosted(`Replied to ${replied} mention${replied > 1 ? "s" : ""}`, "");
-    }
-
-    return NextResponse.json({ ok: true, mentions: replied, sinceId, newestId });
+    return NextResponse.json({ ok: true, queued, sinceId, newestId });
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }

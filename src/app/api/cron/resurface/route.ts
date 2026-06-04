@@ -35,7 +35,7 @@ export async function GET(req: Request) {
           + (t.public_metrics?.reply_count ?? 0) * 2
           + (t.public_metrics?.quote_count ?? 0) * 3,
       }))
-      .filter(t => t.score >= 1)
+      .filter(t => t.score >= 5)
       .sort((a, b) => b.score - a.score);
 
     if (!ranked.length) {

@@ -27,7 +27,7 @@ const DM_TARGET_KEYWORDS = [
   "shipping products alone",
 ];
 
-export const maxDuration = 30;
+export const maxDuration = 55;
 
 export async function GET(req: Request) {
   const auth = req.headers.get("authorization");

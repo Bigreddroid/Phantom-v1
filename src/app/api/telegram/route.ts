@@ -474,6 +474,30 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // ── Mention approval: send the pre-generated reply ───────────────────────
+    if (action === "approve_mention") {
+      const item = await prisma.queueItem.findUnique({ where: { id: param } });
+      if (!item || item.status !== "PENDING") {
+        await send(chatId, "⚠️ Mention already handled.");
+        return NextResponse.json({ ok: true });
+      }
+      const meta = (item.metadata as Record<string, unknown>) ?? {};
+      await send(chatId, "⚡ Sending reply...");
+      try {
+        await replyToTweet(String(meta.tweetId), item.content);
+        await prisma.queueItem.update({ where: { id: param }, data: { status: "POSTED" } });
+        const { buildReplyDetail } = await import("@/lib/reply-dedup");
+        await prisma.activity.create({
+          data: { action: "Replied to mention", detail: buildReplyDetail(String(meta.tweetId), String(meta.authorId ?? ""), item.content), icon: "💬" },
+        });
+        await send(chatId,
+          `✅ *Reply sent to @${meta.authorUsername || "them"}!*\n\n↩ ${item.content.slice(0, 240)}`
+        );
+      } catch (e) {
+        await send(chatId, `❌ Failed: ${String(e).slice(0, 120)}`);
+      }
+    }
+
     // ── Mention reply callbacks ───────────────────────────────────────────────
     if (action === "reply_mention") {
       const item = await prisma.queueItem.findUnique({ where: { id: param } });
@@ -487,13 +511,12 @@ export async function POST(req: NextRequest) {
         const reply = await generateReply(item.content, String(meta.authorUsername || "user"));
         await replyToTweet(String(meta.tweetId), reply);
         await prisma.queueItem.update({ where: { id: param }, data: { status: "POSTED" } });
+        const { buildReplyDetail } = await import("@/lib/reply-dedup");
         await prisma.activity.create({
-          data: { action: "Replied to mention", detail: `mid:${meta.tweetId}|${reply.slice(0, 70)}`, icon: "💬" },
+          data: { action: "Replied to mention", detail: buildReplyDetail(String(meta.tweetId), String(meta.authorId ?? ""), reply), icon: "💬" },
         });
         await send(chatId,
-          `✅ *Reply sent!*\n\n` +
-          `_They said:_ "${item.content.slice(0, 150)}"\n\n` +
-          `↩ ${reply}`
+          `✅ *Reply sent!*\n\n_They said:_ "${item.content.slice(0, 150)}"\n\n↩ ${reply}`
         );
       } catch (e) {
         await send(chatId, `❌ Failed: ${String(e).slice(0, 120)}`);
