@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+
+export const maxDuration = 55;
 import { getMentions, getMyProfile } from "@/lib/x/engage";
 import { replyToTweet } from "@/lib/x/post";
 import { generateReply } from "@/lib/claude/generate";
@@ -56,7 +58,7 @@ export async function GET(req: Request) {
       await humanPause();
 
       try {
-        const reply = await generateReply(mention.text, mention.author_id ?? "user");
+        const reply = await generateReply(mention.text, mention.author_username ?? "user");
         await replyToTweet(mention.id, reply);
         replied++;
 

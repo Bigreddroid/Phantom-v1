@@ -12,9 +12,10 @@ async function extractTweetId(res: Response): Promise<string> {
   const result = tweetResults?.result as Record<string, unknown> | undefined;
   const id = result?.rest_id as string | undefined;
   if (id) return id;
-  // X sometimes returns tweet_results: {} when the tweet posted successfully but
-  // didn't include the full result object. Treat as success with unknown ID.
+  // X sometimes returns tweet_results: {} — treat as success
   if (tweetResults !== undefined) return "";
+  // X sometimes returns create_tweet without tweet_results at all — still success
+  if (createTweet !== undefined) return "";
   throw new Error(`Unexpected tweet response: ${JSON.stringify(json).slice(0, 200)}`);
 }
 

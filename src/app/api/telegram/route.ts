@@ -1384,6 +1384,19 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // ── /clearstale — reject queue items older than 6h (clears backed-up queue) ─
+  else if (cmd === "/clearstale") {
+    const cutoff = new Date(Date.now() - 6 * 60 * 60 * 1000);
+    const wiped = await prisma.queueItem.updateMany({
+      where: { status: "PENDING", createdAt: { lt: cutoff } },
+      data: { status: "REJECTED" },
+    });
+    await send(chatId,
+      `🧹 *Cleared ${wiped.count} stale item${wiped.count !== 1 ? "s" : ""}* older than 6h.\n\n` +
+      `_Queue is fresh. Next cron tick will generate new content._`
+    );
+  }
+
   // ── /blacklist <username> | /block <username> ────────────────────────────
   else if (cmd === "/blacklist" || cmd === "/block") {
     if (!args) {

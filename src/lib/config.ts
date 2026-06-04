@@ -32,18 +32,33 @@ export const NICHE_KEYWORDS = list(
 export const CONTENT_TOPICS = list(
   process.env.CONTENT_TOPICS,
   [
+    // Build updates — raw, specific, credible
     "Phantom — the AI system I built to automate my entire personal brand on X",
     "building Project Z in public — 92 products, starting with Phantom",
-    "how Phantom uses Claude AI to write tweets, threads and replies in my voice",
-    "shipping Phantom: what I learned building an X automation system without the paid API",
-    "the Phantom stack: Next.js, Claude, Telegram bot, cookie-based X auth, Vercel crons",
-    "why I built Phantom instead of paying for a social media tool",
-    "building in public: what Phantom looks like after 30 days live",
-    "how I use Claude AI + Obsidian + Notion as my second brain while building",
-    "Phantom update: what shipped this week and what's next",
-    "the honest truth about automating your personal brand with AI",
-    "how Phantom handles tweet deduplication, approval flows and rate limits",
-    "building 92 products alone — the system behind Project Z",
+    "Phantom update: what shipped this week and what broke along the way",
+    "the honest reality of building Phantom alone — what nobody talks about",
+    "day-in-the-life: what it actually looks like running Phantom on autopilot",
+    // Hot takes — drive replies
+    "hot take: most AI automation tools aren't actually automated",
+    "why 99% of founders fail at building in public before they start",
+    "the mistake I made in the first 30 days of building Phantom",
+    "unpopular opinion: your personal brand is more important than your product",
+    "why I stopped trying to go viral and started building systems instead",
+    // Educational — positions as expert
+    "how I use Claude AI as a second brain while building in public",
+    "the exact stack I use to run Phantom: Next.js, Claude, Telegram, Vercel, Prisma",
+    "how cookie-based X automation works — and why it beats the paid API for indie builders",
+    "the Obsidian + Claude workflow that replaced 3 tools for me",
+    // Results / social proof
+    "what 30 days of automated engagement actually does to an X account",
+    "I let AI run my X account for 30 days — here's what happened",
+    // Engagement hooks — questions, polls, curiosity
+    "what are you building right now — I want to know",
+    "the thing that surprised me most about building 92 products alone",
+    "would you trust an AI to run your personal brand? I do.",
+    // Product Z narrative
+    "building 92 AI tools alone — the system and the madness behind Project Z",
+    "why I built Phantom instead of paying $200/month for a social media tool",
   ]
 );
 
@@ -51,16 +66,27 @@ export const CONTENT_TOPICS = list(
 export const THREAD_TOPICS = list(
   process.env.THREAD_TOPICS,
   [
+    // How-I-built (founder credibility)
     "how I built Phantom — an AI system that runs my entire X presence automatically",
-    "the full Phantom tech stack: every tool, every decision, and why",
-    "building Project Z: 92 products, one founder, no team",
-    "how I use Claude AI to generate content that sounds like me (not a bot)",
-    "Phantom's approval system: how I stay in control while automating everything",
-    "5 things I learned building an X automation system from scratch",
-    "how to build a personal brand on X without spending 3 hours a day on it",
-    "the Obsidian + Notion + Claude workflow I use to build and document everything",
-    "what building in public actually does for your audience — data from 30 days of Phantom",
-    "why cookie-based X auth beats the paid API for indie builders",
+    "the full Phantom tech stack: every tool, every decision, and why I chose each one",
+    "building Project Z: 92 products, one founder, no team — the real story",
+    "how I use Claude AI to generate content that actually sounds like me, not a bot",
+    // Tactical value (gets saves + shares)
+    "5 things I wish I knew before building in public on X",
+    "how to automate your personal brand on X without losing your voice",
+    "the system I use to ship products while still building an audience",
+    "how to use Claude as a second brain — the exact workflow I run daily",
+    "why most founders fail at content and the simple fix that changed everything for me",
+    // Results / proof
+    "what building in public for 30 days actually did to my account — raw data",
+    "I automated my entire X presence with AI — here's exactly how it works",
+    // Hot take threads (high engagement)
+    "7 uncomfortable truths about building a personal brand as a solo founder",
+    "why I think most 'AI automation' advice is wrong — and what actually works",
+    "the 5 mistakes every indie maker makes in their first 90 days",
+    // Niche authority
+    "the Obsidian + Notion + Claude workflow behind Project Z",
+    "why cookie-based X auth is better than the paid API for 90% of indie builders",
   ]
 );
 

@@ -11,16 +11,24 @@ import { NICHE_KEYWORDS } from "@/lib/config";
 export const maxDuration = 60;
 
 const GOOUT_KEYWORDS = [
-  "AI automation founders",
-  "building in public tools",
-  "solopreneur AI workflow",
-  "personal brand AI",
-  "automating content creation",
-  "AI tools for entrepreneurs",
-  "building AI products",
-  "no-code automation",
-  "founder building in public",
-  "productize yourself AI",
+  // High-volume threads where a reply gets visibility
+  "building in public",
+  "shipped today",
+  "just launched my",
+  "what I'm building",
+  "indie maker",
+  "solo founder",
+  // Topic hooks that attract active builders
+  "AI tools for founders",
+  "solopreneur workflow",
+  "personal brand strategy",
+  "automate your content",
+  "founder content strategy",
+  "build an audience",
+  // Genuine conversation starters
+  "what are you building",
+  "honest about building",
+  "the mistake founders make",
 ];
 
 // Parse dedup detail: "tid:<tweetId>|aid:<authorId>|<text>"

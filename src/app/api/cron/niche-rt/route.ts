@@ -21,6 +21,30 @@ export async function GET(req: Request) {
 
   await humanPause();
 
+  // Reject off-topic content even if the keyword matched tangentially
+  const OFFTOPIC = [
+    "biden", "trump", "obama", "harris", "kamala", "pelosi",
+    "congress", "senate", "republican", "democrat", "maga",
+    "election", "voting", "ballot", "shooting", "arrested",
+    "lawsuit", "court", "verdict", "breaking:", "breaking news",
+    "just in:", "media's", "nfl", "nba", "fifa",
+    // crypto / web3 — off-brand
+    "crypto", "bitcoin", "ethereum", "solana", "nft", "defi",
+    "token", "wallet", "blockchain", "web3", "airdrop", "altcoin",
+    "hodl", "memecoin", "degen", "dao", "smart contract",
+  ];
+  const NICHE = [
+    "build", "ship", "launch", "product", "founder", "indie",
+    "automat", "notion", "obsidian", "claude", "llm", "agent",
+    "startup", "saas", "workflow", "content", "brand", "audience",
+    "solopreneur", "phantom", "project z",
+  ];
+  function isRelevant(text: string): boolean {
+    const lower = text.toLowerCase();
+    if (OFFTOPIC.some(s => lower.includes(s))) return false;
+    return NICHE.some(s => lower.includes(s));
+  }
+
   try {
     const isBlocked = await loadBlocklist();
     const keyword = NICHE_KEYWORDS[Math.floor(Math.random() * NICHE_KEYWORDS.length)];
@@ -29,7 +53,7 @@ export async function GET(req: Request) {
 
     // Score by traction: likes + retweets×4 + quotes×3 + replies×1
     const scored = tweets
-      .filter(t => t.author_id && !isBlocked(t.author_id, t.author_username))
+      .filter(t => t.author_id && !isBlocked(t.author_id, t.author_username) && isRelevant(t.text))
       .map(t => ({
         ...t,
         score: (t.public_metrics?.like_count ?? 0)
