@@ -52,6 +52,6 @@ scripts/patch-agent-twitter.js
 *.tsbuildinfo
 next-env.d.ts
 
-/src/generated/prisma
+# /src/generated/prisma  ← committed so Vercel always has correct generated types
 
 .vercel
