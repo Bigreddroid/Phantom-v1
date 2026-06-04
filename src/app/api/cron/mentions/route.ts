@@ -37,7 +37,7 @@ export async function GET(req: Request) {
     const sinceId = statsRow?.lastMentionId ?? undefined;
     const [mentions, repliedTweetIds] = await Promise.all([
       getMentions(me.id, sinceId),
-      getRepliedTweetIds(), // shared dedup — covers mentions + engage + goout
+      getRepliedTweetIds(true), // allTime=true — never reply to the same mention twice, ever
     ]);
 
     if (!mentions.length) {

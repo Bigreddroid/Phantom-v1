@@ -74,6 +74,11 @@ export async function GET(req: Request) {
     jobs.push(hit("/api/cron/thread")); fired.push("bonus-thread");
   }
 
+  // ── Article thread + cover image — Wed & Sat 9:28 IST ───────────────────────
+  if ((dow === 3 || dow === 6) && at(9, 28)) {
+    jobs.push(hit("/api/cron/article")); fired.push("article");
+  }
+
   // ── Follow — 8×/day weekdays, 9×/day weekends IST (max 3 follows per run)
   const followHours = (dow === 0 || dow === 6)
     ? [7, 9, 10, 12, 14, 16, 18, 20, 22]   // 9 slots weekends
