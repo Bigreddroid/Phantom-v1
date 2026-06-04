@@ -49,7 +49,7 @@ export async function generateTweet(topic: string, context?: string, recentTweet
 
 Rules:
 - Under 280 characters
-- MUST name at least one of: Phantom, BigRedDroid, Project Z — not just the concept, the actual name
+- MUST name at least one of: Phantom, BigRedDroid — not just the concept, the actual name
 - No hashtags unless they add real value
 - No generic opener like "Hot take:" or "Thread:"
 - Sound like a real builder's thought, not a marketing post
@@ -75,7 +75,7 @@ Each tweet under 280 characters. No numbering like "1/" needed.`,
   return raw.split("---").map((t) => t.trim()).filter(Boolean);
 }
 
-const REPLY_SYSTEM = `You are ${X_HANDLE} — solo founder building Phantom and Project Z, replying to people on X.
+const REPLY_SYSTEM = `You are ${X_HANDLE} — solo founder building Phantom under BigRedDroid, replying to people on X.
 You talk like a real person: direct, occasionally dry, genuinely curious. Builder to builder.
 Not a support bot. Not a hype machine. Just someone who actually read the tweet.
 Never start with "I". Never say "great point", "so true", "love this", "this resonates", "totally", "absolutely".
@@ -99,7 +99,7 @@ Rules:
 - Don't start with "I" or "@${authorUsername}"
 - No hollow openers: "great point", "well said", "love this", "so true", "100%", "this resonates"
 - No unsolicited advice. No correcting.
-- If Phantom / BigRedDroid / Project Z connects naturally — one clause, never forced.
+- If Phantom / BigRedDroid connects naturally — one clause, never forced.
 
 Hard limit: 240 characters. COMPLETE sentence only.`,
     REPLY_SYSTEM,
@@ -211,7 +211,7 @@ This should read like a genuinely useful article broken into tweets. Format:
 Each tweet separated by "---"
 Each tweet under 280 chars.
 Write as ${X_HANDLE} — direct, confident, sounds like earned experience not generic advice.
-Reference your own tools (Phantom, BigRedDroid, Project Z) only where it fits naturally.`,
+Reference your own tools (Phantom, BigRedDroid) only where it fits naturally.`,
     VOICE_SYSTEM_PROMPT,
     2000,
   );
@@ -290,7 +290,7 @@ Format:
 
 Rules:
 - 600–1800 characters total
-- Mention Phantom, BigRedDroid, or Project Z where it fits naturally — not forced
+- Mention Phantom or BigRedDroid where it fits naturally — not forced
 - Sounds like a builder thinking out loud, not a newsletter
 - No hashtags
 - No "I've been thinking about..." opener`,

@@ -6,11 +6,14 @@ export const runtime = "edge";
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const raw = searchParams.get("text") ?? "Building in public.";
-  // Strip trailing hashtags — they clutter the image
+
+  // Strip trailing hashtags — they clutter the card
   const text = raw.replace(/(#\w+\s*)+$/, "").trim();
 
+  // Scale font down gracefully for longer text
   const len = text.length;
-  const fontSize = len < 80 ? 58 : len < 140 ? 50 : len < 220 ? 42 : 36;
+  const fontSize = len < 60 ? 56 : len < 100 ? 48 : len < 160 ? 42 : len < 220 ? 36 : 30;
+  const paddingV = len > 160 ? 40 : 52;
 
   return new ImageResponse(
     (
@@ -26,109 +29,114 @@ export async function GET(req: Request) {
           fontFamily: "sans-serif",
         }}
       >
-        {/* Red glow — top-left corner */}
+        {/* Top red gradient bar */}
+        <div
+          style={{
+            height: 4,
+            width: "100%",
+            background:
+              "linear-gradient(90deg, #dc2626 0%, #b91c1c 45%, rgba(185,28,28,0.25) 80%, transparent 100%)",
+            display: "flex",
+            flexShrink: 0,
+          }}
+        />
+
+        {/* Background glow — top left */}
         <div
           style={{
             position: "absolute",
-            top: -160,
-            left: -160,
-            width: 520,
-            height: 520,
+            top: -180,
+            left: -180,
+            width: 480,
+            height: 480,
             borderRadius: "50%",
             background:
-              "radial-gradient(circle, rgba(220,38,38,0.22) 0%, rgba(220,38,38,0.05) 50%, transparent 70%)",
+              "radial-gradient(circle, rgba(220,38,38,0.18) 0%, rgba(220,38,38,0.04) 55%, transparent 70%)",
             display: "flex",
           }}
         />
 
-        {/* Subtle bottom-right glow */}
+        {/* Background glow — bottom right */}
         <div
           style={{
             position: "absolute",
             bottom: -120,
-            right: -120,
-            width: 380,
-            height: 380,
+            right: -80,
+            width: 340,
+            height: 340,
             borderRadius: "50%",
             background:
-              "radial-gradient(circle, rgba(220,38,38,0.10) 0%, transparent 65%)",
+              "radial-gradient(circle, rgba(220,38,38,0.08) 0%, transparent 65%)",
             display: "flex",
           }}
         />
 
-        {/* Top accent bar — red gradient */}
-        <div
-          style={{
-            height: 3,
-            background:
-              "linear-gradient(90deg, #dc2626 0%, #b91c1c 40%, rgba(185,28,28,0.3) 80%, transparent 100%)",
-            display: "flex",
-          }}
-        />
-
-        {/* Main content */}
+        {/* Main content area */}
         <div
           style={{
             flex: 1,
-            padding: "52px 80px 36px",
             display: "flex",
             flexDirection: "column",
             justifyContent: "center",
+            padding: `${paddingV}px 80px ${paddingV - 8}px`,
           }}
         >
-          {/* Left red accent + quote text */}
+          {/* Red left border + quote block */}
           <div
             style={{
               display: "flex",
               flexDirection: "row",
               alignItems: "stretch",
-              gap: 32,
+              gap: 28,
+              width: "100%",
             }}
           >
-            {/* Red left bar */}
+            {/* Vertical red accent */}
             <div
               style={{
-                width: 4,
-                borderRadius: 2,
-                background:
-                  "linear-gradient(180deg, #dc2626 0%, #7f1d1d 100%)",
+                width: 5,
+                borderRadius: 3,
+                background: "linear-gradient(180deg, #dc2626 0%, #7f1d1d 100%)",
                 display: "flex",
                 flexShrink: 0,
               }}
             />
 
+            {/* Quote + text column */}
             <div
               style={{
                 display: "flex",
                 flexDirection: "column",
                 flex: 1,
-                gap: 0,
+                minWidth: 0,
+                gap: 12,
               }}
             >
-              {/* Opening quote mark */}
+              {/* Opening quote */}
               <div
                 style={{
-                  color: "#dc2626",
-                  fontSize: 72,
+                  color: "rgba(220,38,38,0.65)",
+                  fontSize: 80,
                   fontWeight: 900,
-                  lineHeight: 0.6,
-                  marginBottom: 20,
-                  opacity: 0.7,
+                  lineHeight: 0.5,
                   display: "flex",
                 }}
               >
-                "
+                {"“"}
               </div>
 
-              {/* Tweet text */}
+              {/* Tweet text — flex column ensures wrapping */}
               <div
                 style={{
-                  color: "#f9fafb",
+                  display: "flex",
+                  flexDirection: "column",
+                  color: "#f3f4f6",
                   fontSize,
                   fontWeight: 700,
-                  lineHeight: 1.45,
-                  letterSpacing: -0.5,
-                  display: "flex",
+                  lineHeight: 1.5,
+                  letterSpacing: -0.3,
+                  wordBreak: "break-word",
+                  maxWidth: "100%",
                 }}
               >
                 {text}
@@ -137,42 +145,44 @@ export async function GET(req: Request) {
           </div>
         </div>
 
-        {/* Bottom bar */}
+        {/* Bottom bar — author + branding */}
         <div
           style={{
             display: "flex",
+            flexDirection: "row",
             alignItems: "center",
-            padding: "22px 80px 28px",
-            borderTop: "1px solid rgba(255,255,255,0.07)",
+            padding: "20px 80px 24px",
+            borderTop: "1px solid rgba(255,255,255,0.06)",
+            flexShrink: 0,
           }}
         >
-          {/* Avatar circle */}
+          {/* Avatar */}
           <div
             style={{
-              width: 54,
-              height: 54,
+              width: 52,
+              height: 52,
               borderRadius: "50%",
-              background:
-                "linear-gradient(135deg, #dc2626 0%, #7f1d1d 100%)",
+              background: "linear-gradient(135deg, #dc2626 0%, #7f1d1d 100%)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: "#fff",
+              color: "#ffffff",
               fontSize: 22,
               fontWeight: 900,
-              marginRight: 16,
               flexShrink: 0,
-              boxShadow: "0 0 16px rgba(220,38,38,0.4)",
+              marginRight: 16,
+              boxShadow: "0 0 18px rgba(220,38,38,0.45)",
             }}
           >
             {DISPLAY_INITIAL}
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          {/* Name + label */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
             <div
               style={{
-                color: "#f3f4f6",
-                fontSize: 19,
+                color: "#f9fafb",
+                fontSize: 20,
                 fontWeight: 700,
                 display: "flex",
               }}
@@ -181,17 +191,18 @@ export async function GET(req: Request) {
             </div>
             <div
               style={{
-                color: "rgba(156,163,175,0.6)",
-                fontSize: 14,
+                color: "rgba(156,163,175,0.55)",
+                fontSize: 13,
+                fontWeight: 500,
+                letterSpacing: 1.2,
                 display: "flex",
-                letterSpacing: 1,
               }}
             >
               PHANTOM · AI PERSONAL BRAND
             </div>
           </div>
 
-          {/* Right: X mark */}
+          {/* Right — X logo */}
           <div
             style={{
               marginLeft: "auto",
@@ -202,28 +213,28 @@ export async function GET(req: Request) {
           >
             <div
               style={{
-                width: 7,
-                height: 7,
+                width: 6,
+                height: 6,
                 borderRadius: "50%",
                 background: "#dc2626",
                 display: "flex",
-                boxShadow: "0 0 8px rgba(220,38,38,0.8)",
+                boxShadow: "0 0 10px rgba(220,38,38,0.9)",
               }}
             />
             <div
               style={{
-                color: "rgba(255,255,255,0.25)",
-                fontSize: 36,
+                color: "rgba(255,255,255,0.18)",
+                fontSize: 38,
                 fontWeight: 900,
                 display: "flex",
               }}
             >
-              𝕏
+              {"𝕏"}
             </div>
           </div>
         </div>
       </div>
     ),
-    { width: 1920, height: 1080 }
+    { width: 1200, height: 628 }
   );
 }

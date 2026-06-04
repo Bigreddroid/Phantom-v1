@@ -34,7 +34,7 @@ export const CONTENT_TOPICS = list(
   [
     // Build updates — raw, specific, credible
     "Phantom — the AI system I built to automate my entire personal brand on X",
-    "building Project Z in public — 92 products, starting with Phantom",
+    "building BigRedDroid in public — 92 products, starting with Phantom",
     "Phantom update: what shipped this week and what broke along the way",
     "the honest reality of building Phantom alone — what nobody talks about",
     "day-in-the-life: what it actually looks like running Phantom on autopilot",
@@ -56,8 +56,8 @@ export const CONTENT_TOPICS = list(
     "what are you building right now — I want to know",
     "the thing that surprised me most about building 92 products alone",
     "would you trust an AI to run your personal brand? I do.",
-    // Product Z narrative
-    "building 92 AI tools alone — the system and the madness behind Project Z",
+    // BigRedDroid narrative
+    "building 92 AI tools alone — the system and the madness behind BigRedDroid",
     "why I built Phantom instead of paying $200/month for a social media tool",
   ]
 );
@@ -69,7 +69,7 @@ export const THREAD_TOPICS = list(
     // How-I-built (founder credibility)
     "how I built Phantom — an AI system that runs my entire X presence automatically",
     "the full Phantom tech stack: every tool, every decision, and why I chose each one",
-    "building Project Z: 92 products, one founder, no team — the real story",
+    "building BigRedDroid: 92 products, one founder, no team — the real story",
     "how I use Claude AI to generate content that actually sounds like me, not a bot",
     // Tactical value (gets saves + shares)
     "5 things I wish I knew before building in public on X",
@@ -85,7 +85,7 @@ export const THREAD_TOPICS = list(
     "why I think most 'AI automation' advice is wrong — and what actually works",
     "the 5 mistakes every indie maker makes in their first 90 days",
     // Niche authority
-    "the Obsidian + Notion + Claude workflow behind Project Z",
+    "the Obsidian + Notion + Claude workflow behind BigRedDroid",
     "why cookie-based X auth is better than the paid API for 90% of indie builders",
   ]
 );
@@ -104,7 +104,7 @@ export const ARTICLE_TOPICS = [
   "the Notion setup that runs my entire product studio (template inside)",
   "how I use Notion AI to turn raw notes into published content in 10 minutes",
   "stop building complex Notion systems — here is the only structure you need as a solopreneur",
-  "Notion as a second brain: the exact database setup I use for Project Z",
+  "Notion as a second brain: the exact database setup I use for BigRedDroid",
   // Obsidian
   "why I switched from Notion to Obsidian for thinking — and use both for different things",
   "the Obsidian + Claude workflow that replaced journaling, note-taking, and planning apps",
@@ -122,14 +122,14 @@ export const ARTICLE_TOPICS = [
   "building in public: what actually works vs. what just gets likes",
   "how I approach X engagement differently from everyone else (and why it compounds)",
   // Solopreneur / Founder
-  "shipping 92 products alone: the mindset and systems behind Project Z",
+  "shipping 92 products alone: the mindset and systems behind BigRedDroid",
   "the solopreneur productivity stack I run on $50/month",
   "why I chose depth over breadth when building under BigRedDroid",
 ];
 
 // Comma-separated topics injected into the AI voice prompt
 export const VOICE_TOPICS = process.env.VOICE_TOPICS
-  ?? "Phantom (AI personal brand system), Project Z (building 92 products), Claude AI, Obsidian, Notion, building in public, solopreneur automation";
+  ?? "Phantom (AI personal brand system), BigRedDroid (building 92 products), Claude AI, Obsidian, Notion, building in public, solopreneur automation";
 
 // Single letter shown in the OG image avatar circle
 export const DISPLAY_INITIAL = (process.env.DISPLAY_INITIAL ?? "P")[0].toUpperCase();

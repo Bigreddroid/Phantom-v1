@@ -59,8 +59,8 @@ export async function GET(req: Request) {
     if (Math.random() < 0.4) {
       const products = [
         "Phantom (my AI personal brand automation system for X/Twitter, live now under BigRedDroid)",
-        "Project Z — building 92 AI automation products under BigRedDroid, Phantom is #1",
-        "BigRedDroid — my solo deep-tech lab, Project Z is the first major initiative",
+        "BigRedDroid — building 92 AI products solo, Phantom is #1",
+        "BigRedDroid — my solo deep-tech lab, Phantom is the flagship product",
       ];
       content = await generateBuildUpdate(
         products[Math.floor(Math.random() * products.length)],

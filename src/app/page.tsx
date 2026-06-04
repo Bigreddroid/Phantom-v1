@@ -440,7 +440,7 @@ export default function LandingPage() {
             </div>
             <span className="font-bold text-sm tracking-tight text-white/60">PHANTOM</span>
           </div>
-          <p className="text-xs text-white/20">Part of <span className="text-white/40">Project Z</span> · Built with Claude + Vercel</p>
+          <p className="text-xs text-white/20">Part of <span className="text-white/40">BigRedDroid</span> · Built with Claude + Vercel</p>
           <div className="flex items-center gap-4 text-xs text-white/25">
             <a href="/login" className="hover:text-white/50 transition-colors">Dashboard</a>
             <a href="https://github.com/Bigreddroid/Phantom-v1" target="_blank" rel="noreferrer" className="hover:text-white/50 transition-colors">GitHub</a>

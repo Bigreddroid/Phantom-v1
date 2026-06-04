@@ -19,7 +19,7 @@ export async function followUser(targetUsername: string, _sourceUserId?: string)
   return scraper.followUser(targetUsername);
 }
 
-export async function getMentions(_userId?: string, _sinceId?: string) {
+export async function getMentions(_userId?: string, sinceId?: string) {
   const s = await getConvoScraper();
   const username = process.env.X_USERNAME!;
   const tweets: Awaited<ReturnType<typeof searchTweets>> = [];
@@ -28,6 +28,10 @@ export async function getMentions(_userId?: string, _sinceId?: string) {
     20,
     ConvoSearchMode.Latest
   )) {
+    // Snowflake IDs are monotonically increasing — stop once we reach already-seen tweets
+    if (sinceId && t.id) {
+      try { if (BigInt(t.id) <= BigInt(sinceId)) break; } catch { /* malformed ID, skip check */ }
+    }
     tweets.push({
       id: t.id ?? "",
       text: t.text ?? "",
