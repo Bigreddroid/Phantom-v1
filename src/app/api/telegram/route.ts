@@ -646,7 +646,8 @@ export async function POST(req: NextRequest) {
       `/today — what Phantom did since midnight\n` +
       `/activity — last 10 actions\n` +
       `/queue — pending approvals with live buttons\n` +
-      `/schedule — automation schedule\n\n` +
+      `/schedule — automation schedule\n` +
+      `/waitlist — all waitlist signups with dates\n\n` +
       `*Control*\n` +
       `/pause — pause all automation (queue kept)\n` +
       `/kill — hard stop: pause + wipe entire pending queue\n` +
@@ -1498,6 +1499,28 @@ export async function POST(req: NextRequest) {
           }
         );
       }
+    } catch (e) {
+      await send(chatId, `❌ Error: ${String(e).slice(0, 100)}`);
+    }
+  }
+
+  // ── /waitlist ─────────────────────────────────────────────────────────────
+  else if (cmd === "/waitlist") {
+    try {
+      const [total, recent] = await Promise.all([
+        prisma.waitlist.count(),
+        prisma.waitlist.findMany({ orderBy: { createdAt: "desc" }, take: 20 }),
+      ]);
+      const lines = recent.map((w, i) => {
+        const d = new Date(w.createdAt);
+        const date = `${d.getDate()}/${d.getMonth() + 1}`;
+        return `${i + 1}. ${w.email} · ${date}`;
+      }).join("\n");
+      await send(chatId,
+        `*📋 Waitlist — ${total} signup${total !== 1 ? "s" : ""}*\n\n` +
+        `\`\`\`\n${lines || "No signups yet."}\n\`\`\`\n\n` +
+        (total > 20 ? `_Showing latest 20 of ${total}_` : "")
+      );
     } catch (e) {
       await send(chatId, `❌ Error: ${String(e).slice(0, 100)}`);
     }

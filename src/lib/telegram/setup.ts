@@ -60,6 +60,7 @@ export async function ensureCommands(): Promise<boolean> {
         { command: "inbox",     description: "See unread mentions — reply, custom reply, or skip each" },
         { command: "mentions",  description: "Auto-reply to all current mentions (no preview)" },
         { command: "linkedin",  description: "Post to LinkedIn or check connection status" },
+        { command: "waitlist",  description: "Show all waitlist signups with dates" },
         { command: "schedule",  description: "Show the full automation schedule" },
         { command: "pause",     description: "Pause automation (queue preserved)" },
         { command: "kill",      description: "Hard stop — pause + wipe entire pending queue" },
