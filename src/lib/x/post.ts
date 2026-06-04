@@ -12,6 +12,9 @@ async function extractTweetId(res: Response): Promise<string> {
   const result = tweetResults?.result as Record<string, unknown> | undefined;
   const id = result?.rest_id as string | undefined;
   if (id) return id;
+  // X sometimes returns tweet_results: {} when the tweet posted successfully but
+  // didn't include the full result object. Treat as success with unknown ID.
+  if (tweetResults !== undefined) return "";
   throw new Error(`Unexpected tweet response: ${JSON.stringify(json).slice(0, 200)}`);
 }
 
@@ -62,8 +65,19 @@ export async function postTweetWithImage(text: string, style?: string): Promise<
   }
 }
 
+function smartTruncate(text: string, limit = 275): string {
+  if (text.length <= limit) return text;
+  // Find last sentence boundary (. ! ?) before the limit
+  const cut = text.slice(0, limit);
+  const lastBoundary = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("! "), cut.lastIndexOf("? "), cut.lastIndexOf(".\n"), cut.lastIndexOf("!\n"), cut.lastIndexOf("?\n"));
+  if (lastBoundary > limit * 0.5) return text.slice(0, lastBoundary + 1).trim();
+  // No clean boundary — at least cut at a word boundary
+  const lastSpace = cut.lastIndexOf(" ");
+  return (lastSpace > 0 ? text.slice(0, lastSpace) : cut).trim();
+}
+
 export async function replyToTweet(tweetId: string, text: string): Promise<{ id: string }> {
-  const safe = text.length > 275 ? text.slice(0, 272) + "…" : text;
+  const safe = smartTruncate(text, 275);
   const client = await getXClient();
   const res = await client.sendTweet(safe, tweetId);
   const id = await extractTweetId(res);
