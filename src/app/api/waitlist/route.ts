@@ -3,8 +3,6 @@ import { prisma } from "@/lib/db";
 import { sendMessage } from "@/lib/telegram/notify";
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 const FROM = "Phantom <onboarding@resend.dev>";
 const REPLY_TO = "bigreddroid7@gmail.com";
 
@@ -129,16 +127,18 @@ export async function POST(req: Request) {
     ]);
     void entry;
 
-    // Fire both in parallel — neither should block the response
+    // Fire both in parallel — neither blocks the response, failures are swallowed
     void Promise.all([
       sendMessage(`🚀 *New Phantom waitlist signup*\n\n📧 ${email}\n👥 Total: ${count}`),
-      resend.emails.send({
-        from: FROM,
-        replyTo: REPLY_TO,
-        to: email,
-        subject: "You're on the Phantom waitlist",
-        html: confirmationEmail(email),
-      }),
+      process.env.RESEND_API_KEY
+        ? new Resend(process.env.RESEND_API_KEY).emails.send({
+            from: FROM,
+            replyTo: REPLY_TO,
+            to: email,
+            subject: "You're on the Phantom waitlist",
+            html: confirmationEmail(email),
+          })
+        : Promise.resolve(),
     ]);
 
     return NextResponse.json({ ok: true });

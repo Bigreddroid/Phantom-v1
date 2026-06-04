@@ -175,11 +175,13 @@ function WaitlistForm({ id }: { id?: string }) {
       if (res.ok) {
         setSubmitted(true);
       } else {
-        const data = await res.json().catch(() => ({}));
-        setError(data.error ?? "Something went wrong. Try again.");
+        const text = await res.text().catch(() => "");
+        let msg = "Something went wrong. Try again.";
+        try { msg = JSON.parse(text).error ?? `HTTP ${res.status}`; } catch { msg = `HTTP ${res.status}`; }
+        setError(msg);
       }
-    } catch {
-      setError("Something went wrong. Try again.");
+    } catch (err) {
+      setError(String(err));
     } finally {
       setSubmitting(false);
     }
