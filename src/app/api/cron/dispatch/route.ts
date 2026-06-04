@@ -44,6 +44,9 @@ export async function GET(req: Request) {
   const jobs: Promise<unknown>[] = [];
   const fired: string[] = [];
 
+  // Seed jitter from today's date — stable within a day, shifts daily
+  const daySeed = now.getDate() + now.getMonth() * 31;
+
   // ── Every 15 min, 24/7 ──────────────────────────────────────────────────────
   jobs.push(hit("/api/cron/mentions")); fired.push("mentions");
   jobs.push(hit("/api/cron/engage"));  fired.push("engage");
@@ -71,8 +74,14 @@ export async function GET(req: Request) {
     jobs.push(hit("/api/cron/thread")); fired.push("bonus-thread");
   }
 
-  // ── Follow — 1×/day at 10:30 IST (rate-limit safe: max 3 follows per run)
-  if (at(10, 28)) {
+  // ── Follow — 8×/day weekdays, 9×/day weekends IST (max 3 follows per run)
+  const followHours = (dow === 0 || dow === 6)
+    ? [7, 9, 10, 12, 14, 16, 18, 20, 22]   // 9 slots weekends
+    : [7, 9, 11, 13, 16, 18, 20, 22];       // 8 slots weekdays
+  if (followHours.some((h, i) => {
+    const jitter = (daySeed * (i + 3)) % 15; // 0–14 min, stable per slot per day
+    return at(h, jitter);
+  })) {
     jobs.push(hit("/api/cron/follow")); fired.push("follow");
   }
 
@@ -87,18 +96,37 @@ export async function GET(req: Request) {
     jobs.push(hit(liType)); fired.push(`li:${liType.split("/").pop()}`);
   }
 
+  // ── Long-form post (Premium+) — daily 10:28 IST ─────────────────────────────
+  if (at(10, 28)) {
+    jobs.push(hit("/api/cron/longpost")); fired.push("longpost");
+  }
+
   // ── Niche RT — daily 16:30 IST ───────────────────────────────────────────────
   if (at(16, 28)) {
     jobs.push(hit("/api/cron/niche-rt")); fired.push("niche-rt");
   }
 
-  // ── Auto DM — daily 13:30 IST ────────────────────────────────────────────────
-  if (at(13, 28)) {
+  // ── Auto DM — 8×/day weekdays, 9×/day weekends IST ─────────────────────────
+  // Each hour-slot has a randomised ±14 min offset so DMs never fire at the
+  // same minute every day — looks human, avoids X pattern detection.
+  const dmHours = (dow === 0 || dow === 6)
+    ? [8, 9, 11, 12, 14, 15, 17, 19, 21]   // 9 slots weekends
+    : [8, 10, 11, 13, 15, 17, 19, 21];      // 8 slots weekdays
+  if (dmHours.some((h, i) => {
+    const jitter = (daySeed * (i + 7)) % 15; // 0–14 min offset, stable per slot per day
+    return at(h, jitter);
+  })) {
     jobs.push(hit("/api/cron/dm")); fired.push("dm");
   }
 
-  // ── Go-out — 5×/day: 9, 11, 14, 17, 20 IST ──────────────────────────────────
-  if (at(9, 0) || at(11, 0) || at(14, 0) || at(17, 0) || at(20, 0)) {
+  // ── Go-out — 8×/day weekdays, 9×/day weekends IST ───────────────────────────
+  const gooutHours = (dow === 0 || dow === 6)
+    ? [8, 9, 11, 13, 15, 17, 19, 21, 22]   // 9 slots weekends
+    : [8, 10, 11, 13, 15, 17, 19, 21];      // 8 slots weekdays
+  if (gooutHours.some((h, i) => {
+    const jitter = (daySeed * (i + 11)) % 15; // 0–14 min, stable per slot per day
+    return at(h, jitter);
+  })) {
     jobs.push(hit("/api/cron/goout")); fired.push("goout");
   }
 

@@ -3,10 +3,9 @@ import { NextRequest, NextResponse } from "next/server";
 export const maxDuration = 60;
 import { prisma } from "@/lib/db";
 import { postTweet, postTweetWithImage, postThread, quoteTweet, replyToTweet } from "@/lib/x/post";
-import { generateTweet, generateThread, generateArticleThread, generateDM, generateQuoteTweet, generateLinkedInPost, generateReply } from "@/lib/claude/generate";
+import { generateTweet, generateThread, generateArticleThread, generateDM, generateQuoteTweet, generateLinkedInPost, generateReply, generateLongTweet } from "@/lib/claude/generate";
 import { notifyPosted, requestApproval, sendMessage } from "@/lib/telegram/notify";
 import { ensureWebhook, ensureCommands } from "@/lib/telegram/setup";
-import { xRO } from "@/lib/x/client";
 import { sendDM, getDMConversations } from "@/lib/x/dm";
 import { searchTweets, getMyProfile, retweet, getMyTweets, getMentions } from "@/lib/x/engage";
 import { getLinkedInAuth } from "@/lib/linkedin/client";
@@ -142,10 +141,10 @@ export async function POST(req: NextRequest) {
       const meta = (item.metadata as Record<string, unknown>) ?? {};
       await send(chatId, `✉️ Sending DM to @${meta.targetUsername}...`);
       try {
-        const { xRO } = await import("@/lib/x/client");
+        const { getUserByUsername } = await import("@/lib/x/engage");
         const { sendDM: xSendDM } = await import("@/lib/x/dm");
-        const { data: user } = await xRO.v2.userByUsername(String(meta.targetUsername));
-        if (!user) throw new Error(`@${meta.targetUsername} not found`);
+        const user = await getUserByUsername(String(meta.targetUsername));
+        if (!user?.id) throw new Error(`@${meta.targetUsername} not found`);
         await xSendDM(user.id, item.content);
         await prisma.queueItem.update({ where: { id: param }, data: { status: "POSTED" } });
         await prisma.activity.create({
@@ -533,8 +532,51 @@ export async function POST(req: NextRequest) {
         `Examples:\n` +
         "`/dm @johndoe`\n" +
         "`/dm @janefoo she builds SaaS tools and tweets about growth`\n\n" +
-        `_Phantom generates a personalised cold DM and sends it via X._`
+        `_Phantom generates a feedback-ask DM and sends it via X._`
       );
+    }
+
+    // ── Regenerate: generate fresh content for an existing pending item ──────────
+    if (action === "regenerate") {
+      const item = await prisma.queueItem.findUnique({ where: { id: param } });
+      if (!item || item.status !== "PENDING") {
+        await send(chatId, "⚠️ Item not found or already handled.");
+        return NextResponse.json({ ok: true });
+      }
+      await send(chatId, "🔄 Generating a fresh version...");
+      try {
+        const [postedItems, pendingItems] = await Promise.all([
+          prisma.queueItem.findMany({ where: { status: "POSTED" }, orderBy: { updatedAt: "desc" }, take: 50, select: { content: true } }),
+          prisma.queueItem.findMany({ where: { status: "PENDING", id: { not: item.id } }, select: { content: true }, take: 10 }),
+        ]);
+        const recentTweets = [...postedItems.map(q => q.content), ...pendingItems.map(q => q.content)];
+
+        let newContent: string;
+        const meta = (item.metadata as Record<string, unknown>) ?? {};
+
+        if (item.type === "Thread") {
+          const { THREAD_TOPICS } = await import("@/lib/config");
+          const topic = THREAD_TOPICS[Math.floor(Math.random() * THREAD_TOPICS.length)];
+          const tweets = await generateThread(topic);
+          newContent = tweets.join("\n---\n");
+        } else if (meta.longpost) {
+          const { CONTENT_TOPICS } = await import("@/lib/config");
+          const topic = CONTENT_TOPICS[Math.floor(Math.random() * CONTENT_TOPICS.length)];
+          newContent = await generateLongTweet(topic, recentTweets);
+        } else {
+          const { CONTENT_TOPICS } = await import("@/lib/config");
+          const topic = CONTENT_TOPICS[Math.floor(Math.random() * CONTENT_TOPICS.length)];
+          newContent = await generateTweet(topic, undefined, recentTweets);
+        }
+
+        await prisma.queueItem.update({ where: { id: item.id }, data: { content: newContent } });
+
+        const label = meta.longpost ? "Long-form post (regenerated)" : item.type === "Thread" ? "Thread (regenerated)" : "Tweet (regenerated)";
+        const { requestApproval } = await import("@/lib/telegram/notify");
+        await requestApproval(label, newContent, { id: item.id });
+      } catch (e) {
+        await send(chatId, `❌ Regeneration failed: ${String(e).slice(0, 120)}`);
+      }
     }
 
     return NextResponse.json({ ok: true });
@@ -559,6 +601,8 @@ export async function POST(req: NextRequest) {
       `*𝕏 Content*\n` +
       `/tweet — preview tweet before posting\n` +
       `/thread — preview thread before posting\n` +
+      `/article [topic] — generate educational thread\n` +
+      `/longpost [topic] — Premium+ long-form post (up to 2000 chars)\n` +
       `/post <text> — post your own tweet instantly\n\n` +
       `*LinkedIn*\n` +
       `/linkedin — post, connect, or check status\n\n` +
@@ -573,11 +617,12 @@ export async function POST(req: NextRequest) {
       `/follow [n] — follow + like + reply to n accounts\n` +
       `/inbox — see unread mentions, reply or skip each one\n` +
       `/mentions — auto-reply to all mentions instantly\n` +
-      `/dm @username [context] — send a personalised cold DM\n\n` +
+      `/dm @username [context] — send a feedback-ask DM\n\n` +
       `*Dashboard*\n` +
       `/status — live stats (both platforms)\n` +
+      `/today — what Phantom did since midnight\n` +
       `/activity — last 10 actions\n` +
-      `/queue — view pending approvals\n` +
+      `/queue — pending approvals with live buttons\n` +
       `/schedule — automation schedule\n\n` +
       `*Control*\n` +
       `/pause — pause all automation (queue kept)\n` +
@@ -586,7 +631,7 @@ export async function POST(req: NextRequest) {
       `/blacklist <username> — silently ignore an account\n` +
       `/setup — register webhook & command menu\n` +
       `/test — test X API connectivity\n\n` +
-      `_All scheduled posts send a preview here first. Tap Approve to post._`,
+      `_All scheduled posts send a preview here first. Tap Approve or 🔄 New version._`,
       {
         reply_markup: {
           inline_keyboard: [
@@ -651,6 +696,55 @@ export async function POST(req: NextRequest) {
         return `${a.icon ?? "•"} *${a.action}* (${t})\n   ${a.detail ?? ""}`;
       });
       await send(chatId, `*📋 Recent Activity*\n\n${lines.join("\n\n")}`);
+    }
+  }
+
+  // ── /today ────────────────────────────────────────────────────────────────
+  else if (cmd === "/today") {
+    try {
+      const nowIST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+      nowIST.setHours(0, 0, 0, 0);
+      // Convert back to UTC for the DB query
+      const midnightUTC = new Date(nowIST.getTime() - (5.5 * 60 * 60 * 1000));
+
+      const todayActivity = await prisma.activity.findMany({
+        where: { createdAt: { gte: midnightUTC } },
+        orderBy: { createdAt: "desc" },
+        take: 100,
+      });
+
+      if (!todayActivity.length) {
+        await send(chatId, "📭 *Nothing logged today yet.*\n\n_Check cron-job.org if automation should have fired._");
+      } else {
+        const counts: Record<string, number> = {};
+        for (const a of todayActivity) {
+          const key = a.action.split("—")[0].trim().split(":")[0].trim();
+          counts[key] = (counts[key] ?? 0) + 1;
+        }
+        const bullets = Object.entries(counts)
+          .sort((a, b) => b[1] - a[1])
+          .map(([k, v]) => `  ${v}× ${k}`)
+          .join("\n");
+
+        const highlights = todayActivity
+          .filter(a => ["🐦", "🧵", "📝"].includes(a.icon ?? ""))
+          .slice(0, 3)
+          .map(a => `  ${a.icon} _${a.detail?.slice(0, 80) ?? a.action}_`)
+          .join("\n");
+
+        const lastTime = new Date(todayActivity[0].createdAt).toLocaleString("en-IN", {
+          timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit",
+        });
+
+        await send(chatId,
+          `*📅 Today's Activity*\n\n` +
+          `${bullets}\n\n` +
+          (highlights ? `*Content posted:*\n${highlights}\n\n` : "") +
+          `_Last action: ${lastTime} IST · ${todayActivity.length} total_`
+        );
+      }
+    } catch (e) {
+      await send(chatId, `❌ Error: ${String(e).slice(0, 100)}`);
     }
   }
 
@@ -719,6 +813,40 @@ export async function POST(req: NextRequest) {
       );
     } catch (e) {
       await send(chatId, `❌ Article generation failed: ${String(e).slice(0, 120)}`);
+    }
+  }
+
+  // ── /longpost [topic] ────────────────────────────────────────────────────
+  else if (cmd === "/longpost") {
+    await send(chatId, "📝 Generating long-form post (Premium+)...");
+    try {
+      const [postedItems, pendingItems] = await Promise.all([
+        prisma.queueItem.findMany({ where: { status: "POSTED" }, orderBy: { updatedAt: "desc" }, take: 50, select: { content: true } }),
+        prisma.queueItem.findMany({ where: { status: "PENDING" }, select: { content: true }, take: 10 }),
+      ]);
+      const recentTweets = [...postedItems.map(q => q.content), ...pendingItems.map(q => q.content)];
+      const { CONTENT_TOPICS } = await import("@/lib/config");
+      const topic = args || CONTENT_TOPICS[Math.floor(Math.random() * CONTENT_TOPICS.length)];
+      const content = await generateLongTweet(topic, recentTweets);
+      const item = await prisma.queueItem.create({
+        data: { type: "Tweet", content, metadata: { withImage: false, longpost: true } },
+      });
+      await send(chatId,
+        `*📝 Long-form post (${content.length} chars)*\n\n${content.slice(0, 1200)}${content.length > 1200 ? `\n_[+${content.length - 1200} more]_` : ""}`,
+        { reply_markup: { inline_keyboard: [
+          [
+            { text: "✅ Post it",      callback_data: `approve:${item.id}` },
+            { text: "✏️ Edit",         callback_data: `edit:${item.id}` },
+            { text: "❌ Skip",         callback_data: `reject:${item.id}` },
+          ],
+          [
+            { text: "🔄 New version",  callback_data: `regenerate:${item.id}` },
+            { text: "📤 X + LinkedIn", callback_data: `approve_xl:${item.id}` },
+          ],
+        ] } }
+      );
+    } catch (e) {
+      await send(chatId, `❌ Failed: ${String(e).slice(0, 120)}`);
     }
   }
 
@@ -836,20 +964,25 @@ export async function POST(req: NextRequest) {
     await send(chatId,
       `*⏰ Automation Schedule (IST)*\n\n` +
       `🐦 *Tweets* — 7:30am · 12:30pm · 6:30pm · 9:30pm\n` +
-      `   _4x/day · randomly: plain, image, thread, or resurface · 15% skip_\n\n` +
-      `🧵 *Bonus threads* — Mon & Thu 2:30pm\n` +
-      `   _On top of the daily posting slot_\n\n` +
-      `⚡ *Engagement* — Every 15 min, 24/7\n` +
-      `   _Likes all day, replies 7am–10pm · 10:1 verified ratio_\n\n` +
-      `🗣️ *Go-out comments* — 9am · 11am · 2pm · 5pm · 8pm\n` +
-      `   _Drops targeted comments on niche posts_\n\n` +
-      `💬 *Mentions* — Every 15 min\n` +
-      `   _Auto-reply to mentions_\n\n` +
-      `🤝 *Follow* — 9:30am · 3:30pm · 8:30pm\n\n` +
+      `   _4x/day · randomly: plain, image, thread, or resurface_\n\n` +
+      `📝 *Long-form post (Premium+)* — daily 10:30am\n` +
+      `   _800–2000 char mini-essay · generates preview for approval_\n\n` +
+      `🧵 *Bonus threads* — Mon & Thu 2:30pm\n\n` +
+      `💬 *Mentions* — Every 15 min, 24/7\n` +
+      `   _Auto-reply to all mentions_\n\n` +
+      `⚡ *Engagement* — 8×/day weekdays · 9×/day weekends\n` +
+      `   _Likes all day, replies 7am–10pm · randomised timing daily_\n\n` +
+      `🗣️ *Go-out comments* — 8×/day weekdays · 9×/day weekends\n` +
+      `   _Targeted comments on niche posts · randomised timing daily_\n\n` +
+      `🤝 *Follow* — 8×/day weekdays · 9×/day weekends\n` +
+      `   _Up to 3 follows per run · randomised timing daily_\n\n` +
+      `📨 *Auto DM* — 8×/day weekdays · 9×/day weekends\n` +
+      `   _Finds builders to ask for feedback · approval-gated_\n\n` +
+      `🔁 *Niche RT* — daily 4:30pm\n\n` +
       `💼 *LinkedIn* — Tue–Fri 8:30am\n` +
       `   _Randomly: thought leadership, story, or list_\n\n` +
       `📊 *Daily summary* — 11:30pm\n\n` +
-      `_Runs via cron-job.org → NEXTAUTH_URL/api/cron/dispatch_`
+      `_All timings shift slightly each day to avoid detection._`
     );
   }
 
@@ -954,11 +1087,12 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // DM send test (cookie-based)
+    // DM send test — isLoggedIn() is unreliable (verify_credentials.json removed by X for free tier).
+    // Instead confirm cookies are loaded; Auth ✅ above already proves the session is live.
     try {
-      const scraper = await (await import("@/lib/x/client")).getXClient();
-      const loggedIn = await scraper.isLoggedIn();
-      lines.push(loggedIn ? `✅ *DM (cookie session active)*` : `⚠️ *DM — not logged in*`);
+      await (await import("@/lib/x/client")).getXClient();
+      const hasCookies = !!(process.env.X_COOKIES);
+      lines.push(hasCookies ? `✅ *DM (cookie session active)*` : `⚠️ *DM — X_COOKIES not set*`);
     } catch (e) {
       lines.push(`❌ *DM* — ${String(e).slice(0, 80)}`);
     }
@@ -1023,8 +1157,9 @@ export async function POST(req: NextRequest) {
     } else {
       await send(chatId, `✉️ Sending DM to @${username}...`);
       try {
-        const { data: user } = await xRO.v2.userByUsername(username);
-        if (!user) throw new Error(`@${username} not found`);
+        const { getUserByUsername } = await import("@/lib/x/engage");
+        const user = await getUserByUsername(username);
+        if (!user?.id) throw new Error(`@${username} not found`);
         const dmText = await generateDM(username, context || `a creator in the ${NICHE_KEYWORDS[0]} space`);
         await sendDM(user.id, dmText);
         await prisma.activity.create({
@@ -1181,23 +1316,71 @@ export async function POST(req: NextRequest) {
   else if (cmd === "/queue") {
     const items = await prisma.queueItem.findMany({
       where: { status: "PENDING" },
-      orderBy: { createdAt: "desc" },
-      take: 5,
+      orderBy: { createdAt: "asc" },
+      take: 8,
     });
     if (!items.length) {
       await send(chatId, "📭 *Queue is empty.* No pending content awaiting approval.");
     } else {
-      const lines = items.map((item, i) => {
+      await send(chatId, `*📋 Pending Approvals (${items.length})*`);
+      for (const item of items) {
         const t = new Date(item.createdAt).toLocaleString("en-IN", {
           timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit",
         });
-        const preview = item.content.split("---")[0].trim().slice(0, 80);
-        return `${i + 1}. *${item.type}* · ${t}\n   _${preview}…_`;
-      });
-      await send(chatId,
-        `*📋 Pending Approvals (${items.length})*\n\n${lines.join("\n\n")}\n\n` +
-        `_Each item has Approve / Edit / Reject buttons above._`
-      );
+        const meta = (item.metadata as Record<string, unknown>) ?? {};
+        const preview = item.content.split("---")[0].trim().slice(0, 300);
+        const typeLabel = item.type === "Thread"
+          ? "🧵 Thread"
+          : meta.longpost ? "📝 Long post"
+          : item.type === "DM" ? `📨 DM → @${meta.targetUsername ?? "?"}`
+          : item.type === "NicheRT" ? `🔁 RT @${meta.authorUsername ?? "?"}`
+          : item.type === "Mention" ? `💬 Mention @${meta.authorUsername ?? "?"}`
+          : "🐦 Tweet";
+
+        if (item.type === "DM") {
+          await send(chatId,
+            `*${typeLabel}* · ${t}\n\n\`\`\`\n${preview}\n\`\`\``,
+            { reply_markup: { inline_keyboard: [[
+              { text: "✅ Send DM",    callback_data: `approve_dm:${item.id}` },
+              { text: "✏️ Edit",       callback_data: `edit:${item.id}` },
+              { text: "❌ Skip",       callback_data: `reject:${item.id}` },
+            ]] } }
+          );
+        } else if (item.type === "NicheRT") {
+          await send(chatId,
+            `*${typeLabel}* · ${t}\n\n_"${preview}"_`,
+            { reply_markup: { inline_keyboard: [[
+              { text: "🔁 Retweet",      callback_data: `niche_rt:${item.id}` },
+              { text: "💬 Quote-tweet",  callback_data: `niche_quote:${item.id}` },
+              { text: "❌ Skip",         callback_data: `reject:${item.id}` },
+            ]] } }
+          );
+        } else if (item.type === "Mention") {
+          await send(chatId,
+            `*${typeLabel}* · ${t}\n\n_"${preview}"_`,
+            { reply_markup: { inline_keyboard: [[
+              { text: "🤖 Auto-reply",  callback_data: `reply_mention:${item.id}` },
+              { text: "✏️ Custom",      callback_data: `custom_mention:${item.id}` },
+              { text: "❌ Skip",        callback_data: `skip_mention:${item.id}` },
+            ]] } }
+          );
+        } else {
+          await send(chatId,
+            `*${typeLabel}* · ${t}\n\n${preview}${item.content.length > 300 ? `\n_[+${item.content.length - 300} more chars]_` : ""}`,
+            { reply_markup: { inline_keyboard: [
+              [
+                { text: "✅ Approve",     callback_data: `approve:${item.id}` },
+                { text: "✏️ Edit",        callback_data: `edit:${item.id}` },
+                { text: "❌ Reject",      callback_data: `reject:${item.id}` },
+              ],
+              [
+                { text: "🔄 New version", callback_data: `regenerate:${item.id}` },
+                { text: "📤 X + LinkedIn", callback_data: `approve_xl:${item.id}` },
+              ],
+            ] } }
+          );
+        }
+      }
     }
   }
 

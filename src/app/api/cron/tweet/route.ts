@@ -21,9 +21,14 @@ export async function GET(req: Request) {
   await humanPause();
 
   try {
-    // Skip if there are already 2+ pending tweets waiting for approval
+    // Skip if there are already 2+ pending tweets created in the last 2 hours.
+    // Older stale items (from when the bot was broken) don't count — they'd block indefinitely.
     const pendingCount = await prisma.queueItem.count({
-      where: { type: "Tweet", status: "PENDING" },
+      where: {
+        type: "Tweet",
+        status: "PENDING",
+        createdAt: { gte: new Date(Date.now() - 2 * 60 * 60 * 1000) },
+      },
     });
     if (pendingCount >= 2) {
       return NextResponse.json({ skipped: true, reason: "queue backed up" });

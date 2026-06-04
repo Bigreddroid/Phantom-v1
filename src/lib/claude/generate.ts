@@ -60,9 +60,12 @@ Rules:
   );
 }
 
-export async function generateThread(topic: string, numTweets = 5) {
+export async function generateThread(topic: string, numTweets = 5, recentTweets?: string[]) {
+  const avoidBlock = recentTweets?.length
+    ? `\n\nSTRICTLY FORBIDDEN — do not repeat the topic, angle, hook, or structure of any of these previous threads/tweets:\n${recentTweets.map((t, i) => `${i + 1}. ${t.slice(0, 120)}`).join("\n")}\n\nPick a completely fresh angle.`
+    : "";
   const raw = await generate(
-    `Write a ${numTweets}-tweet thread about: ${topic}
+    `Write a ${numTweets}-tweet thread about: ${topic}${avoidBlock}
 
 Format each tweet on its own line, separated by "---"
 First tweet hooks the reader. Last tweet has a clear CTA.
@@ -77,8 +80,14 @@ export async function generateReply(mentionText: string, authorUsername: string)
   return generate(
     `@${authorUsername} tweeted: "${mentionText}"
 
-Write a reply. Be genuine, add value or continue the conversation.
-If their tweet is about building, AI, automation, personal brand, or tools — naturally reference what you're building (Phantom, BigRedDroid, Project Z). Keep it organic, not a pitch.
+Write a reply. Goal: build a real connection, not just score points.
+- Match their energy — enthusiastic if they're excited, grounded if they're frustrated
+- If they're sharing a win, be genuinely stoked for them (not just "congrats!")
+- If they're struggling, actually acknowledge it — say something that shows you get it
+- If they're asking something, answer honestly and directly
+- Push back *gently* if you disagree — frame it as curiosity, not correction
+- NEVER give unsolicited advice. NEVER lecture. NEVER say "great point" or "well said".
+- If their tweet touches on building, AI, automation, or personal brand — mention what you're building (Phantom, BigRedDroid, Project Z) only if it adds something genuine to the conversation. Never force it.
 Under 260 characters. Don't start with their name.
 CRITICAL: Write the complete reply — never cut off mid-sentence. Plan it to fit before writing.`,
     VOICE_SYSTEM_PROMPT,
@@ -91,20 +100,25 @@ export async function generateGoOutComment(tweetText: string) {
     `Someone tweeted: "${tweetText}"
 
 Write a short reply. Hard limit: 200 characters. Write the COMPLETE thought — never cut off mid-sentence.
-Can be a quick take, a mild disagreement, a punchy question, or a dry observation.
+Goal: start a real conversation, not just drop a take and leave.
+
+Pick ONE of:
+- Validate something specific they said ("the part about X — 100%, felt that")
+- Ask something genuinely curious ("how are you handling [specific thing from their tweet]?")
+- Share a quick relevant experience ("went through this last month — ended up doing X")
+- Mild pushback if you actually disagree ("not sure — in my experience X tends to happen")
+
 Don't start with "I" or their handle. No flattery. No "great point". No corporate-speak.
-If you disagree slightly, say so. If it's obvious, point that out.
 One or two SHORT sentences max — plan the whole reply before writing it so it fits.
 
 If the tweet is about: AI tools, automation, building in public, personal branding, X/Twitter growth, content creation, solopreneur life, or "what are you building" — weave in what you're building naturally. Examples:
 - "Built Phantom for this exact problem — automates my whole X presence, zero manual effort"
 - "This is why I'm building Project Z — 92 automation tools, Phantom is the first one live"
-- "BigRedDroid is my answer to this — shipping tools so founders don't have to do this manually"
-Only do this if it fits naturally. If the tweet is unrelated, just give a good take.`,
+Only do this if it fits naturally. If the tweet is unrelated, just give a good warm take.`,
     `You're a solo founder who's been building online for years and has strong opinions.
 You're building BigRedDroid — a solo deep-tech systems lab. Current flagship: Phantom (AI personal brand automation for X) and Project Z (92 AI products).
-Confident, occasionally dry, a little cocky — but not mean.
-You reply like you actually have something to say, not like you're trying to network.
+Confident, warm, occasionally dry — but genuinely interested in people.
+You reply like you actually care what they're building, not just trying to be seen.
 Never sycophantic. Sounds real, not polished. Not spammy.
 CRITICAL: Always write complete sentences. Never trail off. If 2 sentences don't fit in 200 chars, write 1 great sentence.`,
     280
@@ -235,16 +249,46 @@ export async function generateQuoteTweet(originalText: string) {
 
 export async function generateDM(recipientUsername: string, context: string) {
   return generate(
-    `Write a cold DM to @${recipientUsername}.
+    `Write a short DM to @${recipientUsername}.
 Context: ${context}
 
+This is NOT a sales pitch. You're a solo founder asking a real person to try your product and tell you what they think.
+The vibe: curious builder reaching out to another builder. You want honest feedback, not a conversion.
+
 Rules:
-- Warm, not salesy
-- Specific to them (reference their work/content)
-- Clear ask or reason for reaching out
-- Under 300 characters
-- No "I hope this message finds you well"`,
+- Mention what Phantom does in one clause — don't lead with it
+- The actual ask: "would you try it and tell me what you think?" or "any feedback welcome"
+- Reference something specific about them or their content (from context above)
+- Under 280 characters
+- No pitch. No "this will help you". No "I'd love to show you"
+- Sounds like a real person, not a product announcement`,
     VOICE_SYSTEM_PROMPT,
     300
+  );
+}
+
+export async function generateLongTweet(topic: string, recentTweets?: string[]) {
+  const avoidBlock = recentTweets?.length
+    ? `\n\nDo NOT repeat the angle, structure, or opening of any of these recent posts:\n${recentTweets.map((t, i) => `${i + 1}. ${t.slice(0, 100)}`).join("\n")}`
+    : "";
+  return generate(
+    `Write a long-form X post about: ${topic}${avoidBlock}
+
+This is a Premium+ post — can be up to 2000 characters. Use the space.
+Format:
+- First line: a single punchy hook (one sentence, no intro)
+- One blank line
+- 3–5 short paragraphs (2–4 lines each) — each one makes a distinct point
+- No bullet lists. Flowing prose.
+- Last paragraph: honest takeaway or open question (not a CTA, not "follow me for more")
+
+Rules:
+- 600–1800 characters total
+- Mention Phantom, BigRedDroid, or Project Z where it fits naturally — not forced
+- Sounds like a builder thinking out loud, not a newsletter
+- No hashtags
+- No "I've been thinking about..." opener`,
+    VOICE_SYSTEM_PROMPT,
+    600
   );
 }

@@ -36,12 +36,13 @@ export async function requestApproval(
   await send(text, {
     inline_keyboard: [
       [
-        { text: "✅ Approve", callback_data: `approve:${id}` },
-        { text: "✏️ Edit",    callback_data: `edit:${id}` },
-        { text: "❌ Reject",  callback_data: `reject:${id}` },
+        { text: "✅ Approve",      callback_data: `approve:${id}` },
+        { text: "✏️ Edit",         callback_data: `edit:${id}` },
+        { text: "❌ Reject",       callback_data: `reject:${id}` },
       ],
       [
-        { text: "📤 Post to X + LinkedIn", callback_data: `approve_xl:${id}` },
+        { text: "🔄 New version",  callback_data: `regenerate:${id}` },
+        { text: "📤 X + LinkedIn", callback_data: `approve_xl:${id}` },
       ],
     ],
   });

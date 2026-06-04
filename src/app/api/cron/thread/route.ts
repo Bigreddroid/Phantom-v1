@@ -21,12 +21,40 @@ export async function GET(req: Request) {
   await humanPause();
 
   try {
-    const pillar = THREAD_TOPICS[Math.floor(Math.random() * THREAD_TOPICS.length)];
-    const tweets = await generateThread(pillar, 5);
+    // Pull recent content so AI knows what angles have already been covered
+    const [postedItems, pendingItems] = await Promise.all([
+      prisma.queueItem.findMany({
+        where: { status: "POSTED", type: { in: ["Tweet", "Thread"] } },
+        orderBy: { updatedAt: "desc" },
+        take: 40,
+        select: { content: true, metadata: true },
+      }),
+      prisma.queueItem.findMany({
+        where: { status: "PENDING", type: { in: ["Tweet", "Thread"] } },
+        select: { content: true, metadata: true },
+        take: 10,
+      }),
+    ]);
+
+    const recentTweets = [
+      ...postedItems.map(q => q.content),
+      ...pendingItems.map(q => q.content),
+    ];
+
+    // Avoid recently used thread topics
+    const usedTopics = new Set([
+      ...postedItems.map(q => (q.metadata as Record<string, unknown>)?.topic as string).filter(Boolean),
+      ...pendingItems.map(q => (q.metadata as Record<string, unknown>)?.topic as string).filter(Boolean),
+    ]);
+    const freshTopics = THREAD_TOPICS.filter(t => !usedTopics.has(t));
+    const topicPool = freshTopics.length ? freshTopics : THREAD_TOPICS;
+    const pillar = topicPool[Math.floor(Math.random() * topicPool.length)];
+
+    const tweets = await generateThread(pillar, 5, recentTweets);
     const content = tweets.join("\n---\n");
 
     const item = await prisma.queueItem.create({
-      data: { type: "Thread", content, metadata: { imageMode: "none", cron: true } },
+      data: { type: "Thread", content, metadata: { imageMode: "none", cron: true, topic: pillar } },
     });
 
     await requestApproval(
