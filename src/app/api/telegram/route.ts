@@ -963,26 +963,29 @@ export async function POST(req: NextRequest) {
   else if (cmd === "/schedule") {
     await send(chatId,
       `*⏰ Automation Schedule (IST)*\n\n` +
-      `🐦 *Tweets* — 7:30am · 12:30pm · 6:30pm · 9:30pm\n` +
-      `   _4x/day · randomly: plain, image, thread, or resurface_\n\n` +
-      `📝 *Long-form post (Premium+)* — daily 10:30am\n` +
-      `   _800–2000 char mini-essay · generates preview for approval_\n\n` +
-      `🧵 *Bonus threads* — Mon & Thu 2:30pm\n\n` +
-      `💬 *Mentions* — Every 15 min, 24/7\n` +
-      `   _Auto-reply to all mentions_\n\n` +
-      `⚡ *Engagement* — 8×/day weekdays · 9×/day weekends\n` +
-      `   _Likes all day, replies 7am–10pm · randomised timing daily_\n\n` +
+      `🐦 *Tweets* — 7:28am · 12:28pm · 6:28pm · 9:28pm\n` +
+      `   _4×/day · randomly: plain tweet, image tweet, thread, or resurface_\n\n` +
+      `📝 *Long-form (Premium+)* — daily 10:28am\n` +
+      `   _600–1800 char mini-essay · approval-gated_\n\n` +
+      `📰 *Articles* — Wed & Sat 9:28am\n` +
+      `   _6-tweet educational thread + cover image auto-attached_\n\n` +
+      `🧵 *Bonus threads* — Mon & Thu 2:28pm\n` +
+      `   _On top of the regular post slot_\n\n` +
+      `💬 *Mentions* — every 15 min, 24/7\n` +
+      `   _Auto-replies · permanent dedup (never replies twice to same mention)_\n\n` +
+      `⚡ *Engagement* — every 15 min, 24/7\n` +
+      `   _Likes + replies · 7-day dedup across all reply crons_\n\n` +
       `🗣️ *Go-out comments* — 8×/day weekdays · 9×/day weekends\n` +
-      `   _Targeted comments on niche posts · randomised timing daily_\n\n` +
+      `   _Targeted comments on niche threads · randomised timing_\n\n` +
       `🤝 *Follow* — 8×/day weekdays · 9×/day weekends\n` +
-      `   _Up to 3 follows per run · randomised timing daily_\n\n` +
+      `   _Up to 3 follows per run · randomised timing_\n\n` +
       `📨 *Auto DM* — 8×/day weekdays · 9×/day weekends\n` +
-      `   _Finds builders to ask for feedback · approval-gated_\n\n` +
-      `🔁 *Niche RT* — daily 4:30pm\n\n` +
-      `💼 *LinkedIn* — Tue–Fri 8:30am\n` +
+      `   _Feedback-ask DMs to active builders · approval-gated_\n\n` +
+      `🔁 *Niche RT* — daily 4:28pm\n\n` +
+      `💼 *LinkedIn* — Tue–Fri 8:28am\n` +
       `   _Randomly: thought leadership, story, or list_\n\n` +
-      `📊 *Daily summary* — 11:30pm\n\n` +
-      `_All timings shift slightly each day to avoid detection._`
+      `📊 *Daily summary* — 11:28pm\n\n` +
+      `_All timings shift ±14 min daily to avoid X pattern detection._`
     );
   }
 

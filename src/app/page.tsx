@@ -5,10 +5,11 @@ import { useState } from "react";
 const SCHEDULE = [
   { emoji: "🐦", job: "Tweets",        freq: "4×/day",   times: "7:28 · 12:28 · 18:28 · 21:28 IST", note: "AI-written, approval-gated" },
   { emoji: "📝", job: "Long-form",     freq: "1×/day",   times: "10:28 IST",                         note: "Premium+ mini-essays, 600–1800 chars" },
+  { emoji: "📰", job: "Articles",      freq: "2×/week",  times: "Wed & Sat · 9:28 IST",              note: "6-tweet educational thread + cover image" },
   { emoji: "🧵", job: "Threads",       freq: "2×/week",  times: "Mon & Thu · 14:28 IST",             note: "Long-form, approval-gated" },
   { emoji: "⚡", job: "Engagement",    freq: "96×/day",  times: "Every 15 min · 24/7",               note: "Likes + replies, traction ≥5" },
   { emoji: "🤝", job: "Follow",        freq: "8–9×/day", times: "Throughout the day",                note: "Verified + engaged accounts in niche" },
-  { emoji: "💬", job: "Mentions",      freq: "96×/day",  times: "Every 15 min",                      note: "Auto-replies within ~15 min" },
+  { emoji: "💬", job: "Mentions",      freq: "96×/day",  times: "Every 15 min",                      note: "Auto-replies within ~15 min, never repeats" },
   { emoji: "🗣️", job: "Go-out",       freq: "8–9×/day", times: "Throughout the day",                note: "Drop comments on high-traction threads" },
   { emoji: "💼", job: "LinkedIn",      freq: "4×/week",  times: "Tue–Fri · 8:28 IST",               note: "Thought leadership, stories, lists" },
   { emoji: "🔁", job: "Resurface",     freq: "1×/day",   times: "10:28 IST",                        note: "Quote-tweet top old content" },
