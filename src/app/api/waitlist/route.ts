@@ -134,7 +134,7 @@ export async function POST(req: Request) {
       sendMessage(`🚀 *New Phantom waitlist signup*\n\n📧 ${email}\n👥 Total: ${count}`),
       resend.emails.send({
         from: FROM,
-        reply_to: REPLY_TO,
+        replyTo: REPLY_TO,
         to: email,
         subject: "You're on the Phantom waitlist",
         html: confirmationEmail(email),
