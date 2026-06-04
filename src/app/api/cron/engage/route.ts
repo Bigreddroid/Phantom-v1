@@ -79,12 +79,16 @@ export async function GET(req: Request) {
     const keyword = NICHE_KEYWORDS[Math.floor(Math.random() * NICHE_KEYWORDS.length)];
 
     const recentReplies = await prisma.activity.findMany({
-      where: { action: "Replied to tweet", createdAt: { gte: new Date(Date.now() - 86400000) } },
+      where: { action: "Replied to tweet", createdAt: { gte: new Date(Date.now() - 7 * 86400000) } },
       select: { detail: true },
-      take: 200,
+      take: 1000,
     });
     const repliedIds = new Set(
       recentReplies.map(a => a.detail?.match(/^tid:(\w+)/)?.[1]).filter(Boolean) as string[]
+    );
+    // Author-level dedup across runs — don't reply to same author twice in 7 days
+    const repliedAuthorIds = new Set(
+      recentReplies.map(a => a.detail?.match(/\|aid:(\w+)/)?.[1]).filter(Boolean) as string[]
     );
 
     const [verifiedTweets, normalTweets] = await Promise.all([
@@ -103,6 +107,7 @@ export async function GET(req: Request) {
     for (const tweet of tweets) {
       if (!tweet.author_id || tweet.author_id === me.id || seen.has(tweet.author_id) || isBlocked(tweet.author_id, tweet.author_username)) continue;
       if (repliedIds.has(tweet.id)) continue;
+      if (tweet.author_id && repliedAuthorIds.has(tweet.author_id)) continue;
       seen.add(tweet.author_id);
 
       try { await likeTweet(tweet.id, me.id); liked++; } catch { /* skip */ }
@@ -120,7 +125,7 @@ export async function GET(req: Request) {
           await replyToTweet(tweet.id, reply);
           replied++;
           await prisma.activity.create({
-            data: { action: "Replied to tweet", detail: `tid:${tweet.id}|${reply.slice(0, 70)}`, icon: "💬" },
+            data: { action: "Replied to tweet", detail: `tid:${tweet.id}|aid:${tweet.author_id ?? ""}|${reply.slice(0, 60)}`, icon: "💬" },
           });
           await sendMessage(
             `💬 *Comment posted on X*\n\n` +

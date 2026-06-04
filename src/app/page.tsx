@@ -1,46 +1,49 @@
 "use client";
 
+import { useState } from "react";
+
 const SCHEDULE = [
-  { emoji: "🐦", job: "Tweets",        freq: "4×/day",   times: "7:30 · 12:30 · 18:30 · 21:30 IST", note: "AI-written, approval-gated" },
-  { emoji: "🧵", job: "Threads",       freq: "2×/week",  times: "Mon & Thu · 14:30 IST",            note: "Long-form, approval-gated" },
-  { emoji: "⚡", job: "Engagement",    freq: "96×/day",  times: "Every 15 min · 24/7",              note: "Likes + replies, traction ≥5" },
-  { emoji: "🤝", job: "Follow",        freq: "1×/day",   times: "10:30 IST",                        note: "3 verified + 2 engaged accounts" },
-  { emoji: "💬", job: "Mentions",      freq: "96×/day",  times: "Every 15 min",                     note: "Auto-replies to all @mentions" },
-  { emoji: "💼", job: "LinkedIn",      freq: "4×/week",  times: "Tue–Fri · 8:30 IST",               note: "Original thought leadership" },
-  { emoji: "🔁", job: "Resurface",     freq: "1×/day",   times: "10:30 IST",                        note: "Quote-tweet top old content" },
-  { emoji: "🗣️", job: "Go-out",       freq: "5×/day",   times: "9 · 11 · 14 · 17 · 20 IST",        note: "Drop comments on viral threads" },
-  { emoji: "📨", job: "Auto DM",       freq: "1×/day",   times: "13:30 IST",                        note: "Personalised, approval-gated" },
-  { emoji: "📊", job: "Summary",       freq: "1×/day",   times: "23:30 IST",                        note: "Daily Telegram report" },
+  { emoji: "🐦", job: "Tweets",        freq: "4×/day",   times: "7:28 · 12:28 · 18:28 · 21:28 IST", note: "AI-written, approval-gated" },
+  { emoji: "📝", job: "Long-form",     freq: "1×/day",   times: "10:28 IST",                         note: "Premium+ mini-essays, 600–1800 chars" },
+  { emoji: "🧵", job: "Threads",       freq: "2×/week",  times: "Mon & Thu · 14:28 IST",             note: "Long-form, approval-gated" },
+  { emoji: "⚡", job: "Engagement",    freq: "96×/day",  times: "Every 15 min · 24/7",               note: "Likes + replies, traction ≥5" },
+  { emoji: "🤝", job: "Follow",        freq: "8–9×/day", times: "Throughout the day",                note: "Verified + engaged accounts in niche" },
+  { emoji: "💬", job: "Mentions",      freq: "96×/day",  times: "Every 15 min",                      note: "Auto-replies within ~15 min" },
+  { emoji: "🗣️", job: "Go-out",       freq: "8–9×/day", times: "Throughout the day",                note: "Drop comments on high-traction threads" },
+  { emoji: "💼", job: "LinkedIn",      freq: "4×/week",  times: "Tue–Fri · 8:28 IST",               note: "Thought leadership, stories, lists" },
+  { emoji: "🔁", job: "Resurface",     freq: "1×/day",   times: "10:28 IST",                        note: "Quote-tweet top old content" },
+  { emoji: "📨", job: "Auto DM",       freq: "8–9×/day", times: "Throughout the day",               note: "Feedback-ask DMs, approval-gated" },
+  { emoji: "📊", job: "Summary",       freq: "1×/day",   times: "23:28 IST",                        note: "Daily Telegram report" },
 ];
 
 const FEATURES = [
-  { icon: "𝕏",  title: "X/Twitter Automation",  desc: "Tweets, threads, likes, replies, follows, DMs — all on autopilot via cookie-based auth. No paid API required." },
-  { icon: "💼", title: "LinkedIn Automation",    desc: "Thought leadership posts, personal stories, and numbered-list content 4×/week. OAuth-connected." },
-  { icon: "🤖", title: "Telegram Command Center", desc: "Control everything from your phone. Post, reply, quote, search, like, pause, check stats — all via bot commands." },
-  { icon: "🧠", title: "Claude AI Generation",   desc: "Every tweet, reply, thread and LinkedIn post is AI-generated in your voice using Anthropic Claude Sonnet/Haiku." },
-  { icon: "📸", title: "Auto Image Cards",       desc: "30% of tweets attach a branded quote card — dark background, red accent, your handle. Generated at post time." },
-  { icon: "🔔", title: "GitHub & Vercel Alerts", desc: "Push, star, fork, PR, deploy — every event pings your Telegram in real time with formatted notifications." },
-  { icon: "🛡️", title: "Smart Deduplication",   desc: "7-day reply memory, 48-hour comment history, 30-day resurface tracking. Never double-posts or double-replies." },
-  { icon: "⏱️", title: "Fully Scheduled",       desc: "cron-job.org fires every 15 min. IST-aligned schedule. One-click pause from Telegram or the dashboard." },
+  { icon: "𝕏",  title: "X/Twitter Automation",    desc: "Tweets, threads, likes, replies, follows, DMs — all on autopilot via cookie-based auth. No paid API required." },
+  { icon: "📝", title: "Long-form Posts",           desc: "Premium+ 600–1800 char mini-essays every morning. Hooks, paragraphs, zero hashtags. Looks human, isn't." },
+  { icon: "💼", title: "LinkedIn Automation",       desc: "Thought leadership, personal stories, and numbered-list content 4×/week. OAuth-connected, auto-refreshes." },
+  { icon: "🤖", title: "Telegram Command Center",  desc: "Control everything from your phone. Approve, skip, regenerate, run jobs, check stats — all via bot commands." },
+  { icon: "🧠", title: "Claude AI Generation",     desc: "Every tweet, reply, thread, and LinkedIn post is AI-generated in your voice using Anthropic Claude Sonnet/Haiku." },
+  { icon: "🔄", title: "Regenerate Anything",      desc: "Not happy with the draft? Hit Regenerate. Get a fresh version with one tap, without losing context." },
+  { icon: "🛡️", title: "Smart Deduplication",     desc: "7-day reply memory, 7-day comment history, 30-day resurface tracking. Never repeats topics or double-replies." },
+  { icon: "⏱️", title: "Fully Scheduled",         desc: "GitHub Actions fires every 15 min. IST-aligned schedule. One-tap pause from Telegram or the dashboard." },
 ];
 
-const STEPS = [
-  { n: 1, title: "Fork & Deploy",         body: "Fork the GitHub repo, connect to Vercel, add your env vars. One-click deploy." },
-  { n: 2, title: "Extract X Cookies",     body: "Run get-cookies.js with Brave/Chrome closed. Pushes X_COOKIES to Vercel automatically." },
-  { n: 3, title: "Create Telegram Bot",   body: "@BotFather → /newbot → copy token. Run /setup in your bot to register webhook + commands." },
-  { n: 4, title: "Connect LinkedIn",      body: "Open the dashboard Settings tab → Connect LinkedIn. One OAuth flow, token auto-refreshes." },
-  { n: 5, title: "Set cron-job.org",      body: "Point cron-job.org at /api/cron/dispatch every 15 min. Add your CRON_SECRET header." },
-  { n: 6, title: "Watch it run",          body: "Phantom posts, engages, and reports daily at 11:30pm IST. Approve tweets from Telegram." },
+const HOW_IT_WORKS = [
+  { n: 1, title: "Connect your accounts",   body: "Link your X account and Telegram in minutes. Cookie-based X auth — no API keys, no rate limits, full access." },
+  { n: 2, title: "AI learns your voice",    body: "Set your niche and content pillars. Claude generates tweets, threads, replies, and DMs that genuinely sound like you." },
+  { n: 3, title: "Approve from Telegram",   body: "Every piece of content hits your Telegram bot first. Approve, regenerate, or skip with one tap." },
+  { n: 4, title: "Engage automatically",    body: "96 automated actions per day — likes, replies, follows, go-out comments — running around the clock without you." },
+  { n: 5, title: "Watch the numbers move",  body: "Daily report every night: followers gained, tweets posted, replies sent, likes given. All straight to Telegram." },
+  { n: 6, title: "Never touch it again",    body: "Once set up, it runs forever. Ghost mode: your brand grows while you actually build the product." },
 ];
 
-function BrowserFrame({ children }: { children: React.ReactNode }) {
+function BrowserFrame({ children, url }: { children: React.ReactNode; url?: string }) {
   return (
     <div className="rounded-2xl overflow-hidden border border-white/[0.10] shadow-2xl shadow-black/60">
       <div className="flex items-center gap-2 px-4 py-3 bg-[#1a1a1a] border-b border-white/[0.08]">
         <span className="w-3 h-3 rounded-full bg-[#ff5f57]" />
         <span className="w-3 h-3 rounded-full bg-[#febc2e]" />
         <span className="w-3 h-3 rounded-full bg-[#28c840]" />
-        <span className="mx-auto text-[11px] text-white/25 font-mono">phantom-beige.vercel.app/dashboard</span>
+        <span className="mx-auto text-[11px] text-white/25 font-mono">{url ?? "phantom-beige.vercel.app"}</span>
       </div>
       {children}
     </div>
@@ -49,12 +52,9 @@ function BrowserFrame({ children }: { children: React.ReactNode }) {
 
 function DashboardMockup() {
   return (
-    <BrowserFrame>
+    <BrowserFrame url="phantom-beige.vercel.app/dashboard">
       <div className="bg-[#090909] text-white text-[11px] font-sans pointer-events-none select-none">
-        {/* Red top bar */}
         <div className="h-[2px] bg-gradient-to-r from-transparent via-red-600 to-transparent opacity-80" />
-
-        {/* Header */}
         <div className="flex items-center justify-between px-5 h-12 border-b border-white/[0.06] bg-[#090909]/95">
           <div className="flex items-center gap-2.5">
             <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-red-600 to-red-900 flex items-center justify-center">
@@ -65,65 +65,45 @@ function DashboardMockup() {
             </div>
             <div>
               <div className="font-bold text-[12px] tracking-tight">PHANTOM</div>
-              <div className="text-[9px] text-white/30 font-mono">@BigRedDr0id</div>
+              <div className="text-[9px] text-white/30 font-mono">@yourhandle</div>
             </div>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-white/[0.04] border border-white/[0.07] text-[9px] text-white/40">
-              <span className="font-black text-white/60 text-[10px]">𝕏</span>
-              <span className="w-1 h-1 rounded-full bg-red-500" />
-            </div>
             <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-red-500/8 border border-red-500/30 text-[9px] text-red-400 font-medium">
               <span className="w-1 h-1 rounded-full bg-red-500" />Live
             </div>
           </div>
         </div>
-
-        {/* Stats */}
         <div className="grid grid-cols-5 gap-2 px-5 pt-4 pb-3">
           {[
-            { label: "Followers", value: "1.2k", red: true },
-            { label: "Tweets",    value: "847",  red: false },
-            { label: "Engagements", value: "23k", red: true },
-            { label: "DMs Sent",  value: "156",  red: false },
-            { label: "LI Posts",  value: "42",   red: false },
+            { label: "Followers", value: "2.4k", red: true },
+            { label: "Tweets",    value: "1.2k", red: false },
+            { label: "Engagements", value: "47k", red: true },
+            { label: "DMs Sent",  value: "312",  red: false },
+            { label: "LI Posts",  value: "89",   red: false },
           ].map(s => (
             <div key={s.label} className={`rounded-xl border bg-[#111] p-3 ${s.red ? "border-red-500/20" : "border-white/[0.07]"}`}>
-              {s.red && <div className="absolute top-0 left-2 right-2 h-px bg-gradient-to-r from-transparent via-red-600/40 to-transparent" />}
               <div className="text-[8px] uppercase tracking-widest text-white/25 mb-1.5">{s.label}</div>
               <div className={`text-xl font-black tabular-nums ${s.red ? "text-red-400" : "text-white/70"}`}>{s.value}</div>
             </div>
           ))}
         </div>
-
-        {/* Actions */}
-        <div className="mx-5 mb-3 rounded-xl border border-white/[0.07] bg-[#111] px-4 py-3">
-          <div className="text-[8px] font-black uppercase tracking-widest text-white/20 mb-2">𝕏 Actions</div>
-          <div className="flex gap-2 flex-wrap">
-            {["🐦 Queue Tweet","🧵 Queue Thread","⚡ Engage","💬 Check Mentions","🔁 Resurface"].map(j => (
-              <div key={j} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white/[0.03] border border-white/[0.07] rounded-lg text-[9px] text-white/50">{j}</div>
-            ))}
-          </div>
-        </div>
-
-        {/* Tabs + Queue */}
         <div className="px-5 pb-4">
           <div className="flex gap-1 mb-3">
             {["queue","activity","schedule","settings"].map((t, i) => (
-              <div key={t} className={`px-3 py-1.5 rounded-lg text-[9px] capitalize font-semibold ${i === 0 ? "bg-red-600 text-white" : "text-white/25"}`}>{t}{i===0 && <span className="ml-1 text-[8px] font-black bg-white text-red-600 rounded-full px-1">2</span>}</div>
+              <div key={t} className={`px-3 py-1.5 rounded-lg text-[9px] capitalize font-semibold ${i === 0 ? "bg-red-600 text-white" : "text-white/25"}`}>{t}{i===0 && <span className="ml-1 text-[8px] font-black bg-white text-red-600 rounded-full px-1">3</span>}</div>
             ))}
           </div>
-          {/* Queue items */}
           {[
-            "Building in public means embracing the mess. Every failed experiment is a data point. Every pivot is a lesson. Ship, learn, repeat. 🧵",
-            "The best personal brands aren't built in a day. They're built at 7:30am, 12:30pm, 6:30pm and 9:30pm — one tweet at a time.",
+            "The best founders I know have one thing in common: they treat distribution like a product feature, not an afterthought. Build the audience while you build the thing. 🧵",
+            "Hot take: most indie hackers are over-building and under-distributing. The product is 30% of the work. The other 70% is getting people to care.",
           ].map((content, i) => (
             <div key={i} className="flex items-start gap-3 bg-[#111] border border-white/[0.07] rounded-xl overflow-hidden mb-2">
               <div className="w-1 self-stretch bg-red-600 shrink-0" />
               <div className="flex-1 py-3 pr-3">
                 <div className="flex items-center gap-2 mb-1.5">
                   <span className="text-[8px] font-black uppercase text-red-400/80">Tweet</span>
-                  <span className="text-[8px] text-white/20 font-mono">{i === 0 ? "7:30am" : "12:30pm"}</span>
+                  <span className="text-[8px] text-white/20 font-mono">{i === 0 ? "7:28am" : "12:28pm"}</span>
                 </div>
                 <p className="text-[9px] text-white/60 leading-relaxed line-clamp-2">{content}</p>
               </div>
@@ -141,14 +121,14 @@ function DashboardMockup() {
 
 function TelegramMockup() {
   const msgs = [
-    { from: "bot", text: "📊 *Daily Summary — Tue Jun 3*\n\n📈 +12 followers (1,247 total)\n🐦 4 tweets posted\n💬 38 replies sent\n❤️ 94 likes given\n📨 3 DMs sent" },
-    { from: "bot", text: "🐦 *New tweet ready for approval*\n\nThe best founders I know have one thing in common: they treat distribution like a product feature, not an afterthought. Build the audience while you build the thing. 🧵", hasButtons: true },
+    { from: "bot", text: "📊 *Daily Summary — Jun 4*\n\n📈 +18 followers (2,412 total)\n🐦 5 tweets posted\n💬 47 replies sent\n❤️ 112 likes given\n📨 4 DMs sent" },
+    { from: "bot", text: "🐦 *New tweet ready*\n\nThe best personal brands aren't built in a day. They're built at 7:28am, 12:28pm, 6:28pm and 9:28pm — one tweet at a time.", hasButtons: true },
     { from: "user", text: "Post →" },
-    { from: "bot", text: "✅ Tweet posted!\nhttps://x.com/BigRedDr0id/status/..." },
+    { from: "bot", text: "✅ Posted!\nhttps://x.com/status/..." },
   ];
 
   return (
-    <BrowserFrame>
+    <BrowserFrame url="t.me/phantomioBot">
       <div className="bg-[#0e0e0e] min-h-[320px] p-4 space-y-3 pointer-events-none select-none">
         <div className="text-center text-[10px] text-white/20 mb-4 font-medium">@phantomioBot</div>
         {msgs.map((m, i) => (
@@ -162,7 +142,7 @@ function TelegramMockup() {
               {m.hasButtons && (
                 <div className="flex gap-1.5 mt-2">
                   <div className="flex-1 text-center py-1 bg-red-600 rounded-lg text-[9px] font-bold text-white">✅ Post →</div>
-                  <div className="flex-1 text-center py-1 bg-white/[0.08] rounded-lg text-[9px] text-white/50">✏️ Edit</div>
+                  <div className="flex-1 text-center py-1 bg-white/[0.08] rounded-lg text-[9px] text-white/50">🔄 Regen</div>
                   <div className="flex-1 text-center py-1 bg-white/[0.06] rounded-lg text-[9px] text-white/40">❌ Skip</div>
                 </div>
               )}
@@ -171,6 +151,72 @@ function TelegramMockup() {
         ))}
       </div>
     </BrowserFrame>
+  );
+}
+
+function WaitlistForm({ id }: { id?: string }) {
+  const [email, setEmail] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!email.trim()) return;
+    setSubmitting(true);
+    setError("");
+    try {
+      const res = await fetch("/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      if (res.ok) {
+        setSubmitted(true);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error ?? "Something went wrong. Try again.");
+      }
+    } catch {
+      setError("Something went wrong. Try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (submitted) {
+    return (
+      <div id={id} className="flex flex-col items-center gap-2">
+        <div className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 font-semibold text-sm">
+          <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/></svg>
+          You&apos;re on the list. We&apos;ll reach out when access opens.
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <form id={id} onSubmit={handleSubmit} className="flex flex-col items-center gap-3 w-full max-w-md mx-auto">
+      <div className="flex w-full gap-2">
+        <input
+          type="email"
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+          placeholder="you@example.com"
+          required
+          className="flex-1 px-4 py-3 rounded-xl bg-white/[0.06] border border-white/[0.12] text-white placeholder-white/25 text-sm outline-none focus:border-red-500/50 focus:bg-white/[0.08] transition-all"
+        />
+        <button
+          type="submit"
+          disabled={submitting}
+          className="px-5 py-3 bg-red-600 hover:bg-red-500 disabled:opacity-60 text-white font-bold text-sm rounded-xl transition-all shadow-lg shadow-red-900/30 hover:scale-[1.02] active:scale-[0.98] whitespace-nowrap"
+        >
+          {submitting ? "..." : "Get early access"}
+        </button>
+      </div>
+      {error && <p className="text-red-400 text-xs">{error}</p>}
+      <p className="text-xs text-white/25">No spam. No noise. We&apos;ll only email when access opens.</p>
+    </form>
   );
 }
 
@@ -185,7 +231,7 @@ export default function LandingPage() {
       <div className="fixed top-[-200px] left-[-200px] w-[600px] h-[600px] rounded-full bg-red-600/[0.04] blur-3xl pointer-events-none" />
       <div className="fixed bottom-[-200px] right-[-200px] w-[500px] h-[500px] rounded-full bg-red-600/[0.03] blur-3xl pointer-events-none" />
 
-      {/* ── NAV ── */}
+      {/* NAV */}
       <nav className="sticky top-[2px] z-40 border-b border-white/[0.06] bg-[#080808]/90 backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -207,24 +253,21 @@ export default function LandingPage() {
               <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
               GitHub
             </a>
-            <div className="flex flex-col items-center gap-0.5">
-              <a
-                href="/login"
-                className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-sm font-bold rounded-xl transition-colors shadow-sm shadow-red-900/40"
-              >
-                Open Dashboard →
-              </a>
-              <span className="text-[10px] text-white/25 font-medium">Admin access only</span>
-            </div>
+            <a
+              href="#waitlist"
+              className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-sm font-bold rounded-xl transition-colors shadow-sm shadow-red-900/40"
+            >
+              Get early access →
+            </a>
           </div>
         </div>
       </nav>
 
-      {/* ── HERO ── */}
+      {/* HERO */}
       <section className="max-w-6xl mx-auto px-6 pt-24 pb-20 text-center">
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-semibold mb-8">
           <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-          AI Personal Brand · Running 24/7
+          Early access — limited spots
         </div>
 
         <h1 className="text-6xl sm:text-7xl md:text-8xl font-black tracking-tighter leading-none mb-6">
@@ -244,7 +287,7 @@ export default function LandingPage() {
         <div className="flex flex-wrap justify-center gap-6 sm:gap-10 mb-12">
           {[
             { n: "96×", label: "engagements/day" },
-            { n: "4×",  label: "tweets/day" },
+            { n: "5+",  label: "posts/day" },
             { n: "0",   label: "manual effort" },
             { n: "24/7", label: "always running" },
           ].map(s => (
@@ -255,19 +298,10 @@ export default function LandingPage() {
           ))}
         </div>
 
-        <div className="flex flex-col items-center gap-2">
-          <a
-            href="/login"
-            className="inline-flex items-center gap-2 px-8 py-4 bg-red-600 hover:bg-red-500 text-white font-bold text-base rounded-2xl transition-all shadow-xl shadow-red-900/30 hover:shadow-red-900/50 hover:scale-[1.02] active:scale-[0.98]"
-          >
-            Open your dashboard
-            <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd"/></svg>
-          </a>
-          <p className="text-xs text-white/30 font-medium">Admin access only</p>
-        </div>
+        <WaitlistForm id="waitlist" />
       </section>
 
-      {/* ── DASHBOARD PREVIEW ── */}
+      {/* DASHBOARD PREVIEW */}
       <section className="max-w-6xl mx-auto px-6 pb-24">
         <div className="text-center mb-12">
           <p className="text-xs font-black uppercase tracking-widest text-white/20 mb-3">What it looks like</p>
@@ -289,12 +323,12 @@ export default function LandingPage() {
               <p className="text-sm font-semibold text-white/60">Telegram control</p>
             </div>
             <TelegramMockup />
-            <p className="text-xs text-white/25 text-center">Approve, edit, skip — from your phone</p>
+            <p className="text-xs text-white/25 text-center">Approve, regenerate, skip — from your phone</p>
           </div>
         </div>
       </section>
 
-      {/* ── FEATURES ── */}
+      {/* FEATURES */}
       <section className="max-w-6xl mx-auto px-6 pb-24">
         <div className="text-center mb-12">
           <p className="text-xs font-black uppercase tracking-widest text-white/20 mb-3">Everything included</p>
@@ -314,7 +348,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── SCHEDULE ── */}
+      {/* SCHEDULE */}
       <section className="max-w-6xl mx-auto px-6 pb-24">
         <div className="text-center mb-12">
           <p className="text-xs font-black uppercase tracking-widest text-white/20 mb-3">Built-in schedule</p>
@@ -339,15 +373,15 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── SETUP STEPS ── */}
+      {/* HOW IT WORKS */}
       <section className="max-w-6xl mx-auto px-6 pb-24">
         <div className="text-center mb-12">
-          <p className="text-xs font-black uppercase tracking-widest text-white/20 mb-3">Get started</p>
-          <h2 className="text-3xl sm:text-4xl font-black tracking-tight">Up in 15 minutes</h2>
+          <p className="text-xs font-black uppercase tracking-widest text-white/20 mb-3">How it works</p>
+          <h2 className="text-3xl sm:text-4xl font-black tracking-tight">Set it once. Run forever.</h2>
         </div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {STEPS.map(s => (
+          {HOW_IT_WORKS.map(s => (
             <div key={s.n} className="rounded-2xl border border-white/[0.07] bg-[#111] p-6 hover:border-white/[0.13] transition-colors relative overflow-hidden">
               <div className="absolute top-4 right-5 text-6xl font-black text-white/[0.03] leading-none select-none">{s.n}</div>
               <div className="w-7 h-7 rounded-full bg-red-500/15 border border-red-500/25 flex items-center justify-center text-xs font-black text-red-400 mb-4">
@@ -360,7 +394,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── CTA ── */}
+      {/* BOTTOM CTA */}
       <section className="max-w-6xl mx-auto px-6 pb-32 text-center">
         <div className="rounded-3xl border border-red-500/15 bg-gradient-to-b from-red-500/[0.06] to-transparent p-12 sm:p-16 relative overflow-hidden">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(220,38,38,0.08)_0%,transparent_60%)]" />
@@ -372,26 +406,20 @@ export default function LandingPage() {
               </svg>
             </div>
             <h2 className="text-4xl sm:text-5xl font-black tracking-tight mb-4">
-              Deploy your own Phantom
+              Build in public.<br />Without the grind.
             </h2>
             <p className="text-white/40 text-base max-w-xl mx-auto mb-10 leading-relaxed">
-              Fork the repo, set your env vars, and your personal brand runs itself from day one.
+              Phantom is your AI co-founder for distribution. It handles the daily output so you can focus on building the actual product.
             </p>
-            <div className="flex flex-wrap justify-center gap-3">
-              <div className="flex flex-col items-center gap-1.5">
-                <a
-                  href="/login"
-                  className="px-8 py-4 bg-red-600 hover:bg-red-500 text-white font-bold rounded-2xl transition-all shadow-xl shadow-red-900/30 hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  Open Dashboard →
-                </a>
-                <span className="text-xs text-white/30 font-medium">Admin access only</span>
-              </div>
+            <WaitlistForm />
+            <div className="mt-6 pt-6 border-t border-white/[0.06]">
+              <p className="text-xs text-white/20 mb-3">Want to self-host today?</p>
               <a
                 href="https://github.com/Bigreddroid/Phantom-v1"
                 target="_blank" rel="noreferrer"
-                className="px-8 py-4 border border-white/[0.10] hover:border-white/[0.20] bg-white/[0.03] hover:bg-white/[0.06] text-white/60 hover:text-white font-bold rounded-2xl transition-all"
+                className="inline-flex items-center gap-2 text-sm text-white/35 hover:text-white/60 transition-colors"
               >
+                <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
                 View on GitHub
               </a>
             </div>
@@ -399,7 +427,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── FOOTER ── */}
+      {/* FOOTER */}
       <footer className="border-t border-white/[0.06] py-8">
         <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
@@ -411,7 +439,7 @@ export default function LandingPage() {
             </div>
             <span className="font-bold text-sm tracking-tight text-white/60">PHANTOM</span>
           </div>
-          <p className="text-xs text-white/20">Part of <span className="text-white/40">BigRedDroid</span> · Built with Claude + Vercel</p>
+          <p className="text-xs text-white/20">Part of <span className="text-white/40">Project Z</span> · Built with Claude + Vercel</p>
           <div className="flex items-center gap-4 text-xs text-white/25">
             <a href="/login" className="hover:text-white/50 transition-colors">Dashboard</a>
             <a href="https://github.com/Bigreddroid/Phantom-v1" target="_blank" rel="noreferrer" className="hover:text-white/50 transition-colors">GitHub</a>

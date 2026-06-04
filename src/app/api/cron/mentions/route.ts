@@ -36,6 +36,16 @@ export async function GET(req: Request) {
     const sinceId = statsRow?.lastMentionId ?? undefined;
     const mentions = await getMentions(me.id, sinceId);
 
+    // Backup dedup: also check activity log in case sinceId cursor drifts
+    const recentMentionReplies = await prisma.activity.findMany({
+      where: { action: "Replied to mention", createdAt: { gte: new Date(Date.now() - 7 * 86400000) } },
+      select: { detail: true },
+      take: 500,
+    });
+    const repliedMentionIds = new Set(
+      recentMentionReplies.map(a => a.detail?.match(/^mid:(\w+)/)?.[1]).filter(Boolean) as string[]
+    );
+
     if (!mentions.length) {
       return NextResponse.json({ ok: true, mentions: 0 });
     }
@@ -54,7 +64,8 @@ export async function GET(req: Request) {
 
     for (const mention of mentions) {
       if (isBlocked(mention.author_id)) continue;
-      if (isSpam(mention.text)) continue; // skip silently — don't engage with bots
+      if (isSpam(mention.text)) continue;
+      if (repliedMentionIds.has(mention.id)) continue; // backup dedup
       await humanPause();
 
       try {
@@ -63,7 +74,7 @@ export async function GET(req: Request) {
         replied++;
 
         await prisma.activity.create({
-          data: { action: "Replied to mention", detail: reply.slice(0, 80), icon: "💬" },
+          data: { action: "Replied to mention", detail: `mid:${mention.id}|${reply.slice(0, 70)}`, icon: "💬" },
         });
         await sendMessage(
           `💬 *Replied to mention*\n\n` +

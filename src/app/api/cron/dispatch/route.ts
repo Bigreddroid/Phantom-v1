@@ -135,7 +135,9 @@ export async function GET(req: Request) {
     jobs.push(hit("/api/cron/summary")); fired.push("summary");
   }
 
-  await Promise.allSettled(jobs);
+  // Fire all sub-jobs without waiting — each is its own Vercel function invocation.
+  // Awaiting causes dispatch to hit the 60s timeout since engage alone takes ~50s.
+  void Promise.allSettled(jobs);
 
   return NextResponse.json({ ok: true, hour, minute, dow, fired });
 }

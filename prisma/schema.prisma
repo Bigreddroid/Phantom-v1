@@ -60,6 +60,12 @@ model XSession {
   updatedAt DateTime @updatedAt
 }
 
+model Waitlist {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+}
+
 enum QueueStatus {
   PENDING
   APPROVED
