@@ -34,8 +34,12 @@ yarn-error.log*
 .env
 .env*
 !.env.example
-# scripts with tokens
+# scripts with tokens / local test runners (never commit — use .env.local for secrets)
 scripts/set-env.mjs
+scripts/test-commands.mjs
+scripts/test-engine.mjs
+scripts/test-x.mjs
+scripts/check-account.mjs
 get-cookies.js
 scripts/patch-agent-twitter.js
 # session exports / PDFs
