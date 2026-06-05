@@ -26,6 +26,7 @@ export type AggregateLinkedInAuth = {
 
 export type LinkedInAuthMinAggregateOutputType = {
   id: string | null
+  userId: string | null
   accessToken: string | null
   refreshToken: string | null
   personId: string | null
@@ -36,6 +37,7 @@ export type LinkedInAuthMinAggregateOutputType = {
 
 export type LinkedInAuthMaxAggregateOutputType = {
   id: string | null
+  userId: string | null
   accessToken: string | null
   refreshToken: string | null
   personId: string | null
@@ -46,6 +48,7 @@ export type LinkedInAuthMaxAggregateOutputType = {
 
 export type LinkedInAuthCountAggregateOutputType = {
   id: number
+  userId: number
   accessToken: number
   refreshToken: number
   personId: number
@@ -58,6 +61,7 @@ export type LinkedInAuthCountAggregateOutputType = {
 
 export type LinkedInAuthMinAggregateInputType = {
   id?: true
+  userId?: true
   accessToken?: true
   refreshToken?: true
   personId?: true
@@ -68,6 +72,7 @@ export type LinkedInAuthMinAggregateInputType = {
 
 export type LinkedInAuthMaxAggregateInputType = {
   id?: true
+  userId?: true
   accessToken?: true
   refreshToken?: true
   personId?: true
@@ -78,6 +83,7 @@ export type LinkedInAuthMaxAggregateInputType = {
 
 export type LinkedInAuthCountAggregateInputType = {
   id?: true
+  userId?: true
   accessToken?: true
   refreshToken?: true
   personId?: true
@@ -161,6 +167,7 @@ export type LinkedInAuthGroupByArgs<ExtArgs extends runtime.Types.Extensions.Int
 
 export type LinkedInAuthGroupByOutputType = {
   id: string
+  userId: string | null
   accessToken: string
   refreshToken: string | null
   personId: string
@@ -192,6 +199,7 @@ export type LinkedInAuthWhereInput = {
   OR?: Prisma.LinkedInAuthWhereInput[]
   NOT?: Prisma.LinkedInAuthWhereInput | Prisma.LinkedInAuthWhereInput[]
   id?: Prisma.StringFilter<"LinkedInAuth"> | string
+  userId?: Prisma.StringNullableFilter<"LinkedInAuth"> | string | null
   accessToken?: Prisma.StringFilter<"LinkedInAuth"> | string
   refreshToken?: Prisma.StringNullableFilter<"LinkedInAuth"> | string | null
   personId?: Prisma.StringFilter<"LinkedInAuth"> | string
@@ -202,6 +210,7 @@ export type LinkedInAuthWhereInput = {
 
 export type LinkedInAuthOrderByWithRelationInput = {
   id?: Prisma.SortOrder
+  userId?: Prisma.SortOrderInput | Prisma.SortOrder
   accessToken?: Prisma.SortOrder
   refreshToken?: Prisma.SortOrderInput | Prisma.SortOrder
   personId?: Prisma.SortOrder
@@ -212,6 +221,7 @@ export type LinkedInAuthOrderByWithRelationInput = {
 
 export type LinkedInAuthWhereUniqueInput = Prisma.AtLeast<{
   id?: string
+  userId?: string
   AND?: Prisma.LinkedInAuthWhereInput | Prisma.LinkedInAuthWhereInput[]
   OR?: Prisma.LinkedInAuthWhereInput[]
   NOT?: Prisma.LinkedInAuthWhereInput | Prisma.LinkedInAuthWhereInput[]
@@ -221,10 +231,11 @@ export type LinkedInAuthWhereUniqueInput = Prisma.AtLeast<{
   expiresAt?: Prisma.DateTimeFilter<"LinkedInAuth"> | Date | string
   createdAt?: Prisma.DateTimeFilter<"LinkedInAuth"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"LinkedInAuth"> | Date | string
-}, "id">
+}, "id" | "userId">
 
 export type LinkedInAuthOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
+  userId?: Prisma.SortOrderInput | Prisma.SortOrder
   accessToken?: Prisma.SortOrder
   refreshToken?: Prisma.SortOrderInput | Prisma.SortOrder
   personId?: Prisma.SortOrder
@@ -241,6 +252,7 @@ export type LinkedInAuthScalarWhereWithAggregatesInput = {
   OR?: Prisma.LinkedInAuthScalarWhereWithAggregatesInput[]
   NOT?: Prisma.LinkedInAuthScalarWhereWithAggregatesInput | Prisma.LinkedInAuthScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"LinkedInAuth"> | string
+  userId?: Prisma.StringNullableWithAggregatesFilter<"LinkedInAuth"> | string | null
   accessToken?: Prisma.StringWithAggregatesFilter<"LinkedInAuth"> | string
   refreshToken?: Prisma.StringNullableWithAggregatesFilter<"LinkedInAuth"> | string | null
   personId?: Prisma.StringWithAggregatesFilter<"LinkedInAuth"> | string
@@ -251,6 +263,7 @@ export type LinkedInAuthScalarWhereWithAggregatesInput = {
 
 export type LinkedInAuthCreateInput = {
   id?: string
+  userId?: string | null
   accessToken: string
   refreshToken?: string | null
   personId: string
@@ -261,6 +274,7 @@ export type LinkedInAuthCreateInput = {
 
 export type LinkedInAuthUncheckedCreateInput = {
   id?: string
+  userId?: string | null
   accessToken: string
   refreshToken?: string | null
   personId: string
@@ -271,6 +285,7 @@ export type LinkedInAuthUncheckedCreateInput = {
 
 export type LinkedInAuthUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accessToken?: Prisma.StringFieldUpdateOperationsInput | string
   refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   personId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -281,6 +296,7 @@ export type LinkedInAuthUpdateInput = {
 
 export type LinkedInAuthUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accessToken?: Prisma.StringFieldUpdateOperationsInput | string
   refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   personId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -291,6 +307,7 @@ export type LinkedInAuthUncheckedUpdateInput = {
 
 export type LinkedInAuthCreateManyInput = {
   id?: string
+  userId?: string | null
   accessToken: string
   refreshToken?: string | null
   personId: string
@@ -301,6 +318,7 @@ export type LinkedInAuthCreateManyInput = {
 
 export type LinkedInAuthUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accessToken?: Prisma.StringFieldUpdateOperationsInput | string
   refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   personId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -311,6 +329,7 @@ export type LinkedInAuthUpdateManyMutationInput = {
 
 export type LinkedInAuthUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accessToken?: Prisma.StringFieldUpdateOperationsInput | string
   refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   personId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -321,6 +340,7 @@ export type LinkedInAuthUncheckedUpdateManyInput = {
 
 export type LinkedInAuthCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  userId?: Prisma.SortOrder
   accessToken?: Prisma.SortOrder
   refreshToken?: Prisma.SortOrder
   personId?: Prisma.SortOrder
@@ -331,6 +351,7 @@ export type LinkedInAuthCountOrderByAggregateInput = {
 
 export type LinkedInAuthMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  userId?: Prisma.SortOrder
   accessToken?: Prisma.SortOrder
   refreshToken?: Prisma.SortOrder
   personId?: Prisma.SortOrder
@@ -341,6 +362,7 @@ export type LinkedInAuthMaxOrderByAggregateInput = {
 
 export type LinkedInAuthMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  userId?: Prisma.SortOrder
   accessToken?: Prisma.SortOrder
   refreshToken?: Prisma.SortOrder
   personId?: Prisma.SortOrder
@@ -353,6 +375,7 @@ export type LinkedInAuthMinOrderByAggregateInput = {
 
 export type LinkedInAuthSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  userId?: boolean
   accessToken?: boolean
   refreshToken?: boolean
   personId?: boolean
@@ -363,6 +386,7 @@ export type LinkedInAuthSelect<ExtArgs extends runtime.Types.Extensions.Internal
 
 export type LinkedInAuthSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  userId?: boolean
   accessToken?: boolean
   refreshToken?: boolean
   personId?: boolean
@@ -373,6 +397,7 @@ export type LinkedInAuthSelectCreateManyAndReturn<ExtArgs extends runtime.Types.
 
 export type LinkedInAuthSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  userId?: boolean
   accessToken?: boolean
   refreshToken?: boolean
   personId?: boolean
@@ -383,6 +408,7 @@ export type LinkedInAuthSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.
 
 export type LinkedInAuthSelectScalar = {
   id?: boolean
+  userId?: boolean
   accessToken?: boolean
   refreshToken?: boolean
   personId?: boolean
@@ -391,13 +417,14 @@ export type LinkedInAuthSelectScalar = {
   updatedAt?: boolean
 }
 
-export type LinkedInAuthOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "accessToken" | "refreshToken" | "personId" | "expiresAt" | "createdAt" | "updatedAt", ExtArgs["result"]["linkedInAuth"]>
+export type LinkedInAuthOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "accessToken" | "refreshToken" | "personId" | "expiresAt" | "createdAt" | "updatedAt", ExtArgs["result"]["linkedInAuth"]>
 
 export type $LinkedInAuthPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "LinkedInAuth"
   objects: {}
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
+    userId: string | null
     accessToken: string
     refreshToken: string | null
     personId: string
@@ -828,6 +855,7 @@ export interface Prisma__LinkedInAuthClient<T, Null = never, ExtArgs extends run
  */
 export interface LinkedInAuthFieldRefs {
   readonly id: Prisma.FieldRef<"LinkedInAuth", 'String'>
+  readonly userId: Prisma.FieldRef<"LinkedInAuth", 'String'>
   readonly accessToken: Prisma.FieldRef<"LinkedInAuth", 'String'>
   readonly refreshToken: Prisma.FieldRef<"LinkedInAuth", 'String'>
   readonly personId: Prisma.FieldRef<"LinkedInAuth", 'String'>

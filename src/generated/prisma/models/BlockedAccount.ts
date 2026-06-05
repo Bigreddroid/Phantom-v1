@@ -26,18 +26,21 @@ export type AggregateBlockedAccount = {
 
 export type BlockedAccountMinAggregateOutputType = {
   id: string | null
+  userId: string | null
   username: string | null
   createdAt: Date | null
 }
 
 export type BlockedAccountMaxAggregateOutputType = {
   id: string | null
+  userId: string | null
   username: string | null
   createdAt: Date | null
 }
 
 export type BlockedAccountCountAggregateOutputType = {
   id: number
+  userId: number
   username: number
   createdAt: number
   _all: number
@@ -46,18 +49,21 @@ export type BlockedAccountCountAggregateOutputType = {
 
 export type BlockedAccountMinAggregateInputType = {
   id?: true
+  userId?: true
   username?: true
   createdAt?: true
 }
 
 export type BlockedAccountMaxAggregateInputType = {
   id?: true
+  userId?: true
   username?: true
   createdAt?: true
 }
 
 export type BlockedAccountCountAggregateInputType = {
   id?: true
+  userId?: true
   username?: true
   createdAt?: true
   _all?: true
@@ -137,6 +143,7 @@ export type BlockedAccountGroupByArgs<ExtArgs extends runtime.Types.Extensions.I
 
 export type BlockedAccountGroupByOutputType = {
   id: string
+  userId: string | null
   username: string
   createdAt: Date
   _count: BlockedAccountCountAggregateOutputType | null
@@ -164,27 +171,32 @@ export type BlockedAccountWhereInput = {
   OR?: Prisma.BlockedAccountWhereInput[]
   NOT?: Prisma.BlockedAccountWhereInput | Prisma.BlockedAccountWhereInput[]
   id?: Prisma.StringFilter<"BlockedAccount"> | string
+  userId?: Prisma.StringNullableFilter<"BlockedAccount"> | string | null
   username?: Prisma.StringFilter<"BlockedAccount"> | string
   createdAt?: Prisma.DateTimeFilter<"BlockedAccount"> | Date | string
 }
 
 export type BlockedAccountOrderByWithRelationInput = {
   id?: Prisma.SortOrder
+  userId?: Prisma.SortOrderInput | Prisma.SortOrder
   username?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
 export type BlockedAccountWhereUniqueInput = Prisma.AtLeast<{
   id?: string
-  username?: string
+  userId_username?: Prisma.BlockedAccountUserIdUsernameCompoundUniqueInput
   AND?: Prisma.BlockedAccountWhereInput | Prisma.BlockedAccountWhereInput[]
   OR?: Prisma.BlockedAccountWhereInput[]
   NOT?: Prisma.BlockedAccountWhereInput | Prisma.BlockedAccountWhereInput[]
+  userId?: Prisma.StringNullableFilter<"BlockedAccount"> | string | null
+  username?: Prisma.StringFilter<"BlockedAccount"> | string
   createdAt?: Prisma.DateTimeFilter<"BlockedAccount"> | Date | string
-}, "id" | "username">
+}, "id" | "userId_username">
 
 export type BlockedAccountOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
+  userId?: Prisma.SortOrderInput | Prisma.SortOrder
   username?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   _count?: Prisma.BlockedAccountCountOrderByAggregateInput
@@ -197,66 +209,82 @@ export type BlockedAccountScalarWhereWithAggregatesInput = {
   OR?: Prisma.BlockedAccountScalarWhereWithAggregatesInput[]
   NOT?: Prisma.BlockedAccountScalarWhereWithAggregatesInput | Prisma.BlockedAccountScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"BlockedAccount"> | string
+  userId?: Prisma.StringNullableWithAggregatesFilter<"BlockedAccount"> | string | null
   username?: Prisma.StringWithAggregatesFilter<"BlockedAccount"> | string
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"BlockedAccount"> | Date | string
 }
 
 export type BlockedAccountCreateInput = {
   id?: string
+  userId?: string | null
   username: string
   createdAt?: Date | string
 }
 
 export type BlockedAccountUncheckedCreateInput = {
   id?: string
+  userId?: string | null
   username: string
   createdAt?: Date | string
 }
 
 export type BlockedAccountUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   username?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type BlockedAccountUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   username?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type BlockedAccountCreateManyInput = {
   id?: string
+  userId?: string | null
   username: string
   createdAt?: Date | string
 }
 
 export type BlockedAccountUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   username?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type BlockedAccountUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   username?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
+export type BlockedAccountUserIdUsernameCompoundUniqueInput = {
+  userId: string
+  username: string
+}
+
 export type BlockedAccountCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  userId?: Prisma.SortOrder
   username?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
 export type BlockedAccountMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  userId?: Prisma.SortOrder
   username?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
 export type BlockedAccountMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  userId?: Prisma.SortOrder
   username?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
@@ -265,35 +293,40 @@ export type BlockedAccountMinOrderByAggregateInput = {
 
 export type BlockedAccountSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  userId?: boolean
   username?: boolean
   createdAt?: boolean
 }, ExtArgs["result"]["blockedAccount"]>
 
 export type BlockedAccountSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  userId?: boolean
   username?: boolean
   createdAt?: boolean
 }, ExtArgs["result"]["blockedAccount"]>
 
 export type BlockedAccountSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  userId?: boolean
   username?: boolean
   createdAt?: boolean
 }, ExtArgs["result"]["blockedAccount"]>
 
 export type BlockedAccountSelectScalar = {
   id?: boolean
+  userId?: boolean
   username?: boolean
   createdAt?: boolean
 }
 
-export type BlockedAccountOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "username" | "createdAt", ExtArgs["result"]["blockedAccount"]>
+export type BlockedAccountOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "username" | "createdAt", ExtArgs["result"]["blockedAccount"]>
 
 export type $BlockedAccountPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "BlockedAccount"
   objects: {}
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
+    userId: string | null
     username: string
     createdAt: Date
   }, ExtArgs["result"]["blockedAccount"]>
@@ -720,6 +753,7 @@ export interface Prisma__BlockedAccountClient<T, Null = never, ExtArgs extends r
  */
 export interface BlockedAccountFieldRefs {
   readonly id: Prisma.FieldRef<"BlockedAccount", 'String'>
+  readonly userId: Prisma.FieldRef<"BlockedAccount", 'String'>
   readonly username: Prisma.FieldRef<"BlockedAccount", 'String'>
   readonly createdAt: Prisma.FieldRef<"BlockedAccount", 'DateTime'>
 }

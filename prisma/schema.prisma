@@ -7,26 +7,101 @@ datasource db {
   provider = "postgresql"
 }
 
+// ── Multi-tenant user accounts ────────────────────────────────────────────────
+
+model User {
+  id                 String    @id @default(cuid())
+  email              String    @unique
+  passwordHash       String
+  name               String?
+  stripeCustomerId   String?
+  stripeSubscriptionId String?
+  plan               String    @default("free")          // free | starter | pro
+  subscriptionStatus String    @default("inactive")      // inactive | trialing | active | canceled | past_due
+  trialEndsAt        DateTime?
+  onboardingStep     Int       @default(0)               // 0=not started, 1=x, 2=telegram, 3=voice, 4=done
+  onboardingDone     Boolean   @default(false)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  xCredential        XCredential?
+  telegramSetup      TelegramSetup?
+  userSettings       UserSettings?
+}
+
+model XCredential {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  authMethod   String   @default("cookies")  // "cookies" | "api"
+  cookies      String?                         // JSON array of cookie strings (authMethod="cookies")
+  username     String
+  xUserId      String?
+  // Official X API keys (authMethod="api") — stored encrypted at rest by Supabase
+  apiKey       String?
+  apiSecret    String?
+  accessToken  String?
+  accessSecret String?
+  updatedAt    DateTime @updatedAt
+  createdAt    DateTime @default(now())
+}
+
+model TelegramSetup {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  botToken   String
+  chatId     String
+  webhookSet Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model UserSettings {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  handle           String   @default("")
+  timezone         String   @default("Asia/Kolkata")
+  nicheKeywords    String   @default("")  // comma-separated
+  contentTopics    String   @default("")
+  threadTopics     String   @default("")
+  voiceTopics      String   @default("")
+  voiceDescription String   @default("")  // free-text voice/tone description
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+// ── Existing tables — userId added as nullable for backward compat ─────────────
+// Varun's legacy records have userId = null. New user records have userId set.
+
 model QueueItem {
   id        String      @id @default(cuid())
+  userId    String?
   type      String
   content   String
   metadata  Json?
   status    QueueStatus @default(PENDING)
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
+
+  @@index([userId])
 }
 
 model Activity {
   id        String   @id @default(cuid())
+  userId    String?
   action    String
   detail    String?
   icon      String?
   createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 model Stats {
   id            String   @id @default("singleton")
+  userId        String?  @unique
   followers     Int      @default(0)
   following     Int      @default(0)
   tweets        Int      @default(0)
@@ -39,12 +114,16 @@ model Stats {
 
 model BlockedAccount {
   id        String   @id @default(cuid())
-  username  String   @unique
+  userId    String?
+  username  String
   createdAt DateTime @default(now())
+
+  @@unique([userId, username])
 }
 
 model LinkedInAuth {
   id           String    @id @default("singleton")
+  userId       String?   @unique
   accessToken  String
   refreshToken String?
   personId     String
@@ -55,6 +134,7 @@ model LinkedInAuth {
 
 model XSession {
   id        String   @id @default("singleton")
+  userId    String?  @unique
   cookies   String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -64,6 +144,37 @@ model Waitlist {
   id        String   @id @default(cuid())
   email     String   @unique
   createdAt DateTime @default(now())
+}
+
+model BrainMemory {
+  id        String   @id @default(cuid())
+  userId    String?
+  key       String
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, key])
+}
+
+model ConversationThread {
+  id              String   @id @default(cuid())
+  userId          String?
+  twitterUserId   String
+  twitterUsername String
+  messages        Json
+  updatedAt       DateTime @updatedAt
+
+  @@unique([userId, twitterUserId])
+}
+
+model PerformanceInsight {
+  id        String   @id @default(cuid())
+  userId    String?
+  insight   String
+  metric    String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 enum QueueStatus {

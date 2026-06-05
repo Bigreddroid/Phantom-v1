@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
+export const maxDuration = 60;
 import { getMyProfile } from "@/lib/x/engage";
 import { prisma } from "@/lib/db";
 import { notifyDailySummary, notifyMilestone } from "@/lib/telegram/notify";
+import { getBrainFields } from "@/lib/brain/context";
+import { getInsights } from "@/lib/brain/performance";
 
 const MILESTONES = [10, 50, 100, 250, 500, 1000, 5000, 10000];
 
@@ -18,12 +21,14 @@ export async function GET(req: Request) {
 
   const since = new Date(Date.now() - 86400000); // last 24h
 
-  const [tweetsPosted, engagements, mentions, dmsSent, statsRecord] = await Promise.all([
+  const [tweetsPosted, engagements, mentions, dmsSent, statsRecord, brain, insights] = await Promise.all([
     prisma.activity.count({ where: { action: { contains: "posted" }, createdAt: { gte: since } } }),
     prisma.activity.count({ where: { action: { contains: "Liked" }, createdAt: { gte: since } } }),
     prisma.activity.count({ where: { action: { contains: "mention" }, createdAt: { gte: since } } }),
     prisma.activity.count({ where: { action: { contains: "DM" }, createdAt: { gte: since } } }),
     prisma.stats.findUnique({ where: { id: "singleton" } }),
+    getBrainFields().catch(() => null),
+    getInsights(1).catch(() => []),
   ]);
 
   // Delta since last summary run (0 on first run — seeds the baseline)
@@ -45,6 +50,8 @@ export async function GET(req: Request) {
     engagements,
     mentions,
     dmsSent,
+    brainFocus: brain?.focus ?? undefined,
+    latestInsight: insights[0]?.insight ?? undefined,
   });
 
   // Check milestones

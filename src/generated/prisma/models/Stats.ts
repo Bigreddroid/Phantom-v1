@@ -44,6 +44,7 @@ export type StatsSumAggregateOutputType = {
 
 export type StatsMinAggregateOutputType = {
   id: string | null
+  userId: string | null
   followers: number | null
   following: number | null
   tweets: number | null
@@ -56,6 +57,7 @@ export type StatsMinAggregateOutputType = {
 
 export type StatsMaxAggregateOutputType = {
   id: string | null
+  userId: string | null
   followers: number | null
   following: number | null
   tweets: number | null
@@ -68,6 +70,7 @@ export type StatsMaxAggregateOutputType = {
 
 export type StatsCountAggregateOutputType = {
   id: number
+  userId: number
   followers: number
   following: number
   tweets: number
@@ -98,6 +101,7 @@ export type StatsSumAggregateInputType = {
 
 export type StatsMinAggregateInputType = {
   id?: true
+  userId?: true
   followers?: true
   following?: true
   tweets?: true
@@ -110,6 +114,7 @@ export type StatsMinAggregateInputType = {
 
 export type StatsMaxAggregateInputType = {
   id?: true
+  userId?: true
   followers?: true
   following?: true
   tweets?: true
@@ -122,6 +127,7 @@ export type StatsMaxAggregateInputType = {
 
 export type StatsCountAggregateInputType = {
   id?: true
+  userId?: true
   followers?: true
   following?: true
   tweets?: true
@@ -221,6 +227,7 @@ export type StatsGroupByArgs<ExtArgs extends runtime.Types.Extensions.InternalAr
 
 export type StatsGroupByOutputType = {
   id: string
+  userId: string | null
   followers: number
   following: number
   tweets: number
@@ -256,6 +263,7 @@ export type StatsWhereInput = {
   OR?: Prisma.StatsWhereInput[]
   NOT?: Prisma.StatsWhereInput | Prisma.StatsWhereInput[]
   id?: Prisma.StringFilter<"Stats"> | string
+  userId?: Prisma.StringNullableFilter<"Stats"> | string | null
   followers?: Prisma.IntFilter<"Stats"> | number
   following?: Prisma.IntFilter<"Stats"> | number
   tweets?: Prisma.IntFilter<"Stats"> | number
@@ -268,6 +276,7 @@ export type StatsWhereInput = {
 
 export type StatsOrderByWithRelationInput = {
   id?: Prisma.SortOrder
+  userId?: Prisma.SortOrderInput | Prisma.SortOrder
   followers?: Prisma.SortOrder
   following?: Prisma.SortOrder
   tweets?: Prisma.SortOrder
@@ -280,6 +289,7 @@ export type StatsOrderByWithRelationInput = {
 
 export type StatsWhereUniqueInput = Prisma.AtLeast<{
   id?: string
+  userId?: string
   AND?: Prisma.StatsWhereInput | Prisma.StatsWhereInput[]
   OR?: Prisma.StatsWhereInput[]
   NOT?: Prisma.StatsWhereInput | Prisma.StatsWhereInput[]
@@ -291,10 +301,11 @@ export type StatsWhereUniqueInput = Prisma.AtLeast<{
   paused?: Prisma.BoolFilter<"Stats"> | boolean
   lastMentionId?: Prisma.StringNullableFilter<"Stats"> | string | null
   updatedAt?: Prisma.DateTimeFilter<"Stats"> | Date | string
-}, "id">
+}, "id" | "userId">
 
 export type StatsOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
+  userId?: Prisma.SortOrderInput | Prisma.SortOrder
   followers?: Prisma.SortOrder
   following?: Prisma.SortOrder
   tweets?: Prisma.SortOrder
@@ -315,6 +326,7 @@ export type StatsScalarWhereWithAggregatesInput = {
   OR?: Prisma.StatsScalarWhereWithAggregatesInput[]
   NOT?: Prisma.StatsScalarWhereWithAggregatesInput | Prisma.StatsScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"Stats"> | string
+  userId?: Prisma.StringNullableWithAggregatesFilter<"Stats"> | string | null
   followers?: Prisma.IntWithAggregatesFilter<"Stats"> | number
   following?: Prisma.IntWithAggregatesFilter<"Stats"> | number
   tweets?: Prisma.IntWithAggregatesFilter<"Stats"> | number
@@ -327,6 +339,7 @@ export type StatsScalarWhereWithAggregatesInput = {
 
 export type StatsCreateInput = {
   id?: string
+  userId?: string | null
   followers?: number
   following?: number
   tweets?: number
@@ -339,6 +352,7 @@ export type StatsCreateInput = {
 
 export type StatsUncheckedCreateInput = {
   id?: string
+  userId?: string | null
   followers?: number
   following?: number
   tweets?: number
@@ -351,6 +365,7 @@ export type StatsUncheckedCreateInput = {
 
 export type StatsUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   followers?: Prisma.IntFieldUpdateOperationsInput | number
   following?: Prisma.IntFieldUpdateOperationsInput | number
   tweets?: Prisma.IntFieldUpdateOperationsInput | number
@@ -363,6 +378,7 @@ export type StatsUpdateInput = {
 
 export type StatsUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   followers?: Prisma.IntFieldUpdateOperationsInput | number
   following?: Prisma.IntFieldUpdateOperationsInput | number
   tweets?: Prisma.IntFieldUpdateOperationsInput | number
@@ -375,6 +391,7 @@ export type StatsUncheckedUpdateInput = {
 
 export type StatsCreateManyInput = {
   id?: string
+  userId?: string | null
   followers?: number
   following?: number
   tweets?: number
@@ -387,6 +404,7 @@ export type StatsCreateManyInput = {
 
 export type StatsUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   followers?: Prisma.IntFieldUpdateOperationsInput | number
   following?: Prisma.IntFieldUpdateOperationsInput | number
   tweets?: Prisma.IntFieldUpdateOperationsInput | number
@@ -399,6 +417,7 @@ export type StatsUpdateManyMutationInput = {
 
 export type StatsUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   followers?: Prisma.IntFieldUpdateOperationsInput | number
   following?: Prisma.IntFieldUpdateOperationsInput | number
   tweets?: Prisma.IntFieldUpdateOperationsInput | number
@@ -411,6 +430,7 @@ export type StatsUncheckedUpdateManyInput = {
 
 export type StatsCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  userId?: Prisma.SortOrder
   followers?: Prisma.SortOrder
   following?: Prisma.SortOrder
   tweets?: Prisma.SortOrder
@@ -431,6 +451,7 @@ export type StatsAvgOrderByAggregateInput = {
 
 export type StatsMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  userId?: Prisma.SortOrder
   followers?: Prisma.SortOrder
   following?: Prisma.SortOrder
   tweets?: Prisma.SortOrder
@@ -443,6 +464,7 @@ export type StatsMaxOrderByAggregateInput = {
 
 export type StatsMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  userId?: Prisma.SortOrder
   followers?: Prisma.SortOrder
   following?: Prisma.SortOrder
   tweets?: Prisma.SortOrder
@@ -461,22 +483,11 @@ export type StatsSumOrderByAggregateInput = {
   dmsSent?: Prisma.SortOrder
 }
 
-export type IntFieldUpdateOperationsInput = {
-  set?: number
-  increment?: number
-  decrement?: number
-  multiply?: number
-  divide?: number
-}
-
-export type BoolFieldUpdateOperationsInput = {
-  set?: boolean
-}
-
 
 
 export type StatsSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  userId?: boolean
   followers?: boolean
   following?: boolean
   tweets?: boolean
@@ -489,6 +500,7 @@ export type StatsSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
 
 export type StatsSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  userId?: boolean
   followers?: boolean
   following?: boolean
   tweets?: boolean
@@ -501,6 +513,7 @@ export type StatsSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensi
 
 export type StatsSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  userId?: boolean
   followers?: boolean
   following?: boolean
   tweets?: boolean
@@ -513,6 +526,7 @@ export type StatsSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensi
 
 export type StatsSelectScalar = {
   id?: boolean
+  userId?: boolean
   followers?: boolean
   following?: boolean
   tweets?: boolean
@@ -523,13 +537,14 @@ export type StatsSelectScalar = {
   updatedAt?: boolean
 }
 
-export type StatsOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "followers" | "following" | "tweets" | "engagements" | "dmsSent" | "paused" | "lastMentionId" | "updatedAt", ExtArgs["result"]["stats"]>
+export type StatsOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "followers" | "following" | "tweets" | "engagements" | "dmsSent" | "paused" | "lastMentionId" | "updatedAt", ExtArgs["result"]["stats"]>
 
 export type $StatsPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Stats"
   objects: {}
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
+    userId: string | null
     followers: number
     following: number
     tweets: number
@@ -962,6 +977,7 @@ export interface Prisma__StatsClient<T, Null = never, ExtArgs extends runtime.Ty
  */
 export interface StatsFieldRefs {
   readonly id: Prisma.FieldRef<"Stats", 'String'>
+  readonly userId: Prisma.FieldRef<"Stats", 'String'>
   readonly followers: Prisma.FieldRef<"Stats", 'Int'>
   readonly following: Prisma.FieldRef<"Stats", 'Int'>
   readonly tweets: Prisma.FieldRef<"Stats", 'Int'>

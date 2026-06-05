@@ -9,13 +9,23 @@ const grok = process.env.GROK_API_KEY
   : null;
 
 import { X_HANDLE, VOICE_TOPICS } from "@/lib/config";
+import { getBrainContext, getThread } from "@/lib/brain/context";
 
-const VOICE_SYSTEM_PROMPT = `You are a ghostwriter for ${X_HANDLE} — a solo founder building under BigRedDroid.
+const VOICE_BASE = `You are a ghostwriter for ${X_HANDLE} — a solo founder building under BigRedDroid.
 BigRedDroid is a solo deep-tech lab. Flagship product: Phantom — an AI system that automates your entire X/Twitter presence (posting, engaging, replying, following, DMs) 24/7, controlled via Telegram.
 Write in their voice: direct, confident, no fluff, no emojis unless natural,
 conversational but intelligent. Never sound like a bot or a marketing post.
 Vary sentence length. Sound like a real person thinking out loud.
 Topics: ${VOICE_TOPICS}.`;
+
+async function voicePrompt(): Promise<string> {
+  try {
+    const ctx = await getBrainContext();
+    return `${ctx}\n\n${VOICE_BASE}`;
+  } catch {
+    return VOICE_BASE;
+  }
+}
 
 // Use Grok when available (better for X/Twitter content), fall back to Claude
 async function generate(prompt: string, system: string, maxTokens: number): Promise<string> {
@@ -54,7 +64,7 @@ Rules:
 - No generic opener like "Hot take:" or "Thread:"
 - Sound like a real builder's thought, not a marketing post
 - Every tweet must cover a different angle than what's been posted before`,
-    VOICE_SYSTEM_PROMPT,
+    await voicePrompt(),
     300
   );
 }
@@ -69,22 +79,54 @@ export async function generateThread(topic: string, numTweets = 5, recentTweets?
 Format each tweet on its own line, separated by "---"
 First tweet hooks the reader. Last tweet has a clear CTA.
 Each tweet under 280 characters. No numbering like "1/" needed.`,
-    VOICE_SYSTEM_PROMPT,
+    await voicePrompt(),
     1500
   );
   return raw.split("---").map((t) => t.trim()).filter(Boolean);
 }
 
-const REPLY_SYSTEM = `You are ${X_HANDLE} — solo founder building Phantom under BigRedDroid, replying to people on X.
+async function replySystemPrompt(): Promise<string> {
+  try {
+    const ctx = await getBrainContext();
+    return `${ctx}\n\nYou are ${X_HANDLE} — solo founder building Phantom under BigRedDroid, replying to people on X.
 You talk like a real person: direct, occasionally dry, genuinely curious. Builder to builder.
 Not a support bot. Not a hype machine. Just someone who actually read the tweet.
 Never start with "I". Never say "great point", "so true", "love this", "this resonates", "totally", "absolutely".
 Never give advice nobody asked for. Never summarise their tweet back at them.
 Every reply is a COMPLETE thought — never trails off.`;
+  } catch {
+    return `You are ${X_HANDLE} — solo founder building Phantom under BigRedDroid, replying to people on X.
+You talk like a real person: direct, occasionally dry, genuinely curious. Builder to builder.
+Not a support bot. Not a hype machine. Just someone who actually read the tweet.
+Never start with "I". Never say "great point", "so true", "love this", "this resonates", "totally", "absolutely".
+Never give advice nobody asked for. Never summarise their tweet back at them.
+Every reply is a COMPLETE thought — never trails off.`;
+  }
+}
 
-export async function generateReply(mentionText: string, authorUsername: string) {
+export async function generateReply(
+  mentionText: string,
+  authorUsername: string,
+  twitterUserId?: string,
+) {
+  // Fetch conversation history if we know who this is
+  let threadBlock = "";
+  if (twitterUserId) {
+    try {
+      const history = await getThread(twitterUserId, 6);
+      if (history.length > 0) {
+        const lines = history.map(m =>
+          m.role === "them"
+            ? `@${authorUsername}: "${m.content}"`
+            : `You: "${m.content}"`
+        ).join("\n");
+        threadBlock = `\n\nPrevious exchanges with this person:\n${lines}\n\nDo NOT repeat anything you already said. Continue naturally from where the conversation left off.`;
+      }
+    } catch { /* thread lookup is best-effort */ }
+  }
+
   return generate(
-    `@${authorUsername} tweeted: "${mentionText}"
+    `@${authorUsername} tweeted: "${mentionText}"${threadBlock}
 
 Write a short, natural reply — peer to peer, not cheerleader to athlete.
 
@@ -102,7 +144,7 @@ Rules:
 - If Phantom / BigRedDroid connects naturally — one clause, never forced.
 
 Hard limit: 240 characters. COMPLETE sentence only.`,
-    REPLY_SYSTEM,
+    await replySystemPrompt(),
     300
   );
 }
@@ -126,7 +168,7 @@ Rules:
 - COMPLETE thought. If it's going long, cut a point — never cut mid-sentence.
 
 Hard limit: 180 characters.`,
-    REPLY_SYSTEM,
+    await replySystemPrompt(),
     240
   );
 }
@@ -212,7 +254,7 @@ Each tweet separated by "---"
 Each tweet under 280 chars.
 Write as ${X_HANDLE} — direct, confident, sounds like earned experience not generic advice.
 Reference your own tools (Phantom, BigRedDroid) only where it fits naturally.`,
-    VOICE_SYSTEM_PROMPT,
+    await voicePrompt(),
     2000,
   );
   return raw.split("---").map(t => t.trim()).filter(Boolean);
@@ -240,7 +282,7 @@ Rules:
 - No "excited to share" or "thrilled to announce"
 - Sound like a builder talking to other builders
 - Every tweet must cover a completely different angle, format, and opening than all previous ones`,
-    VOICE_SYSTEM_PROMPT,
+    await voicePrompt(),
     300
   );
 }
@@ -248,7 +290,7 @@ Rules:
 export async function generateQuoteTweet(originalText: string) {
   return generate(
     `You're quote-tweeting your own old post to resurface it with fresh context:\n\n"${originalText}"\n\nWrite a 1–2 sentence quote-tweet comment that adds new insight, a update, or a punchy observation. Don't just repeat the original. Under 200 characters. No "back to this" or "still relevant" openers.`,
-    VOICE_SYSTEM_PROMPT,
+    await voicePrompt(),
     200
   );
 }
@@ -268,7 +310,7 @@ Rules:
 - Under 280 characters
 - No pitch. No "this will help you". No "I'd love to show you"
 - Sounds like a real person, not a product announcement`,
-    VOICE_SYSTEM_PROMPT,
+    await voicePrompt(),
     300
   );
 }
@@ -294,7 +336,7 @@ Rules:
 - Sounds like a builder thinking out loud, not a newsletter
 - No hashtags
 - No "I've been thinking about..." opener`,
-    VOICE_SYSTEM_PROMPT,
+    await voicePrompt(),
     600
   );
 }

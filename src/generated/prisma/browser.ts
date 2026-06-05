@@ -18,6 +18,26 @@ export { Prisma }
 export * as $Enums from './enums'
 export * from './enums';
 /**
+ * Model User
+ * 
+ */
+export type User = Prisma.UserModel
+/**
+ * Model XCredential
+ * 
+ */
+export type XCredential = Prisma.XCredentialModel
+/**
+ * Model TelegramSetup
+ * 
+ */
+export type TelegramSetup = Prisma.TelegramSetupModel
+/**
+ * Model UserSettings
+ * 
+ */
+export type UserSettings = Prisma.UserSettingsModel
+/**
  * Model QueueItem
  * 
  */
@@ -52,3 +72,18 @@ export type XSession = Prisma.XSessionModel
  * 
  */
 export type Waitlist = Prisma.WaitlistModel
+/**
+ * Model BrainMemory
+ * 
+ */
+export type BrainMemory = Prisma.BrainMemoryModel
+/**
+ * Model ConversationThread
+ * 
+ */
+export type ConversationThread = Prisma.ConversationThreadModel
+/**
+ * Model PerformanceInsight
+ * 
+ */
+export type PerformanceInsight = Prisma.PerformanceInsightModel

@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phantom — Project Progress A to Z</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #1a1a1a;
+    background: #fff;
+    padding: 40px;
+    max-width: 960px;
+    margin: 0 auto;
+  }
+  @media print {
+    body { padding: 20px; font-size: 12px; }
+    .no-break { page-break-inside: avoid; }
+    h1, h2 { page-break-after: avoid; }
+  }
+  h1 { font-size: 28px; font-weight: 800; margin-bottom: 4px; color: #000; }
+  .subtitle { font-size: 15px; color: #666; margin-bottom: 32px; border-bottom: 2px solid #000; padding-bottom: 16px; }
+  h2 { font-size: 18px; font-weight: 700; margin: 32px 0 12px; color: #000; border-left: 4px solid #000; padding-left: 10px; }
+  h3 { font-size: 14px; font-weight: 700; margin: 18px 0 8px; color: #333; text-transform: uppercase; letter-spacing: 0.05em; }
+  p { margin-bottom: 10px; color: #333; }
+  ul, ol { margin-left: 20px; margin-bottom: 12px; }
+  li { margin-bottom: 4px; }
+  code {
+    font-family: 'SF Mono', 'Consolas', 'Monaco', monospace;
+    font-size: 12px;
+    background: #f4f4f4;
+    border: 1px solid #e0e0e0;
+    border-radius: 3px;
+    padding: 1px 5px;
+  }
+  pre {
+    background: #f4f4f4;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    font-family: 'SF Mono', 'Consolas', monospace;
+    font-size: 12px;
+    margin: 10px 0 16px;
+    line-height: 1.5;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0 20px;
+    font-size: 13px;
+  }
+  th {
+    background: #000;
+    color: #fff;
+    text-align: left;
+    padding: 8px 12px;
+    font-weight: 600;
+  }
+  td {
+    padding: 7px 12px;
+    border-bottom: 1px solid #e8e8e8;
+    vertical-align: top;
+  }
+  tr:nth-child(even) td { background: #fafafa; }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+  }
+  .badge-green  { background: #d4edda; color: #155724; }
+  .badge-yellow { background: #fff3cd; color: #856404; }
+  .badge-red    { background: #f8d7da; color: #721c24; }
+  .badge-blue   { background: #d1ecf1; color: #0c5460; }
+  .badge-gray   { background: #e9ecef; color: #495057; }
+  .section-box {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+  }
+  .meta-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .meta-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .meta-card .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #888; font-weight: 600; margin-bottom: 4px; }
+  .meta-card .value { font-size: 14px; font-weight: 600; color: #000; }
+  .meta-card .sub   { font-size: 12px; color: #555; margin-top: 2px; }
+  .warn {
+    background: #fff8e1;
+    border-left: 4px solid #ffc107;
+    padding: 10px 14px;
+    margin: 12px 0;
+    border-radius: 0 6px 6px 0;
+    font-size: 13px;
+  }
+  .info {
+    background: #e8f4fd;
+    border-left: 4px solid #2196f3;
+    padding: 10px 14px;
+    margin: 12px 0;
+    border-radius: 0 6px 6px 0;
+    font-size: 13px;
+  }
+  .header-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+  }
+  .toc { columns: 2; margin-bottom: 32px; }
+  .toc li { font-size: 13px; color: #555; margin-bottom: 3px; }
+  .toc a { color: #000; text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  hr { border: none; border-top: 1px solid #e0e0e0; margin: 28px 0; }
+  .cmd { font-family: monospace; font-size: 13px; font-weight: 600; }
+  .done::before { content: "✅ "; }
+  .pending::before { content: "🔲 "; }
+  .wip::before { content: "🔧 "; }
+</style>
+</head>
+<body>
+
+<div class="header-bar">
+  <div>
+    <h1>Phantom</h1>
+    <p class="subtitle">AI-Automated Personal Brand System · BigRedDroid · Progress Document A–Z &nbsp;·&nbsp; Generated 04-Jun-2026</p>
+  </div>
+</div>
+
+<!-- META CARDS -->
+<div class="meta-grid">
+  <div class="meta-card">
+    <div class="label">Live URL</div>
+    <div class="value">phantom-beige.vercel.app</div>
+    <div class="sub">Vercel Hobby → Production</div>
+  </div>
+  <div class="meta-card">
+    <div class="label">Telegram Control Bot</div>
+    <div class="value">@PhantomioBot</div>
+    <div class="sub">Token prefix: 8393530168:… · Chat ID: 6061651803</div>
+  </div>
+  <div class="meta-card">
+    <div class="label">X / Twitter Account</div>
+    <div class="value">@BigRedDr0id</div>
+    <div class="sub">User ID: 2061773668603314176</div>
+  </div>
+  <div class="meta-card">
+    <div class="label">Vercel Project</div>
+    <div class="value">prj_L4icKq3R6PZ6w3XjhHzhTrS04f8b</div>
+    <div class="sub">Team: team_qPEQEbNy3a5cWWPqN4MKOA3K</div>
+  </div>
+  <div class="meta-card">
+    <div class="label">Owner</div>
+    <div class="value">@BigRedDr0id</div>
+    <div class="sub">bigreddroid7@gmail.com</div>
+  </div>
+  <div class="meta-card">
+    <div class="label">Cron Scheduler</div>
+    <div class="value">cron-job.org → every 15 min</div>
+    <div class="sub">/api/cron/dispatch · Bearer CRON_SECRET</div>
+  </div>
+</div>
+
+<!-- TABLE OF CONTENTS -->
+<h3>Table of Contents</h3>
+<ol class="toc">
+  <li><a href="#vision">Vision &amp; Mission</a></li>
+  <li><a href="#tech">Tech Stack</a></li>
+  <li><a href="#auth">X Auth Architecture</a></li>
+  <li><a href="#schedule">Automation Schedule</a></li>
+  <li><a href="#telegram">Telegram Bot Commands</a></li>
+  <li><a href="#content">Content System</a></li>
+  <li><a href="#files">Key Files Map</a></li>
+  <li><a href="#env">Environment Variables</a></li>
+  <li><a href="#db">Database Schema</a></li>
+  <li><a href="#bugs">Bugs Fixed This Session</a></li>
+  <li><a href="#pending">Pending / Roadmap</a></li>
+  <li><a href="#ops">Ops Runbook</a></li>
+  <li><a href="#constraints">Known Constraints &amp; Gotchas</a></li>
+  <li><a href="#git">Git History Summary</a></li>
+</ol>
+
+<hr>
+
+<!-- SECTION 1: VISION -->
+<h2 id="vision">1. Vision &amp; Mission</h2>
+<div class="section-box no-break">
+  <p><strong>Phantom</strong> is the flagship product of <strong>BigRedDroid</strong> — a solo deep-tech lab building 92 AI-powered products. Phantom is #1.</p>
+  <p>Phantom automates the entire X/Twitter (and LinkedIn) personal brand for @BigRedDr0id — 24/7, without manual work. It posts content in an authentic voice, engages with the community, replies to mentions, follows relevant accounts, runs educational threads, sends DMs, and grows the audience on autopilot.</p>
+  <h3>Why it exists</h3>
+  <ul>
+    <li>Building a personal brand on X manually takes 3+ hours/day. Phantom compresses that to zero active time.</li>
+    <li>Demonstrates Phantom as a real product (dogfooding — Phantom markets itself by running its own account).</li>
+    <li>Shows what's possible with Claude AI + cookie-based X auth without the paid API.</li>
+    <li>Platform and proof-of-concept for future BigRedDroid products.</li>
+  </ul>
+  <h3>Content pillars</h3>
+  <ul>
+    <li>Building Phantom and BigRedDroid in public</li>
+    <li>Claude AI workflows and automation tips</li>
+    <li>Obsidian + Notion knowledge management</li>
+    <li>Solopreneur productivity systems</li>
+    <li>X/Twitter growth tactics and automation</li>
+  </ul>
+</div>
+
+<hr>
+
+<!-- SECTION 2: TECH STACK -->
+<h2 id="tech">2. Tech Stack</h2>
+<table>
+  <tr><th>Layer</th><th>Technology</th><th>Why</th></tr>
+  <tr><td>Framework</td><td>Next.js 16 App Router (TypeScript)</td><td>Vercel-native, serverless functions, API routes</td></tr>
+  <tr><td>Database</td><td>Supabase PostgreSQL via Prisma v7</td><td>Managed DB, Prisma type-safe ORM</td></tr>
+  <tr><td>X Auth (write)</td><td><code>agent-twitter-client</code> v0.0.18</td><td>Cookie-based — no $100/mo official API needed</td></tr>
+  <tr><td>X Auth (read/search)</td><td><code>@the-convocation/twitter-scraper</code></td><td>Maintained GraphQL queries, works from Vercel DCs</td></tr>
+  <tr><td>AI generation</td><td>Claude Sonnet 4.6 (tweets/threads/LinkedIn) + Haiku (replies/DMs)</td><td>Best quality/speed balance, runs on Anthropic API</td></tr>
+  <tr><td>Telegram</td><td>Webhook mode (not polling)</td><td>No persistent server needed; Vercel serverless</td></tr>
+  <tr><td>Scheduling</td><td>cron-job.org → single dispatch route</td><td>Free, reliable, IST-aware routing in code</td></tr>
+  <tr><td>Images</td><td>Canvas-generated templates + /api/og fallback</td><td>5 named styles: dark, light, branded, article, data</td></tr>
+  <tr><td>LinkedIn</td><td>OAuth 2.0 PKCE + LinkedIn API v2</td><td>Official API (no cookie workaround needed)</td></tr>
+  <tr><td>Email</td><td>Resend (onboarding@resend.dev)</td><td>Waitlist confirmation emails. Swap to custom domain when available.</td></tr>
+  <tr><td>Hosting</td><td>Vercel Hobby (free)</td><td>Serverless, zero maintenance</td></tr>
+  <tr><td>Dashboard auth</td><td>HMAC cookie (<code>phantom_auth</code>)</td><td>No NextAuth needed; single-admin use</td></tr>
+</table>
+
+<hr>
+
+<!-- SECTION 3: X AUTH -->
+<h2 id="auth">3. X Auth Architecture</h2>
+<div class="section-box no-break">
+  <p><strong>No official Twitter API keys are used for posting.</strong> Everything goes through browser cookies extracted from Brave.</p>
+  <h3>Cookie chain (in priority order)</h3>
+  <ol>
+    <li><code>X_COOKIES</code> Vercel env var (JSON array of cookie strings) — fastest path</li>
+    <li>XSession record in Supabase DB (fallback when env var missing)</li>
+    <li>Fresh login via <code>X_USERNAME</code> + <code>X_PASSWORD</code> — saves to DB for reuse</li>
+  </ol>
+  <h3>Two scrapers, one session</h3>
+  <ul>
+    <li><strong>agent-twitter-client</strong> (<code>getXClient()</code>) — used for all write ops: sendTweet, likeTweet, retweet, follow, sendDm</li>
+    <li><strong>@the-convocation/twitter-scraper</strong> (<code>getConvoScraper()</code>) — used for search/read ops. Shares the same cookie session from DB. Agent-twitter-client's search returns 404 from Vercel datacenters.</li>
+  </ul>
+  <h3>Patches (scripts/patch-agent-twitter.js)</h3>
+  <p>Runs automatically on <code>postinstall</code> and <code>build</code>. Patches agent-twitter-client to:</p>
+  <ul>
+    <li>Replace <code>twitter.com</code> → <code>x.com</code> and update API paths</li>
+    <li>Update stale GraphQL query hashes (sourced from @the-convocation@0.22)</li>
+    <li>Add browser headers to write operations (required by X's bot detection)</li>
+    <li>Update bearer token</li>
+  </ul>
+  <h3>Cookie refresh procedure</h3>
+  <pre>1. Close Brave completely:    Get-Process -Name "brave" | Stop-Process -Force
+2. Run cookie extractor:       node get-cookies.js
+3. Deploy with new cookies:    npx vercel deploy --prod
+   (cookies go into X_COOKIES env var)</pre>
+  <div class="warn">⚠️ Cookies expire ~30 days. If posting starts failing with auth errors, run the refresh procedure above.</div>
+</div>
+
+<hr>
+
+<!-- SECTION 4: AUTOMATION SCHEDULE -->
+<h2 id="schedule">4. Automation Schedule (IST)</h2>
+<p>One cron-job.org job fires every 15 minutes, hitting <code>/api/cron/dispatch</code>. The dispatch route checks the current IST time and routes to the appropriate internal job. All slots use :28 past the hour. Window is 15 min to guarantee exactly one hit per slot.</p>
+<table>
+  <tr><th>What</th><th>When (IST)</th><th>Notes</th></tr>
+  <tr><td>Mentions check</td><td>Every 15 min, 24/7</td><td>Approval-gated — queues to Telegram. Never auto-posts. Permanent dedup (allTime sinceId).</td></tr>
+  <tr><td>Engage (like / reply / RT)</td><td>Every 15 min, 24/7</td><td>4 random modes each run: Like spree / Reply focus / Mixed / Retweet mix. Night mode = likes only.</td></tr>
+  <tr><td>Watchdog</td><td>Hourly (x:00–x:20)</td><td>Health check; pauses if anomalies detected</td></tr>
+  <tr><td>Tweet / Thread / Resurface</td><td>7:28, 12:28, 18:28, 21:28</td><td>Weighted random: plain tweet (35%), image tweet (30%), thread (20%), resurface (15%)</td></tr>
+  <tr><td>Articles</td><td>Wed &amp; Sat 9:28</td><td>6-tweet educational thread + article-style cover image on tweet 1. Topic dedup from posted items.</td></tr>
+  <tr><td>Long-form</td><td>10:28 daily</td><td>Premium+ 600–1800 char mini-essays</td></tr>
+  <tr><td>Bonus thread</td><td>Mon + Thu 14:28</td><td>Extra thread on top of whatever the slot picked</td></tr>
+  <tr><td>Follow</td><td>8×/day weekdays · 9×/day weekends (jittered)</td><td>Max 3/run, 8-18s delays, verified only, 24h dedup. Shared reply dedup prevents double-replies.</td></tr>
+  <tr><td>Go-out comments</td><td>8×/day weekdays · 9×/day weekends (jittered)</td><td>Targets top posts by traction score, 7-day dedup. Shared reply dedup.</td></tr>
+  <tr><td>Niche RT</td><td>16:28 daily</td><td>Content relevance filter — rejects politics/news. Queued to Telegram for approval.</td></tr>
+  <tr><td>Auto DM</td><td>8×/day weekdays · 9×/day weekends (jittered)</td><td>2 candidates/run → ~10-16 DMs/day to Telegram. 14 customer-targeting keywords.</td></tr>
+  <tr><td>LinkedIn post</td><td>Tue–Fri 8:28</td><td>Weighted: thought leadership (50%), personal story (30%), 5-lesson list (20%)</td></tr>
+  <tr><td>Daily summary</td><td>23:28</td><td>Telegram message: tweets posted, likes, follows, errors</td></tr>
+</table>
+
+<hr>
+
+<!-- SECTION 5: TELEGRAM COMMANDS -->
+<h2 id="telegram">5. Telegram Bot Commands (All 27+)</h2>
+<div class="info">All commands accessible via @PhantomioBot. Only chat ID 6061651803 can use them.</div>
+<table>
+  <tr><th>Command</th><th>What it does</th><th>Status</th></tr>
+  <tr><td class="cmd">/help</td><td>Lists all commands with descriptions</td><td><span class="badge badge-green">Working</span></td></tr>
+  <tr><td class="cmd">/status</td><td>Shows system health: X login, DB, queue counts, pause state</td><td><span class="badge badge-green">Working</span></td></tr>
+  <tr><td class="cmd">/activity</td><td>Last 10 activity entries (tweets, likes, follows)</td><td><span class="badge badge-green">Working</span></td></tr>
+  <tr><td class="cmd">/queue</td><td>Pending approval items with approve/reject buttons</td><td><span class="badge badge-green">Working</span></td></tr>
+  <tr><td class="cmd">/schedule</td><td>Human-readable cron schedule for today</td><td><span class="badge badge-green">Working</span></td></tr>
+  <tr><td class="cmd">/waitlist</td><td>Show all waitlist signups with email + signup date (latest 20, total count)</td><td><span class="badge badge-green">Working</span></td></tr>
+  <tr><td class="cmd">/setup</td><td>Re-registers all Telegram commands with BotFather</td><td><span class="badge badge-green">Working</span></td></tr>
+  <tr><td class="cmd">/tweet</td><td>Generate tweet → shows menu: Plain / With Image / Image Only</td><td><span class="badge badge-green">Working</span></td></tr>
+  <tr><td class="cmd">/thread</td><td>Generate thread → shows menu: Plain / Image First / Image All</td><td><span class="badge badge-green">Working</span></td></tr>
+  <tr><td class="cmd">/article [topic]</td><td>Generate 6-tweet educational thread on topic (random if not given)</td><td><span class="badge badge-green">Working</span></td></tr>
+  <tr><td class="cmd">/resurface</td><td>Find old high-performing tweet, bring it back</td><td><span class="badge badge-green">Working</span></td></tr>
+  <tr><td class="cmd">/rt [keyword]</td><td>Search niche, retweet top tweet (score ≥ 3, top 5 pool)</td><td><span class="badge badge-green">Working</span></td></tr>
+  <tr><td class="cmd">/engage</td><td>Trigger one engagement cycle (like + reply)</td><td><span class="badge badge-green">Working</span></td></tr>
+  <tr><td class="cmd">/topic [keyword]</td><td>Generate tweet on custom topic</td><td><span class="badge badge-green">Working</span></td></tr>
+  <tr><td class="cmd">/goout</td><td>Trigger go-out comment on a top niche post</td><td><span class="badge badge-green">Working</span></td></tr>
+  <tr><td class="cmd">/mentions</td><td>Manually queue all unread mentions for approval</td><td><span class="badge badge-green">Working</span></td></tr>
+  <tr><td class="cmd">/inbox</td><td>See unread mentions — reply, custom reply, or skip each one</td><td><span class="badge badge-green">Working</span></td></tr>
+  <tr><td class="cmd">/follow [n]</td><td>Follow N accounts (default 3). Fire-and-forget, reports back when done.</td><td><span class="badge badge-green">Working</span></td></tr>
+  <tr><td class="cmd">/post [text]</td><td>Immediately post a manual tweet</td><td><span class="badge badge-green">Working</span></td></tr>
+  <tr><td class="cmd">/blast [text]</td><td>Post immediately + DM all recent engagers</td><td><span class="badge badge-green">Working</span></td></tr>
+  <tr><td class="cmd">/linkedin</td><td>Generate LinkedIn post → shows style menu</td><td><span class="badge badge-green">Working</span></td></tr>
+  <tr><td class="cmd">/dm @user context: [note]</td><td>Send DM to @user with AI-generated message using context note</td><td><span class="badge badge-green">Working</span></td></tr>
+  <tr><td class="cmd">/blacklist [username]</td><td>Add account to blocklist (won't follow/engage)</td><td><span class="badge badge-green">Working</span></td></tr>
+  <tr><td class="cmd">/test</td><td>X connectivity check (cookie session, login status)</td><td><span class="badge badge-green">Working</span></td></tr>
+  <tr><td class="cmd">/pause</td><td>Pause all automation (crons return early, bot still responds)</td><td><span class="badge badge-green">Working</span></td></tr>
+  <tr><td class="cmd">/resume</td><td>Resume automation</td><td><span class="badge badge-green">Working</span></td></tr>
+  <tr><td class="cmd">/kill</td><td>Hard stop: pause + wipe entire pending queue</td><td><span class="badge badge-green">Working</span></td></tr>
+</table>
+
+<h3>Mention Approval Flow</h3>
+<p>Mentions are NEVER auto-posted. Every mention → pre-generates Claude reply → queues to Telegram with buttons:</p>
+<table>
+  <tr><th>Button</th><th>Action</th></tr>
+  <tr><td>✅ Send</td><td>Posts the pre-generated reply immediately</td></tr>
+  <tr><td>🔄 New reply</td><td>Regenerates with Claude and updates the queue item</td></tr>
+  <tr><td>✏️ Edit</td><td>Enter custom reply text — next message you send is the reply</td></tr>
+  <tr><td>❌ Skip</td><td>Marks as REJECTED, never replied</td></tr>
+</table>
+
+<h3>Image Style Picker</h3>
+<p>When a tweet or thread with image is selected, Phantom shows a 6-button style picker before posting:</p>
+<table>
+  <tr><th>Style</th><th>Visual</th></tr>
+  <tr><td><code>dark</code></td><td>Dark background, white text, high contrast</td></tr>
+  <tr><td><code>light</code></td><td>White background, clean minimal</td></tr>
+  <tr><td><code>branded</code></td><td>BigRedDroid brand colors with logo mark</td></tr>
+  <tr><td><code>article</code></td><td>Editorial newspaper-style layout</td></tr>
+  <tr><td><code>data</code></td><td>Data/stats visualization card style</td></tr>
+  <tr><td><code>auto</code></td><td>Phantom picks best style for the content (70% template, 30% OG image)</td></tr>
+</table>
+
+<hr>
+
+<!-- SECTION 6: CONTENT SYSTEM -->
+<h2 id="content">6. Content System</h2>
+<div class="section-box">
+  <h3>Tweet deduplication (anti-repetition)</h3>
+  <p>Phantom reads the last <strong>40 posted QueueItems</strong> (full untruncated text) and passes them to Claude as a STRICTLY FORBIDDEN list. Claude is instructed to never repeat hooks, phrases, sentence structures, or angles from that list. Both <code>generateTweet</code> and <code>generateBuildUpdate</code> use this.</p>
+
+  <h3>Reply deduplication (shared pool)</h3>
+  <p><code>src/lib/reply-dedup.ts</code> — shared library used by all reply crons (mentions, engage, goout, follow). Stores <code>tid:&lt;tweetId&gt;|aid:&lt;authorId&gt;</code> format. Permanent dedup for mentions, 30-day for engage/goout, 7-day author-level dedup. Prevents any tweet from getting two replies from any cron.</p>
+
+  <h3>Reply tone</h3>
+  <p>Peer-to-peer builder voice. Not a support bot or hype machine. Direct, occasionally dry, genuinely curious. Rules: never start with "I", no hollow openers ("great point", "love this", "so true"), no unsolicited advice, no summarising their tweet back at them. Winning → curious ("what made the difference?"). Struggling → acknowledge briefly + something real ("yeah X always bites — I ran into that doing Y").</p>
+
+  <h3>Content generation functions (src/lib/claude/generate.ts)</h3>
+  <ul>
+    <li><strong>generateTweet(topic, recentTweets)</strong> — standard tweet, @BigRedDr0id voice</li>
+    <li><strong>generateBuildUpdate(product, context, recentTweets)</strong> — "shipped X today" style</li>
+    <li><strong>generateThread(topic, recentTweets)</strong> — 5-7 tweet thread</li>
+    <li><strong>generateArticleThread(topic, recentTweets)</strong> — 6-tweet educational thread: hook → 3 insight tweets → CTA → summary. Topics from ARTICLE_TOPICS array (26 topics).</li>
+    <li><strong>generateReply(tweetText, authorHandle)</strong> — contextual reply, peer-to-peer tone</li>
+    <li><strong>generateGoOutComment(tweetText)</strong> — proactive comment, direct + specific</li>
+    <li><strong>generateLinkedInPost(topic)</strong> — LinkedIn-specific voice</li>
+    <li><strong>generateDM(handle, context)</strong> — personal DM, not salesy</li>
+    <li><strong>generateLongTweet(topic)</strong> — Premium+ 600–1800 char post</li>
+  </ul>
+
+  <h3>Article Topics (26 pre-researched)</h3>
+  <p>High-traction categories: Claude AI tips · Notion workflows · Obsidian PKM · AI automation for founders · X/personal brand growth · Solopreneur productivity</p>
+
+  <h3>Posting flow</h3>
+  <ol>
+    <li>Content generated → saved as QueueItem (status: PENDING)</li>
+    <li>Telegram message sent with Approve / Skip / Regenerate buttons</li>
+    <li>On approve: <code>postQueueItem()</code> reads <code>meta.imageStyle</code>, calls correct post function</li>
+    <li>QueueItem status updated to POSTED, Activity record created</li>
+    <li>Mentions: never auto-approve — manual approval required every time</li>
+  </ol>
+</div>
+
+<hr>
+
+<!-- SECTION 7: KEY FILES -->
+<h2 id="files">7. Key Files Map</h2>
+<table>
+  <tr><th>File</th><th>Purpose</th></tr>
+  <tr><td><code>src/app/api/telegram/route.ts</code></td><td>Main Telegram webhook handler — all commands and callbacks. Most complex file.</td></tr>
+  <tr><td><code>src/app/api/cron/dispatch/route.ts</code></td><td>Single entry point for all cron jobs — IST time routing. Fire-and-forget (void Promise.allSettled). Returns in &lt;1s.</td></tr>
+  <tr><td><code>src/app/api/cron/tweet/route.ts</code></td><td>Tweet generation + dedup logic</td></tr>
+  <tr><td><code>src/app/api/cron/mentions/route.ts</code></td><td>Fetch new mentions → queue each for Telegram approval. Never auto-posts.</td></tr>
+  <tr><td><code>src/app/api/cron/engage/route.ts</code></td><td>Like + reply to niche tweets. Uses shared reply dedup.</td></tr>
+  <tr><td><code>src/app/api/cron/goout/route.ts</code></td><td>Proactive commenting on top posts. Uses shared reply dedup.</td></tr>
+  <tr><td><code>src/app/api/cron/follow/route.ts</code></td><td>Rate-limit-safe follow: max 3, 8-18s delays, 24h dedup. Uses shared reply dedup.</td></tr>
+  <tr><td><code>src/app/api/cron/article/route.ts</code></td><td>6-tweet educational thread + article cover image. Wed &amp; Sat 9:28 IST.</td></tr>
+  <tr><td><code>src/app/api/cron/niche-rt/route.ts</code></td><td>Find + retweet niche content</td></tr>
+  <tr><td><code>src/app/api/cron/dm/route.ts</code></td><td>Auto DM recent engagers (maxDuration: 55)</td></tr>
+  <tr><td><code>src/app/api/cron/thread/route.ts</code></td><td>Thread generation + posting</td></tr>
+  <tr><td><code>src/app/api/cron/resurface/route.ts</code></td><td>Resurface high-performing old tweet (score threshold ≥ 5)</td></tr>
+  <tr><td><code>src/app/api/waitlist/route.ts</code></td><td>Saves email to Waitlist table + Telegram ping + Resend confirmation email</td></tr>
+  <tr><td><code>src/lib/reply-dedup.ts</code></td><td>Shared dedup library — getRepliedTweetIds(), getRepliedAuthorIds(), buildReplyDetail(). Used by all reply crons.</td></tr>
+  <tr><td><code>src/lib/claude/generate.ts</code></td><td>All Claude AI generation functions. Brand: BigRedDroid only (no Project Z).</td></tr>
+  <tr><td><code>src/lib/x/client.ts</code></td><td>getXClient() and getConvoScraper() — cookie auth + session management</td></tr>
+  <tr><td><code>src/lib/x/post.ts</code></td><td>postTweet, postTweetWithImage, postThread, replyToTweet, quoteTweet, deleteTweet. Twitter error codes surfaced (226 = duplicate/automated block).</td></tr>
+  <tr><td><code>src/lib/x/dm.ts</code></td><td>sendDM via cookie-based scraper</td></tr>
+  <tr><td><code>src/lib/x/engage.ts</code></td><td>Like, retweet, follow, getMentions (sinceId now actually used)</td></tr>
+  <tr><td><code>src/lib/x/templates.ts</code></td><td>Image templates + pickTemplateByStyle(style, text). 16 topic categories, 80+ images.</td></tr>
+  <tr><td><code>src/lib/config.ts</code></td><td>NICHE_KEYWORDS, CONTENT_TOPICS, THREAD_TOPICS, ARTICLE_TOPICS, VOICE_TOPICS. All BigRedDroid branding (no Project Z).</td></tr>
+  <tr><td><code>src/lib/telegram/setup.ts</code></td><td>ensureCommands() — registers all commands with Telegram BotFather</td></tr>
+  <tr><td><code>src/middleware.ts</code></td><td>Auth middleware — PUBLIC list: /, /login, /api/auth/login, /api/telegram, /api/waitlist (CRITICAL)</td></tr>
+  <tr><td><code>src/app/page.tsx</code></td><td>Landing page — waitlist form, product features, schedule, BigRedDroid footer. No admin-only text.</td></tr>
+  <tr><td><code>src/app/api/og/route.tsx</code></td><td>OG image generator — 1200×628 (Twitter standard), responsive font, top gradient bar</td></tr>
+  <tr><td><code>prisma/schema.prisma</code></td><td>DB schema: QueueItem, Activity, XSession, Stats, BlockedAccount, LinkedInAuth, Waitlist</td></tr>
+  <tr><td><code>src/generated/prisma/</code></td><td>Generated Prisma client — committed to git (not gitignored) to prevent Vercel build cache issues</td></tr>
+  <tr><td><code>scripts/patch-agent-twitter.js</code></td><td>Patches agent-twitter-client on build</td></tr>
+  <tr><td><code>scripts/get-cookies.js</code></td><td>Extracts X cookies from Brave browser profile</td></tr>
+</table>
+
+<hr>
+
+<!-- SECTION 8: ENVIRONMENT VARIABLES -->
+<h2 id="env">8. Environment Variables (Vercel)</h2>
+<table>
+  <tr><th>Variable</th><th>Value / Notes</th><th>Required</th></tr>
+  <tr><td><code>X_COOKIES</code></td><td>JSON array of cookie strings from Brave. Refresh monthly.</td><td><span class="badge badge-red">Critical</span></td></tr>
+  <tr><td><code>X_USERNAME</code></td><td>Twitter/X username (BigRedDr0id)</td><td><span class="badge badge-red">Critical</span></td></tr>
+  <tr><td><code>X_PASSWORD</code></td><td>Twitter/X password</td><td><span class="badge badge-red">Critical</span></td></tr>
+  <tr><td><code>X_EMAIL</code></td><td>Email for X auth challenge</td><td><span class="badge badge-yellow">Recommended</span></td></tr>
+  <tr><td><code>TELEGRAM_BOT_TOKEN</code></td><td>8393530168:AAEvro4Pctj0z9gmE_QTS1Tc05yKfk8DqBQ</td><td><span class="badge badge-red">Critical</span></td></tr>
+  <tr><td><code>TELEGRAM_CHAT_ID</code></td><td>6061651803</td><td><span class="badge badge-red">Critical</span></td></tr>
+  <tr><td><code>TELEGRAM_WEBHOOK_SECRET</code></td><td>Set only if webhook was registered with a secret (currently optional)</td><td><span class="badge badge-gray">Optional</span></td></tr>
+  <tr><td><code>ANTHROPIC_API_KEY</code></td><td>Anthropic API key for Claude</td><td><span class="badge badge-red">Critical</span></td></tr>
+  <tr><td><code>DATABASE_URL</code></td><td>Supabase PostgreSQL connection string</td><td><span class="badge badge-red">Critical</span></td></tr>
+  <tr><td><code>CRON_SECRET</code></td><td>Bearer token for cron-job.org → /api/cron/dispatch</td><td><span class="badge badge-red">Critical</span></td></tr>
+  <tr><td><code>NEXTAUTH_SECRET</code></td><td>HMAC secret for dashboard cookie auth (used to derive phantom_auth token)</td><td><span class="badge badge-red">Critical</span></td></tr>
+  <tr><td><code>DASHBOARD_PASSWORD</code></td><td>Password for phantom-beige.vercel.app/dashboard login</td><td><span class="badge badge-red">Critical</span></td></tr>
+  <tr><td><code>NEXTAUTH_URL</code></td><td>https://phantom-beige.vercel.app</td><td><span class="badge badge-red">Critical</span></td></tr>
+  <tr><td><code>RESEND_API_KEY</code></td><td>Resend API key for waitlist confirmation emails (Production + Preview only)</td><td><span class="badge badge-yellow">Waitlist emails</span></td></tr>
+  <tr><td><code>LINKEDIN_CLIENT_ID</code></td><td>LinkedIn OAuth app client ID</td><td><span class="badge badge-yellow">For LinkedIn</span></td></tr>
+  <tr><td><code>LINKEDIN_CLIENT_SECRET</code></td><td>LinkedIn OAuth app secret</td><td><span class="badge badge-yellow">For LinkedIn</span></td></tr>
+  <tr><td><code>X_HANDLE</code></td><td>@BigRedDr0id — used in OG images and prompts</td><td><span class="badge badge-blue">Config</span></td></tr>
+  <tr><td><code>DISPLAY_INITIAL</code></td><td>P — letter shown in OG image avatar</td><td><span class="badge badge-blue">Config</span></td></tr>
+</table>
+<div class="warn">⚠️ BOM WARNING: Never set Vercel env vars via PowerShell pipe commands — this adds a BOM (byte-order mark) that breaks JSON parsing. Always use <code>vercel env add</code> CLI or the Vercel dashboard web UI.</div>
+
+<hr>
+
+<!-- SECTION 9: DATABASE -->
+<h2 id="db">9. Database Schema (Prisma / Supabase)</h2>
+<table>
+  <tr><th>Table</th><th>Purpose</th><th>Key Fields</th></tr>
+  <tr><td><code>QueueItem</code></td><td>Content approval queue + posting history</td><td>id, content, type, status (PENDING/POSTED/REJECTED), metadata (JSON: imageStyle, threads[], tweetId, etc.), createdAt</td></tr>
+  <tr><td><code>Activity</code></td><td>Log of all actions taken. Reply dedup reads this.</td><td>id, action, detail (format: tid:&lt;id&gt;|aid:&lt;id&gt;|&lt;text&gt;), icon, createdAt</td></tr>
+  <tr><td><code>XSession</code></td><td>Cookie session storage (singleton)</td><td>id="singleton", cookies (JSON string)</td></tr>
+  <tr><td><code>Stats</code></td><td>Running metrics + pause state + mention cursor</td><td>id="singleton", followers, following, tweets, paused, lastMentionId</td></tr>
+  <tr><td><code>BlockedAccount</code></td><td>Accounts to never interact with</td><td>username (unique), createdAt</td></tr>
+  <tr><td><code>LinkedInAuth</code></td><td>LinkedIn OAuth tokens</td><td>accessToken, refreshToken, expiresAt</td></tr>
+  <tr><td><code>Waitlist</code></td><td>Early access email signups from landing page</td><td>id, email (unique), createdAt</td></tr>
+</table>
+
+<hr>
+
+<!-- SECTION 10: BUGS FIXED -->
+<h2 id="bugs">10. Bugs Fixed</h2>
+
+<h3>Session 1 (03-Jun-2026) — Initial build stabilisation</h3>
+<table>
+  <tr><th>Bug</th><th>Root Cause</th><th>Fix</th><th>Commit</th></tr>
+  <tr><td>X account flagged — follow rate limit</td><td>Up to 11 follows with 1-2.5s delays, 3×/day</td><td>Max 3/run, 8-18s delays, 1×/day, verified only, 24h dedup</td><td>07f1350</td></tr>
+  <tr><td>Bot posting near-identical tweets</td><td>generateBuildUpdate had zero dedup; Activity stored truncated text</td><td>Last 40 QueueItem(POSTED) full text as STRICTLY FORBIDDEN to Claude</td><td>dd7b2a1</td></tr>
+  <tr><td>Telegram webhook 307 → /login</td><td>/api/telegram not in middleware PUBLIC list</td><td>Added /api/telegram to PUBLIC</td><td>866db6d</td></tr>
+  <tr><td>Webhook silently dropping all updates</td><td>WEBHOOK_SECRET check rejected empty strings; CHAT_ID not set blocked all</td><td>Only reject non-empty wrong secrets; allow if CHAT not configured</td><td>a0dceac</td></tr>
+  <tr><td>Commands timing out</td><td>Vercel default 10s, no maxDuration set</td><td><code>export const maxDuration = 60</code> in telegram route</td><td>f21d6f6</td></tr>
+  <tr><td>"Invalid consumer tokens" on post</td><td>All posting used twitter-api-v2 official API — keys not set</td><td>Rewrote post.ts to use cookie-based getXClient()</td><td>4f30682</td></tr>
+  <tr><td>/rt 404 + no high-traction tweets</td><td>getConvoScraper() ran as guest; score threshold 20 too strict</td><td>XSession DB fallback + bootstrap; threshold → 3, top-5 pool</td><td>b7985bc / 101a96b</td></tr>
+  <tr><td>DM "Invalid consumer tokens"</td><td>getDMConversations() used official API</td><td>Rewrote dm.ts to cookie-based sendDm</td><td>101a96b</td></tr>
+  <tr><td>XSession missing from Prisma schema</td><td>Model in schema, not in DB</td><td>Migration run</td><td>acc9667</td></tr>
+</table>
+
+<h3>Session 2 (04-Jun-2026) — Automation quality + scheduling overhaul</h3>
+<table>
+  <tr><th>Bug</th><th>Root Cause</th><th>Fix</th></tr>
+  <tr><td>Replies sounded like advice/mentoring</td><td>generateReply prompt triggered advice-giving tone</td><td>Full rewrite: peer-to-peer, no advice, match energy</td></tr>
+  <tr><td>Mentions route "Dear @2061773668..." style</td><td>mention.author_id (numeric) passed as authorUsername to Claude</td><td>Changed to mention.author_username</td></tr>
+  <tr><td>DM sending broken</td><td>approve_dm used xRO.v2.userByUsername() (official API)</td><td>Replaced with cookie-based scraper getUserByUsername()</td></tr>
+  <tr><td>CRITICAL: all jitter jobs crashed</td><td><code>const daySeed</code> used before declaration — const doesn't hoist</td><td>Moved daySeed declaration to before all uses</td></tr>
+  <tr><td>OG image text overflow</td><td>No wordBreak or flex column wrapping</td><td>Added flexDirection: "column", wordBreak: "break-word", maxWidth: "100%"</td></tr>
+  <tr><td>OG image wrong dimensions (1920×1080)</td><td>Non-standard for Twitter cards</td><td>Changed to 1200×628 (Twitter standard)</td></tr>
+  <tr><td>Off-brand retweet (politics/news)</td><td>Keyword search matched tangentially; no content filter</td><td>Relevance filter: must contain niche word AND not contain politics/news signals</td></tr>
+  <tr><td>Engage timing out — no DB writes</td><td>Engage route had no maxDuration; Vercel killed it before DB write</td><td>Added maxDuration = 60 to engage and mentions routes</td></tr>
+  <tr><td>Mentions replied to repeatedly every 15 min</td><td>getMentions() accepted sinceId but completely ignored it (_sinceId never used)</td><td>Renamed to sinceId, added Snowflake ID comparison to stop at already-seen tweets</td></tr>
+  <tr><td>Same tweet replied to by multiple crons</td><td>engage, goout, follow had separate dedup lists</td><td>Shared reply-dedup.ts library — all crons use the same pool</td></tr>
+  <tr><td>Dispatch 504 timeout</td><td>await Promise.allSettled() waited for all sub-jobs; engage alone takes ~50s</td><td>void Promise.allSettled() — fire-and-forget. Returns in &lt;1s.</td></tr>
+  <tr><td>at() window too narrow — slots missed</td><td>10-min window + 15-min cron = misaligned slots never fired</td><td>Window → 15 min guarantees exactly one hit per slot</td></tr>
+  <tr><td>DM timeout</td><td>maxDuration 30 too short for Claude + DB ops</td><td>maxDuration → 55</td></tr>
+  <tr><td>Resurface posting junk tweets</td><td>Score threshold ≥ 1 would resurface any tweet with 1 like</td><td>Threshold → 5</td></tr>
+  <tr><td>Twitter error 226 — raw JSON blob in Telegram</td><td>extractTweetId() threw before checking errors array</td><td>Check errors[] first; code 226 = "automated/duplicate content block", no retry</td></tr>
+</table>
+
+<h3>Session 3 (04-Jun-2026) — Waitlist, branding cleanup, /waitlist command</h3>
+<table>
+  <tr><th>Bug</th><th>Root Cause</th><th>Fix</th></tr>
+  <tr><td>Waitlist form "Something went wrong" always</td><td>/api/waitlist not in middleware PUBLIC list — every POST redirected to /login (302 HTML)</td><td>Added /api/waitlist to PUBLIC routes in middleware.ts</td></tr>
+  <tr><td>Waitlist form broken even after middleware fix (history)</td><td>Generated Prisma client was gitignored. Vercel build cached old client without Waitlist model → TypeScript build failure → Vercel served old deploy with no /api/waitlist</td><td>Committed src/generated/prisma/ to git (removed from .gitignore)</td></tr>
+  <tr><td>Resend TS build failure</td><td>Used reply_to instead of replyTo — Resend v6 API property name. TypeScript error silently failed every Vercel build.</td><td>Fixed to replyTo</td></tr>
+  <tr><td>Resend crashing route at module load</td><td>new Resend(key) called at module level — if key undefined, constructor throws, Next.js returns HTML 500 (not JSON)</td><td>Moved Resend construction inside handler, guarded by RESEND_API_KEY check</td></tr>
+  <tr><td>"Project Z" branding throughout codebase</td><td>Old branding in config.ts, generate.ts, tweet cron, page.tsx footer, voice prompts</td><td>Replaced every instance with "BigRedDroid" across all source files</td></tr>
+</table>
+
+<hr>
+
+<!-- SECTION 11: PENDING -->
+<h2 id="pending">11. Pending Tasks &amp; Roadmap</h2>
+
+<h3>Completed Session 2+3 (04-Jun-2026)</h3>
+<ul>
+  <li class="done">Engagement every 15 min — fires on every cron tick</li>
+  <li class="done">Engage 4 randomised modes — like-spree / reply-focus / mixed / retweet-mix</li>
+  <li class="done">Follow 8×/day weekdays, 9×/day weekends</li>
+  <li class="done">DM 8×/day weekdays, 9×/day weekends — ~10-16/day queued to Telegram</li>
+  <li class="done">Goout 8×/day weekdays, 9×/day weekends</li>
+  <li class="done">Reply tone rewritten — peer-to-peer, no advice, no consoling</li>
+  <li class="done">Mention approval flow — every mention queued, never auto-posted</li>
+  <li class="done">Shared reply dedup — all crons use same pool, no tweet gets two replies</li>
+  <li class="done">getMentions sinceId actually working now</li>
+  <li class="done">Dispatch fire-and-forget — returns in &lt;1s, no more 504</li>
+  <li class="done">at() window fix — 10→15 min, all slots guaranteed to fire</li>
+  <li class="done">Article cron — 6-tweet educational thread + cover image, Wed &amp; Sat 9:28</li>
+  <li class="done">OG image — 1200×628, proper text wrapping, responsive font</li>
+  <li class="done">Templates expanded — 16 topic categories, 80+ images</li>
+  <li class="done">Waitlist landing page — product page with email form (not admin-only)</li>
+  <li class="done">Waitlist API + DB + Resend confirmation email</li>
+  <li class="done">/waitlist Telegram command — full list from phone</li>
+  <li class="done">All "Project Z" references removed — BigRedDroid branding only</li>
+  <li class="done">Twitter error 226 surfaced properly in Telegram</li>
+  <li class="done">Prisma generated client committed — no more Vercel build cache issues</li>
+</ul>
+
+<h3>Immediate / Next Up</h3>
+<ul>
+  <li class="pending">Custom domain for Resend — currently sends from onboarding@resend.dev. Verify a domain to send from phantom@yourdomain.com</li>
+  <li class="pending">Goout score threshold — if "0 comments" persists, drop gate from ≥10 to ≥5</li>
+  <li class="pending">Follow engagers — add 2 slots from recent engagers (likes/replies to our tweets)</li>
+  <li class="pending">Conversation threading — when someone replies to a reply, continue the thread</li>
+  <li class="pending">Polls for audience research — periodic Twitter polls on what topics people want</li>
+  <li class="pending">Quote tweet feature — /quote command to quote-tweet a post with a take</li>
+</ul>
+
+<h3>LinkedIn</h3>
+<ul>
+  <li class="pending">LinkedIn testing deferred — revisit when X is stable</li>
+  <li class="pending">LinkedIn article carousel — multi-image carousel posts (higher engagement format)</li>
+</ul>
+
+<h3>Content Quality</h3>
+<ul>
+  <li class="pending">Topic performance tracking — track which tweet topics get most engagement</li>
+  <li class="pending">Best time to post — analyze when audience is most active, shift posting slots</li>
+</ul>
+
+<h3>Growth &amp; Monetization</h3>
+<ul>
+  <li class="pending">Phantom as a product — multi-tenant version for other founders</li>
+  <li class="pending">BigRedDroid products 2–92 — Phantom is #1. Define and start #2.</li>
+</ul>
+
+<h3>Technical Debt</h3>
+<ul>
+  <li class="pending">Cookie auto-refresh — currently manual (~30 days). Automate with get-cookies.js on schedule.</li>
+  <li class="pending">Error alerting — if a cron fails 3× in a row, Telegram alert before daily summary</li>
+  <li class="pending">Rate limit backoff — if X returns 429, back off exponentially and notify</li>
+</ul>
+
+<hr>
+
+<!-- SECTION 12: OPS RUNBOOK -->
+<h2 id="ops">12. Ops Runbook</h2>
+<div class="section-box no-break">
+  <h3>Deploy to production</h3>
+  <pre>cd "C:\Users\Varun\project Z\phantom"
+git add . && git commit -m "your message" && git push origin main</pre>
+  <p>Vercel auto-deploys on every push to main. Build command: <code>prisma generate &amp;&amp; next build</code>.</p>
+
+  <h3>Refresh X cookies (do monthly or when posting fails)</h3>
+  <pre>Get-Process -Name "brave" | Stop-Process -Force
+node get-cookies.js
+# Then update X_COOKIES in Vercel dashboard and redeploy</pre>
+
+  <h3>Update Vercel environment variable (safe method)</h3>
+  <pre># NEVER use PowerShell pipe — adds BOM
+# Use vercel CLI:
+vercel env add VARIABLE_NAME
+# Or use Vercel dashboard web UI directly</pre>
+
+  <h3>Register Telegram bot webhook</h3>
+  <pre>curl -X POST "https://api.telegram.org/bot8393530168:AAEvro4Pctj0z9gmE_QTS1Tc05yKfk8DqBQ/setWebhook" \
+  -d "url=https://phantom-beige.vercel.app/api/telegram"</pre>
+
+  <h3>Re-register bot commands (after adding new ones)</h3>
+  <p>Send <code>/setup</code> to @PhantomioBot. This calls ensureWebhook() + ensureCommands().</p>
+
+  <h3>Check what's deployed</h3>
+  <pre>curl https://phantom-beige.vercel.app/ | grep BigRedDroid</pre>
+
+  <h3>Pause all automation (emergency)</h3>
+  <p>Send <code>/pause</code> to @PhantomioBot. All cron jobs will return early. Send <code>/resume</code> to restart.</p>
+
+  <h3>Hard stop (wipe queue + pause)</h3>
+  <p>Send <code>/kill</code> to @PhantomioBot.</p>
+
+  <h3>View waitlist signups</h3>
+  <p>Send <code>/waitlist</code> to @PhantomioBot — or Supabase dashboard → Table Editor → Waitlist.</p>
+</div>
+
+<hr>
+
+<!-- SECTION 13: CONSTRAINTS -->
+<h2 id="constraints">13. Known Constraints &amp; Gotchas</h2>
+<table>
+  <tr><th>Constraint</th><th>Detail</th></tr>
+  <tr><td>BOM on env vars</td><td>PowerShell pipes add BOM to strings. Always use <code>vercel env add</code> or Vercel dashboard to set env vars.</td></tr>
+  <tr><td>Vercel Hobby timeout</td><td>Default 10s. All route files that do slow work must have <code>export const maxDuration = 60;</code> at top.</td></tr>
+  <tr><td>agent-twitter-client search → 404</td><td>GraphQL query hashes go stale. Use @the-convocation/twitter-scraper for all reads.</td></tr>
+  <tr><td>X cookie domain</td><td>Cookies from Brave may have Domain=twitter.com. Must be replaced with Domain=.x.com. Handled in getXClient() and getConvoScraper().</td></tr>
+  <tr><td>Official API not used</td><td>X_API_KEY etc. NOT set in Vercel (costs $100/mo). All posting via cookie-based auth. Only deleteTweet falls back to xRW.</td></tr>
+  <tr><td>Twitter error 226</td><td>Automated/duplicate content detection. Fires when post is near-identical to recent content or triggers spam filter. Not a bug — one-off hits are normal. Retry won't help.</td></tr>
+  <tr><td>Middleware blocks public APIs</td><td>CRITICAL: /api/telegram AND /api/waitlist MUST be in the PUBLIC list in middleware.ts or all requests get 307 redirect to /login.</td></tr>
+  <tr><td>GitHub Actions disabled</td><td>All cron jobs were being double-fired. GitHub Actions workflow disabled (commit ce39b0e). cron-job.org is the only scheduler.</td></tr>
+  <tr><td>Prisma generated client — commit it</td><td>src/generated/prisma/ must be committed to git. If gitignored and Vercel caches an old build, new models (e.g. Waitlist) cause TypeScript build failures silently.</td></tr>
+  <tr><td>Resend free tier — no custom domain</td><td>Without a verified domain, Resend sends from onboarding@resend.dev. Emails go to recipients but show Resend's domain. Verify a custom domain to send from your own address.</td></tr>
+  <tr><td>LinkedIn testing deferred</td><td>Do not run LinkedIn tests until explicitly requested.</td></tr>
+</table>
+
+<hr>
+
+<!-- SECTION 14: GIT -->
+<h2 id="git">14. Git History Summary</h2>
+<table>
+  <tr><th>Commit</th><th>Summary</th></tr>
+  <tr><td><code>136e4d7</code></td><td>feat: /waitlist Telegram command — shows all signups with dates</td></tr>
+  <tr><td><code>d80e436</code></td><td>fix: add /api/waitlist to middleware PUBLIC routes (root cause of "Something went wrong")</td></tr>
+  <tr><td><code>7b2b114</code></td><td>fix: lazy Resend init + show actual error in form</td></tr>
+  <tr><td><code>8c915da</code></td><td>fix: Resend replyTo field name (was reply_to — caused TS build failure)</td></tr>
+  <tr><td><code>871461a</code></td><td>feat: Resend confirmation email on waitlist signup</td></tr>
+  <tr><td><code>5f8a520</code></td><td>fix: Twitter error handling — surface error codes, handle 226 properly</td></tr>
+  <tr><td><code>eb45147</code></td><td>fix: commit generated Prisma client — fixes Vercel build cache issue</td></tr>
+  <tr><td><code>827ddc7</code></td><td>fix: remove all Project Z references, fix getMentions sinceId bug, improve OG + templates</td></tr>
+  <tr><td><code>c366206</code></td><td>fix: full audit — mention approval, tone, dedup, branding, at() window, DM timeout</td></tr>
+  <tr><td><code>5b68dec</code></td><td>feat: article cron with cover image + permanent mention dedup</td></tr>
+  <tr><td><code>1d87817</code></td><td>fix: shared reply dedup — no tweet ever gets two replies from any cron</td></tr>
+  <tr><td><code>101a96b</code></td><td>fix: DM cookie auth + /rt score threshold + /test DM check</td></tr>
+  <tr><td><code>b7985bc</code></td><td>fix: convo scraper cookie fallback + follow async + post cookie auth</td></tr>
+  <tr><td><code>dc849d4</code></td><td>feat: image style picker for tweets and threads (6 styles)</td></tr>
+  <tr><td><code>4f30682</code></td><td>fix: switch posting to cookie-based auth + add /article command</td></tr>
+  <tr><td><code>f21d6f6</code></td><td>fix: telegram route maxDuration + top-level error catch</td></tr>
+  <tr><td><code>a0dceac</code></td><td>fix: telegram webhook silent rejection + debug endpoint</td></tr>
+  <tr><td><code>866db6d</code></td><td>fix: allow /api/telegram through middleware + footer branding</td></tr>
+  <tr><td><code>dd7b2a1</code></td><td>fix: eliminate tweet repetition — full dedup for all generation paths</td></tr>
+  <tr><td><code>07f1350</code></td><td>fix: rate-limit-safe follow — 1x/day, max 3 per run, 8-18s delays</td></tr>
+  <tr><td><code>acc9667</code></td><td>fix: add missing XSession model to schema</td></tr>
+  <tr><td><code>97b14dd</code></td><td>feat: /kill command — hard stop (pause + wipe pending queue)</td></tr>
+  <tr><td><code>ce39b0e</code></td><td>fix: disable GitHub Actions cron — was double-firing every job</td></tr>
+</table>
+
+<hr>
+
+<div style="text-align:center; color:#999; font-size:12px; margin-top: 32px; padding-top: 16px; border-top: 1px solid #e0e0e0;">
+  Phantom · BigRedDroid · Generated 04-Jun-2026 &nbsp;·&nbsp; <strong>To save as PDF: Ctrl+P → Save as PDF</strong>
+</div>
+
+</body>
+</html>

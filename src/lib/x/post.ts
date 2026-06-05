@@ -2,6 +2,7 @@ import { getXClient } from "./client";
 import { xRW } from "./client";
 import { EUploadMimeType } from "twitter-api-v2";
 import { pickTemplate, pickTemplateByStyle } from "./templates";
+import { randomDelay } from "@/lib/scheduler/humanize";
 
 // ── Helper: extract tweet ID from agent-twitter-client response ──────────────
 async function extractTweetId(res: Response): Promise<string> {
@@ -149,6 +150,8 @@ export async function postThread(
     }
 
     const mediaData = imgBuffer ? [{ data: imgBuffer, mediaType: mimeType }] : undefined;
+    // Wait between thread tweets so X doesn't flag the burst as automated
+    if (i > 0) await randomDelay(4000, 9000);
     const res = await client.sendTweet(text, lastId, mediaData);
     const id = await extractTweetId(res);
     posted.push({ id, hasImage: !!imgBuffer });

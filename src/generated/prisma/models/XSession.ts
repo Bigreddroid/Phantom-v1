@@ -26,6 +26,7 @@ export type AggregateXSession = {
 
 export type XSessionMinAggregateOutputType = {
   id: string | null
+  userId: string | null
   cookies: string | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -33,6 +34,7 @@ export type XSessionMinAggregateOutputType = {
 
 export type XSessionMaxAggregateOutputType = {
   id: string | null
+  userId: string | null
   cookies: string | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -40,6 +42,7 @@ export type XSessionMaxAggregateOutputType = {
 
 export type XSessionCountAggregateOutputType = {
   id: number
+  userId: number
   cookies: number
   createdAt: number
   updatedAt: number
@@ -49,6 +52,7 @@ export type XSessionCountAggregateOutputType = {
 
 export type XSessionMinAggregateInputType = {
   id?: true
+  userId?: true
   cookies?: true
   createdAt?: true
   updatedAt?: true
@@ -56,6 +60,7 @@ export type XSessionMinAggregateInputType = {
 
 export type XSessionMaxAggregateInputType = {
   id?: true
+  userId?: true
   cookies?: true
   createdAt?: true
   updatedAt?: true
@@ -63,6 +68,7 @@ export type XSessionMaxAggregateInputType = {
 
 export type XSessionCountAggregateInputType = {
   id?: true
+  userId?: true
   cookies?: true
   createdAt?: true
   updatedAt?: true
@@ -143,6 +149,7 @@ export type XSessionGroupByArgs<ExtArgs extends runtime.Types.Extensions.Interna
 
 export type XSessionGroupByOutputType = {
   id: string
+  userId: string | null
   cookies: string
   createdAt: Date
   updatedAt: Date
@@ -171,6 +178,7 @@ export type XSessionWhereInput = {
   OR?: Prisma.XSessionWhereInput[]
   NOT?: Prisma.XSessionWhereInput | Prisma.XSessionWhereInput[]
   id?: Prisma.StringFilter<"XSession"> | string
+  userId?: Prisma.StringNullableFilter<"XSession"> | string | null
   cookies?: Prisma.StringFilter<"XSession"> | string
   createdAt?: Prisma.DateTimeFilter<"XSession"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"XSession"> | Date | string
@@ -178,6 +186,7 @@ export type XSessionWhereInput = {
 
 export type XSessionOrderByWithRelationInput = {
   id?: Prisma.SortOrder
+  userId?: Prisma.SortOrderInput | Prisma.SortOrder
   cookies?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -185,16 +194,18 @@ export type XSessionOrderByWithRelationInput = {
 
 export type XSessionWhereUniqueInput = Prisma.AtLeast<{
   id?: string
+  userId?: string
   AND?: Prisma.XSessionWhereInput | Prisma.XSessionWhereInput[]
   OR?: Prisma.XSessionWhereInput[]
   NOT?: Prisma.XSessionWhereInput | Prisma.XSessionWhereInput[]
   cookies?: Prisma.StringFilter<"XSession"> | string
   createdAt?: Prisma.DateTimeFilter<"XSession"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"XSession"> | Date | string
-}, "id">
+}, "id" | "userId">
 
 export type XSessionOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
+  userId?: Prisma.SortOrderInput | Prisma.SortOrder
   cookies?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -208,6 +219,7 @@ export type XSessionScalarWhereWithAggregatesInput = {
   OR?: Prisma.XSessionScalarWhereWithAggregatesInput[]
   NOT?: Prisma.XSessionScalarWhereWithAggregatesInput | Prisma.XSessionScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"XSession"> | string
+  userId?: Prisma.StringNullableWithAggregatesFilter<"XSession"> | string | null
   cookies?: Prisma.StringWithAggregatesFilter<"XSession"> | string
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"XSession"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"XSession"> | Date | string
@@ -215,6 +227,7 @@ export type XSessionScalarWhereWithAggregatesInput = {
 
 export type XSessionCreateInput = {
   id?: string
+  userId?: string | null
   cookies: string
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -222,6 +235,7 @@ export type XSessionCreateInput = {
 
 export type XSessionUncheckedCreateInput = {
   id?: string
+  userId?: string | null
   cookies: string
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -229,6 +243,7 @@ export type XSessionUncheckedCreateInput = {
 
 export type XSessionUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   cookies?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -236,6 +251,7 @@ export type XSessionUpdateInput = {
 
 export type XSessionUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   cookies?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -243,6 +259,7 @@ export type XSessionUncheckedUpdateInput = {
 
 export type XSessionCreateManyInput = {
   id?: string
+  userId?: string | null
   cookies: string
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -250,6 +267,7 @@ export type XSessionCreateManyInput = {
 
 export type XSessionUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   cookies?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -257,6 +275,7 @@ export type XSessionUpdateManyMutationInput = {
 
 export type XSessionUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   cookies?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -264,6 +283,7 @@ export type XSessionUncheckedUpdateManyInput = {
 
 export type XSessionCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  userId?: Prisma.SortOrder
   cookies?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -271,6 +291,7 @@ export type XSessionCountOrderByAggregateInput = {
 
 export type XSessionMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  userId?: Prisma.SortOrder
   cookies?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -278,6 +299,7 @@ export type XSessionMaxOrderByAggregateInput = {
 
 export type XSessionMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  userId?: Prisma.SortOrder
   cookies?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -287,6 +309,7 @@ export type XSessionMinOrderByAggregateInput = {
 
 export type XSessionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  userId?: boolean
   cookies?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -294,6 +317,7 @@ export type XSessionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
 
 export type XSessionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  userId?: boolean
   cookies?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -301,6 +325,7 @@ export type XSessionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
 
 export type XSessionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  userId?: boolean
   cookies?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -308,18 +333,20 @@ export type XSessionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
 
 export type XSessionSelectScalar = {
   id?: boolean
+  userId?: boolean
   cookies?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type XSessionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "cookies" | "createdAt" | "updatedAt", ExtArgs["result"]["xSession"]>
+export type XSessionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "cookies" | "createdAt" | "updatedAt", ExtArgs["result"]["xSession"]>
 
 export type $XSessionPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "XSession"
   objects: {}
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
+    userId: string | null
     cookies: string
     createdAt: Date
     updatedAt: Date
@@ -747,6 +774,7 @@ export interface Prisma__XSessionClient<T, Null = never, ExtArgs extends runtime
  */
 export interface XSessionFieldRefs {
   readonly id: Prisma.FieldRef<"XSession", 'String'>
+  readonly userId: Prisma.FieldRef<"XSession", 'String'>
   readonly cookies: Prisma.FieldRef<"XSession", 'String'>
   readonly createdAt: Prisma.FieldRef<"XSession", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"XSession", 'DateTime'>

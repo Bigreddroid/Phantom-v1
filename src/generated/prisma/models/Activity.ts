@@ -26,6 +26,7 @@ export type AggregateActivity = {
 
 export type ActivityMinAggregateOutputType = {
   id: string | null
+  userId: string | null
   action: string | null
   detail: string | null
   icon: string | null
@@ -34,6 +35,7 @@ export type ActivityMinAggregateOutputType = {
 
 export type ActivityMaxAggregateOutputType = {
   id: string | null
+  userId: string | null
   action: string | null
   detail: string | null
   icon: string | null
@@ -42,6 +44,7 @@ export type ActivityMaxAggregateOutputType = {
 
 export type ActivityCountAggregateOutputType = {
   id: number
+  userId: number
   action: number
   detail: number
   icon: number
@@ -52,6 +55,7 @@ export type ActivityCountAggregateOutputType = {
 
 export type ActivityMinAggregateInputType = {
   id?: true
+  userId?: true
   action?: true
   detail?: true
   icon?: true
@@ -60,6 +64,7 @@ export type ActivityMinAggregateInputType = {
 
 export type ActivityMaxAggregateInputType = {
   id?: true
+  userId?: true
   action?: true
   detail?: true
   icon?: true
@@ -68,6 +73,7 @@ export type ActivityMaxAggregateInputType = {
 
 export type ActivityCountAggregateInputType = {
   id?: true
+  userId?: true
   action?: true
   detail?: true
   icon?: true
@@ -149,6 +155,7 @@ export type ActivityGroupByArgs<ExtArgs extends runtime.Types.Extensions.Interna
 
 export type ActivityGroupByOutputType = {
   id: string
+  userId: string | null
   action: string
   detail: string | null
   icon: string | null
@@ -178,6 +185,7 @@ export type ActivityWhereInput = {
   OR?: Prisma.ActivityWhereInput[]
   NOT?: Prisma.ActivityWhereInput | Prisma.ActivityWhereInput[]
   id?: Prisma.StringFilter<"Activity"> | string
+  userId?: Prisma.StringNullableFilter<"Activity"> | string | null
   action?: Prisma.StringFilter<"Activity"> | string
   detail?: Prisma.StringNullableFilter<"Activity"> | string | null
   icon?: Prisma.StringNullableFilter<"Activity"> | string | null
@@ -186,6 +194,7 @@ export type ActivityWhereInput = {
 
 export type ActivityOrderByWithRelationInput = {
   id?: Prisma.SortOrder
+  userId?: Prisma.SortOrderInput | Prisma.SortOrder
   action?: Prisma.SortOrder
   detail?: Prisma.SortOrderInput | Prisma.SortOrder
   icon?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -197,6 +206,7 @@ export type ActivityWhereUniqueInput = Prisma.AtLeast<{
   AND?: Prisma.ActivityWhereInput | Prisma.ActivityWhereInput[]
   OR?: Prisma.ActivityWhereInput[]
   NOT?: Prisma.ActivityWhereInput | Prisma.ActivityWhereInput[]
+  userId?: Prisma.StringNullableFilter<"Activity"> | string | null
   action?: Prisma.StringFilter<"Activity"> | string
   detail?: Prisma.StringNullableFilter<"Activity"> | string | null
   icon?: Prisma.StringNullableFilter<"Activity"> | string | null
@@ -205,6 +215,7 @@ export type ActivityWhereUniqueInput = Prisma.AtLeast<{
 
 export type ActivityOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
+  userId?: Prisma.SortOrderInput | Prisma.SortOrder
   action?: Prisma.SortOrder
   detail?: Prisma.SortOrderInput | Prisma.SortOrder
   icon?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -219,6 +230,7 @@ export type ActivityScalarWhereWithAggregatesInput = {
   OR?: Prisma.ActivityScalarWhereWithAggregatesInput[]
   NOT?: Prisma.ActivityScalarWhereWithAggregatesInput | Prisma.ActivityScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"Activity"> | string
+  userId?: Prisma.StringNullableWithAggregatesFilter<"Activity"> | string | null
   action?: Prisma.StringWithAggregatesFilter<"Activity"> | string
   detail?: Prisma.StringNullableWithAggregatesFilter<"Activity"> | string | null
   icon?: Prisma.StringNullableWithAggregatesFilter<"Activity"> | string | null
@@ -227,6 +239,7 @@ export type ActivityScalarWhereWithAggregatesInput = {
 
 export type ActivityCreateInput = {
   id?: string
+  userId?: string | null
   action: string
   detail?: string | null
   icon?: string | null
@@ -235,6 +248,7 @@ export type ActivityCreateInput = {
 
 export type ActivityUncheckedCreateInput = {
   id?: string
+  userId?: string | null
   action: string
   detail?: string | null
   icon?: string | null
@@ -243,6 +257,7 @@ export type ActivityUncheckedCreateInput = {
 
 export type ActivityUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   action?: Prisma.StringFieldUpdateOperationsInput | string
   detail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -251,6 +266,7 @@ export type ActivityUpdateInput = {
 
 export type ActivityUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   action?: Prisma.StringFieldUpdateOperationsInput | string
   detail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -259,6 +275,7 @@ export type ActivityUncheckedUpdateInput = {
 
 export type ActivityCreateManyInput = {
   id?: string
+  userId?: string | null
   action: string
   detail?: string | null
   icon?: string | null
@@ -267,6 +284,7 @@ export type ActivityCreateManyInput = {
 
 export type ActivityUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   action?: Prisma.StringFieldUpdateOperationsInput | string
   detail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -275,6 +293,7 @@ export type ActivityUpdateManyMutationInput = {
 
 export type ActivityUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   action?: Prisma.StringFieldUpdateOperationsInput | string
   detail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -283,6 +302,7 @@ export type ActivityUncheckedUpdateManyInput = {
 
 export type ActivityCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  userId?: Prisma.SortOrder
   action?: Prisma.SortOrder
   detail?: Prisma.SortOrder
   icon?: Prisma.SortOrder
@@ -291,6 +311,7 @@ export type ActivityCountOrderByAggregateInput = {
 
 export type ActivityMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  userId?: Prisma.SortOrder
   action?: Prisma.SortOrder
   detail?: Prisma.SortOrder
   icon?: Prisma.SortOrder
@@ -299,20 +320,18 @@ export type ActivityMaxOrderByAggregateInput = {
 
 export type ActivityMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  userId?: Prisma.SortOrder
   action?: Prisma.SortOrder
   detail?: Prisma.SortOrder
   icon?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
-export type NullableStringFieldUpdateOperationsInput = {
-  set?: string | null
-}
-
 
 
 export type ActivitySelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  userId?: boolean
   action?: boolean
   detail?: boolean
   icon?: boolean
@@ -321,6 +340,7 @@ export type ActivitySelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
 
 export type ActivitySelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  userId?: boolean
   action?: boolean
   detail?: boolean
   icon?: boolean
@@ -329,6 +349,7 @@ export type ActivitySelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
 
 export type ActivitySelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  userId?: boolean
   action?: boolean
   detail?: boolean
   icon?: boolean
@@ -337,19 +358,21 @@ export type ActivitySelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
 
 export type ActivitySelectScalar = {
   id?: boolean
+  userId?: boolean
   action?: boolean
   detail?: boolean
   icon?: boolean
   createdAt?: boolean
 }
 
-export type ActivityOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "action" | "detail" | "icon" | "createdAt", ExtArgs["result"]["activity"]>
+export type ActivityOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "action" | "detail" | "icon" | "createdAt", ExtArgs["result"]["activity"]>
 
 export type $ActivityPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Activity"
   objects: {}
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
+    userId: string | null
     action: string
     detail: string | null
     icon: string | null
@@ -778,6 +801,7 @@ export interface Prisma__ActivityClient<T, Null = never, ExtArgs extends runtime
  */
 export interface ActivityFieldRefs {
   readonly id: Prisma.FieldRef<"Activity", 'String'>
+  readonly userId: Prisma.FieldRef<"Activity", 'String'>
   readonly action: Prisma.FieldRef<"Activity", 'String'>
   readonly detail: Prisma.FieldRef<"Activity", 'String'>
   readonly icon: Prisma.FieldRef<"Activity", 'String'>

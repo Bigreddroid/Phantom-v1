@@ -1,3 +1,4 @@
+export const maxDuration = 60;
 import { NextResponse } from "next/server";
 import { generateTweet } from "@/lib/claude/generate";
 import { prisma } from "@/lib/db";

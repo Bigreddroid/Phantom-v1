@@ -1,35 +1,43 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { verifySession } from "@/lib/auth/session";
 
-const AUTH_COOKIE = "phantom_auth";
+const LEGACY_COOKIE  = "phantom_auth";
+const SESSION_COOKIE = "phantom_session";
 
-async function deriveToken(secret: string): Promise<string> {
+async function deriveLegacyToken(secret: string): Promise<string> {
   const key = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
+    "raw", new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" }, false, ["sign"],
   );
-  const sig = await crypto.subtle.sign(
-    "HMAC",
-    key,
-    new TextEncoder().encode("phantom_dashboard_v1"),
-  );
-  return Array.from(new Uint8Array(sig))
-    .map(b => b.toString(16).padStart(2, "0"))
-    .join("");
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode("phantom_dashboard_v1"));
+  return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
-const PUBLIC = ["/", "/login", "/api/auth/login", "/api/telegram", "/api/waitlist"];
+// Paths that never require auth
+const PUBLIC = [
+  "/",
+  "/login",
+  "/signup",
+  "/onboarding",
+  "/api/auth/login",
+  "/api/auth/signup",
+  "/api/auth/signin",
+  "/api/auth/signout",
+  "/api/telegram",
+  "/api/waitlist",
+  "/api/billing/webhook",
+];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  const isPublic = PUBLIC.some(p => pathname === p || pathname.startsWith(p + "/") || pathname.startsWith(p + "?"));
+  const isPublic = PUBLIC.some(p =>
+    pathname === p || pathname.startsWith(p + "/") || pathname.startsWith(p + "?")
+  );
   if (isPublic) return NextResponse.next();
 
-  // Allow internal cron/job calls authenticated with CRON_SECRET
+  // Cron/job calls authenticated with CRON_SECRET
   const cronSecret = process.env.CRON_SECRET;
   if (cronSecret) {
     const auth = request.headers.get("authorization");
@@ -37,24 +45,31 @@ export async function middleware(request: NextRequest) {
   }
 
   const secret = process.env.NEXTAUTH_SECRET;
-  if (!secret) {
-    // Fail closed — never silently expose the app if secret is misconfigured
-    const loginUrl = new URL("/login", request.url);
-    return NextResponse.redirect(loginUrl);
+  if (!secret) return NextResponse.redirect(new URL("/login", request.url));
+
+  // ── Check new JWT session ──────────────────────────────────────────────────
+  const sessionToken = request.cookies.get(SESSION_COOKIE)?.value;
+  if (sessionToken) {
+    const session = await verifySession(sessionToken);
+    if (session) {
+      // Inject userId as header so API routes can read it without re-parsing JWT
+      const headers = new Headers(request.headers);
+      headers.set("x-phantom-user-id", session.userId);
+      headers.set("x-phantom-email", session.email);
+      return NextResponse.next({ request: { headers } });
+    }
   }
 
-  const expected = await deriveToken(secret);
-  const token = request.cookies.get(AUTH_COOKIE)?.value;
+  // ── Fall back to legacy single-password token (Varun's dashboard) ──────────
+  const expected   = await deriveLegacyToken(secret);
+  const legacyToken = request.cookies.get(LEGACY_COOKIE)?.value;
+  if (legacyToken === expected) return NextResponse.next();
 
-  if (token !== expected) {
-    const loginUrl = new URL("/login", request.url);
-    // Validate from param: only allow same-origin paths
-    const safePath = pathname.startsWith("/") && !pathname.startsWith("//") ? pathname : "/dashboard";
-    loginUrl.searchParams.set("from", safePath);
-    return NextResponse.redirect(loginUrl);
-  }
-
-  return NextResponse.next();
+  // Not authenticated — redirect to login
+  const loginUrl = new URL("/login", request.url);
+  const safePath = pathname.startsWith("/") && !pathname.startsWith("//") ? pathname : "/dashboard";
+  loginUrl.searchParams.set("from", safePath);
+  return NextResponse.redirect(loginUrl);
 }
 
 export const config = {

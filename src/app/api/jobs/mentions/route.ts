@@ -1,3 +1,4 @@
+export const maxDuration = 60;
 import { NextResponse } from "next/server";
 import { getMentions, getMyProfile } from "@/lib/x/engage";
 import { replyToTweet } from "@/lib/x/post";

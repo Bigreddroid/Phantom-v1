@@ -141,6 +141,11 @@ export async function GET(req: Request) {
     jobs.push(hit("/api/cron/summary")); fired.push("summary");
   }
 
+  // ── Brain performance analysis — Sunday 23:00 IST ────────────────────────────
+  if (dow === 0 && at(23, 0)) {
+    jobs.push(hit("/api/cron/brain")); fired.push("brain");
+  }
+
   // Fire all sub-jobs without waiting — each is its own Vercel function invocation.
   // Awaiting causes dispatch to hit the 60s timeout since engage alone takes ~50s.
   void Promise.allSettled(jobs);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+// no hooks needed at page level
 
 const SCHEDULE = [
   { emoji: "🐦", job: "Tweets",        freq: "4×/day",   times: "7:28 · 12:28 · 18:28 · 21:28 IST", note: "AI-written, approval-gated" },
@@ -155,71 +155,22 @@ function TelegramMockup() {
   );
 }
 
-function WaitlistForm({ id }: { id?: string }) {
-  const [email, setEmail] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [error, setError] = useState("");
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!email.trim()) return;
-    setSubmitting(true);
-    setError("");
-    try {
-      const res = await fetch("/api/waitlist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim() }),
-      });
-      if (res.ok) {
-        setSubmitted(true);
-      } else {
-        const text = await res.text().catch(() => "");
-        let msg = "Something went wrong. Try again.";
-        try { msg = JSON.parse(text).error ?? `HTTP ${res.status}`; } catch { msg = `HTTP ${res.status}`; }
-        setError(msg);
-      }
-    } catch (err) {
-      setError(String(err));
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  if (submitted) {
-    return (
-      <div id={id} className="flex flex-col items-center gap-2">
-        <div className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 font-semibold text-sm">
-          <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/></svg>
-          You&apos;re on the list. We&apos;ll reach out when access opens.
-        </div>
-      </div>
-    );
-  }
-
+function CTAButtons({ id }: { id?: string }) {
   return (
-    <form id={id} onSubmit={handleSubmit} className="flex flex-col items-center gap-3 w-full max-w-md mx-auto">
-      <div className="flex w-full gap-2">
-        <input
-          type="email"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          placeholder="you@example.com"
-          required
-          className="flex-1 px-4 py-3 rounded-xl bg-white/[0.06] border border-white/[0.12] text-white placeholder-white/25 text-sm outline-none focus:border-red-500/50 focus:bg-white/[0.08] transition-all"
-        />
-        <button
-          type="submit"
-          disabled={submitting}
-          className="px-5 py-3 bg-red-600 hover:bg-red-500 disabled:opacity-60 text-white font-bold text-sm rounded-xl transition-all shadow-lg shadow-red-900/30 hover:scale-[1.02] active:scale-[0.98] whitespace-nowrap"
-        >
-          {submitting ? "..." : "Get early access"}
-        </button>
-      </div>
-      {error && <p className="text-red-400 text-xs">{error}</p>}
-      <p className="text-xs text-white/25">No spam. No noise. We&apos;ll only email when access opens.</p>
-    </form>
+    <div id={id} className="flex flex-col sm:flex-row items-center gap-3 justify-center">
+      <a
+        href="/signup"
+        className="px-7 py-3.5 bg-red-600 hover:bg-red-500 text-white font-bold text-sm rounded-xl transition-all shadow-lg shadow-red-900/30 hover:scale-[1.02] active:scale-[0.98] whitespace-nowrap"
+      >
+        Start free trial →
+      </a>
+      <a
+        href="/login"
+        className="px-7 py-3.5 border border-white/[0.10] text-white/50 hover:text-white/80 text-sm rounded-xl transition-all hover:bg-white/[0.04]"
+      >
+        Sign in
+      </a>
+    </div>
   );
 }
 
@@ -257,10 +208,10 @@ export default function LandingPage() {
               GitHub
             </a>
             <a
-              href="#waitlist"
+              href="/signup"
               className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-sm font-bold rounded-xl transition-colors shadow-sm shadow-red-900/40"
             >
-              Get early access →
+              Start free trial →
             </a>
           </div>
         </div>
@@ -301,7 +252,7 @@ export default function LandingPage() {
           ))}
         </div>
 
-        <WaitlistForm id="waitlist" />
+        <CTAButtons id="waitlist" />
       </section>
 
       {/* DASHBOARD PREVIEW */}
@@ -414,7 +365,7 @@ export default function LandingPage() {
             <p className="text-white/40 text-base max-w-xl mx-auto mb-10 leading-relaxed">
               Phantom is your AI co-founder for distribution. It handles the daily output so you can focus on building the actual product.
             </p>
-            <WaitlistForm />
+            <CTAButtons />
             <div className="mt-6 pt-6 border-t border-white/[0.06]">
               <p className="text-xs text-white/20 mb-3">Want to self-host today?</p>
               <a

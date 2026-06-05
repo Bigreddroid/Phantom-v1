@@ -51,13 +51,20 @@ export const AnyNull = runtime.AnyNull
 
 
 export const ModelName = {
+  User: 'User',
+  XCredential: 'XCredential',
+  TelegramSetup: 'TelegramSetup',
+  UserSettings: 'UserSettings',
   QueueItem: 'QueueItem',
   Activity: 'Activity',
   Stats: 'Stats',
   BlockedAccount: 'BlockedAccount',
   LinkedInAuth: 'LinkedInAuth',
   XSession: 'XSession',
-  Waitlist: 'Waitlist'
+  Waitlist: 'Waitlist',
+  BrainMemory: 'BrainMemory',
+  ConversationThread: 'ConversationThread',
+  PerformanceInsight: 'PerformanceInsight'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -76,8 +83,71 @@ export const TransactionIsolationLevel = runtime.makeStrictEnum({
 export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof typeof TransactionIsolationLevel]
 
 
+export const UserScalarFieldEnum = {
+  id: 'id',
+  email: 'email',
+  passwordHash: 'passwordHash',
+  name: 'name',
+  stripeCustomerId: 'stripeCustomerId',
+  stripeSubscriptionId: 'stripeSubscriptionId',
+  plan: 'plan',
+  subscriptionStatus: 'subscriptionStatus',
+  trialEndsAt: 'trialEndsAt',
+  onboardingStep: 'onboardingStep',
+  onboardingDone: 'onboardingDone',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
+
+
+export const XCredentialScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  cookies: 'cookies',
+  username: 'username',
+  xUserId: 'xUserId',
+  updatedAt: 'updatedAt',
+  createdAt: 'createdAt'
+} as const
+
+export type XCredentialScalarFieldEnum = (typeof XCredentialScalarFieldEnum)[keyof typeof XCredentialScalarFieldEnum]
+
+
+export const TelegramSetupScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  botToken: 'botToken',
+  chatId: 'chatId',
+  webhookSet: 'webhookSet',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type TelegramSetupScalarFieldEnum = (typeof TelegramSetupScalarFieldEnum)[keyof typeof TelegramSetupScalarFieldEnum]
+
+
+export const UserSettingsScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  handle: 'handle',
+  timezone: 'timezone',
+  nicheKeywords: 'nicheKeywords',
+  contentTopics: 'contentTopics',
+  threadTopics: 'threadTopics',
+  voiceTopics: 'voiceTopics',
+  voiceDescription: 'voiceDescription',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type UserSettingsScalarFieldEnum = (typeof UserSettingsScalarFieldEnum)[keyof typeof UserSettingsScalarFieldEnum]
+
+
 export const QueueItemScalarFieldEnum = {
   id: 'id',
+  userId: 'userId',
   type: 'type',
   content: 'content',
   metadata: 'metadata',
@@ -91,6 +161,7 @@ export type QueueItemScalarFieldEnum = (typeof QueueItemScalarFieldEnum)[keyof t
 
 export const ActivityScalarFieldEnum = {
   id: 'id',
+  userId: 'userId',
   action: 'action',
   detail: 'detail',
   icon: 'icon',
@@ -102,6 +173,7 @@ export type ActivityScalarFieldEnum = (typeof ActivityScalarFieldEnum)[keyof typ
 
 export const StatsScalarFieldEnum = {
   id: 'id',
+  userId: 'userId',
   followers: 'followers',
   following: 'following',
   tweets: 'tweets',
@@ -117,6 +189,7 @@ export type StatsScalarFieldEnum = (typeof StatsScalarFieldEnum)[keyof typeof St
 
 export const BlockedAccountScalarFieldEnum = {
   id: 'id',
+  userId: 'userId',
   username: 'username',
   createdAt: 'createdAt'
 } as const
@@ -126,6 +199,7 @@ export type BlockedAccountScalarFieldEnum = (typeof BlockedAccountScalarFieldEnu
 
 export const LinkedInAuthScalarFieldEnum = {
   id: 'id',
+  userId: 'userId',
   accessToken: 'accessToken',
   refreshToken: 'refreshToken',
   personId: 'personId',
@@ -139,6 +213,7 @@ export type LinkedInAuthScalarFieldEnum = (typeof LinkedInAuthScalarFieldEnum)[k
 
 export const XSessionScalarFieldEnum = {
   id: 'id',
+  userId: 'userId',
   cookies: 'cookies',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
@@ -154,6 +229,40 @@ export const WaitlistScalarFieldEnum = {
 } as const
 
 export type WaitlistScalarFieldEnum = (typeof WaitlistScalarFieldEnum)[keyof typeof WaitlistScalarFieldEnum]
+
+
+export const BrainMemoryScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  key: 'key',
+  value: 'value',
+  updatedAt: 'updatedAt'
+} as const
+
+export type BrainMemoryScalarFieldEnum = (typeof BrainMemoryScalarFieldEnum)[keyof typeof BrainMemoryScalarFieldEnum]
+
+
+export const ConversationThreadScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  twitterUserId: 'twitterUserId',
+  twitterUsername: 'twitterUsername',
+  messages: 'messages',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ConversationThreadScalarFieldEnum = (typeof ConversationThreadScalarFieldEnum)[keyof typeof ConversationThreadScalarFieldEnum]
+
+
+export const PerformanceInsightScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  insight: 'insight',
+  metric: 'metric',
+  createdAt: 'createdAt'
+} as const
+
+export type PerformanceInsightScalarFieldEnum = (typeof PerformanceInsightScalarFieldEnum)[keyof typeof PerformanceInsightScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -172,12 +281,27 @@ export const NullableJsonNullValueInput = {
 export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
 
 
+export const JsonNullValueInput = {
+  JsonNull: JsonNull
+} as const
+
+export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
+
+
 export const QueryMode = {
   default: 'default',
   insensitive: 'insensitive'
 } as const
 
 export type QueryMode = (typeof QueryMode)[keyof typeof QueryMode]
+
+
+export const NullsOrder = {
+  first: 'first',
+  last: 'last'
+} as const
+
+export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
 
 
 export const JsonNullValueFilter = {
@@ -187,12 +311,4 @@ export const JsonNullValueFilter = {
 } as const
 
 export type JsonNullValueFilter = (typeof JsonNullValueFilter)[keyof typeof JsonNullValueFilter]
-
-
-export const NullsOrder = {
-  first: 'first',
-  last: 'last'
-} as const
-
-export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
 

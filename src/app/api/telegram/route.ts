@@ -6,6 +6,9 @@ import { postTweet, postTweetWithImage, postThread, quoteTweet, replyToTweet } f
 import { generateTweet, generateThread, generateArticleThread, generateDM, generateQuoteTweet, generateLinkedInPost, generateReply, generateLongTweet } from "@/lib/claude/generate";
 import { notifyPosted, requestApproval, sendMessage } from "@/lib/telegram/notify";
 import { ensureWebhook, ensureCommands } from "@/lib/telegram/setup";
+import { humanPause } from "@/lib/scheduler/humanize";
+import { getBrainFields, setBrainField, appendToThread } from "@/lib/brain";
+import { getInsights } from "@/lib/brain/performance";
 import { sendDM, getDMConversations } from "@/lib/x/dm";
 import { searchTweets, getMyProfile, retweet, getMyTweets, getMentions } from "@/lib/x/engage";
 import { getLinkedInAuth } from "@/lib/linkedin/client";
@@ -95,13 +98,20 @@ export async function POST(req: NextRequest) {
 
     // ── Approval flow callbacks ──────────────────────────────────────────────
     if (action === "approve") {
-      const item = await prisma.queueItem.findUnique({ where: { id: param } });
-      if (!item || item.status !== "PENDING") {
+      // Atomic claim — only one concurrent tap can win the PENDING→APPROVED transition
+      const claimed = await prisma.queueItem.updateMany({
+        where: { id: param, status: "PENDING" },
+        data: { status: "APPROVED" },
+      });
+      if (claimed.count === 0) {
         await send(chatId, "⚠️ Item not found or already processed.");
         return NextResponse.json({ ok: true });
       }
+      const item = await prisma.queueItem.findUnique({ where: { id: param } });
+      if (!item) return NextResponse.json({ ok: true });
       await send(chatId, "⚡ Posting now...");
       try {
+        await humanPause();
         await postQueueItem(item);
         await send(chatId, `✅ *Posted!*\n\n${item.content.slice(0, 280)}`);
       } catch (e) {
@@ -165,6 +175,7 @@ export async function POST(req: NextRequest) {
       }
       await send(chatId, "⚡ Posting to X + LinkedIn...");
       try {
+        await humanPause();
         await postQueueItem(item);
         await send(chatId, `✅ *Posted to X!*\n\n${item.content.slice(0, 280)}`);
 
@@ -484,12 +495,23 @@ export async function POST(req: NextRequest) {
       const meta = (item.metadata as Record<string, unknown>) ?? {};
       await send(chatId, "⚡ Sending reply...");
       try {
+        await humanPause();
         await replyToTweet(String(meta.tweetId), item.content);
         await prisma.queueItem.update({ where: { id: param }, data: { status: "POSTED" } });
         const { buildReplyDetail } = await import("@/lib/reply-dedup");
         await prisma.activity.create({
           data: { action: "Replied to mention", detail: buildReplyDetail(String(meta.tweetId), String(meta.authorId ?? ""), item.content), icon: "💬" },
         });
+        // Record both sides of the conversation for thread memory — guard empty authorId
+        const _aId = meta.authorId && String(meta.authorId).trim() ? String(meta.authorId) : null;
+        if (_aId && meta.originalText) {
+          await appendToThread(_aId, String(meta.authorUsername ?? ""), {
+            role: "them", content: String(meta.originalText), tweetId: String(meta.tweetId), at: new Date().toISOString(),
+          });
+          await appendToThread(_aId, String(meta.authorUsername ?? ""), {
+            role: "us", content: item.content, tweetId: String(meta.tweetId), at: new Date().toISOString(),
+          });
+        }
         await send(chatId,
           `✅ *Reply sent to @${meta.authorUsername || "them"}!*\n\n↩ ${item.content.slice(0, 240)}`
         );
@@ -508,15 +530,29 @@ export async function POST(req: NextRequest) {
       await send(chatId, "💬 Generating reply...");
       try {
         const meta = (item.metadata as Record<string, unknown>) ?? {};
-        const reply = await generateReply(item.content, String(meta.authorUsername || "user"));
+        // item.content is the pre-generated reply for cron items, or the mention text for /inbox items.
+        // originalText (when present) is always the mention text — use it for generateReply and thread recording.
+        const mentionText = String(meta.originalText || item.content);
+        const authorId = meta.authorId && String(meta.authorId).trim() ? String(meta.authorId) : undefined;
+        const reply = await generateReply(mentionText, String(meta.authorUsername || "user"), authorId);
+        await humanPause();
         await replyToTweet(String(meta.tweetId), reply);
         await prisma.queueItem.update({ where: { id: param }, data: { status: "POSTED" } });
         const { buildReplyDetail } = await import("@/lib/reply-dedup");
         await prisma.activity.create({
-          data: { action: "Replied to mention", detail: buildReplyDetail(String(meta.tweetId), String(meta.authorId ?? ""), reply), icon: "💬" },
+          data: { action: "Replied to mention", detail: buildReplyDetail(String(meta.tweetId), authorId ?? "", reply), icon: "💬" },
         });
+        // Record both sides to thread memory — guard empty authorId
+        if (authorId) {
+          await appendToThread(authorId, String(meta.authorUsername ?? ""), {
+            role: "them", content: mentionText, tweetId: String(meta.tweetId), at: new Date().toISOString(),
+          });
+          await appendToThread(authorId, String(meta.authorUsername ?? ""), {
+            role: "us", content: reply, tweetId: String(meta.tweetId), at: new Date().toISOString(),
+          });
+        }
         await send(chatId,
-          `✅ *Reply sent!*\n\n_They said:_ "${item.content.slice(0, 150)}"\n\n↩ ${reply}`
+          `✅ *Reply sent!*\n\n_They said:_ "${mentionText.slice(0, 150)}"\n\n↩ ${reply}`
         );
       } catch (e) {
         await send(chatId, `❌ Failed: ${String(e).slice(0, 120)}`);
@@ -560,6 +596,26 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Regenerate: generate fresh content for an existing pending item ──────────
+    // ── Brain field quick-edit (from /status buttons) ────────────────────────
+    if (action === "brain_edit") {
+      const field = param; // "focus" | "avoid" | "notes"
+      const labels: Record<string, string> = { focus: "current focus", avoid: "what to avoid", notes: "notes / scratchpad" };
+      const brain = await getBrainFields().catch(() => null);
+      const current = brain?.[field] ?? "";
+      // Clear any stale pending brain edits first (user tapped but never replied)
+      await prisma.queueItem.updateMany({
+        where: { type: "BrainEdit", status: "PENDING" },
+        data: { status: "REJECTED" },
+      });
+      await prisma.queueItem.create({
+        data: { type: "BrainEdit", content: field, metadata: { awaitingBrainEdit: true, field } },
+      });
+      await send(chatId,
+        `✏️ *Edit ${labels[field] ?? field}*\n\nCurrent:\n_${current.slice(0, 300) || "empty"}_\n\nReply with the new value:`,
+        { reply_markup: { force_reply: true, selective: true } }
+      );
+    }
+
     if (action === "regenerate") {
       const item = await prisma.queueItem.findUnique({ where: { id: param } });
       if (!item || item.status !== "PENDING") {
@@ -674,17 +730,26 @@ export async function POST(req: NextRequest) {
   // ── /status ──────────────────────────────────────────────────────────────
   else if (cmd === "/status") {
     try {
-      const [statsRes, recentActivity, totalPosted, totalReplied] = await Promise.all([
+      const [statsRes, recentActivity, totalPosted, totalReplied, brain, latestInsights] = await Promise.all([
         cronFetch(`/api/stats`).then(r => r.json()).catch(() => ({})),
         prisma.activity.findMany({ orderBy: { createdAt: "desc" }, take: 3 }),
         prisma.activity.count({ where: { icon: { in: ["🐦", "🧵", "🖼️"] } } }),
         prisma.activity.count({ where: { icon: "💬" } }),
+        getBrainFields().catch(() => null),
+        getInsights(1).catch(() => []),
       ]);
 
       const lastAct = recentActivity[0];
       const lastTime = lastAct
         ? new Date(lastAct.createdAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit" })
         : "—";
+
+      const brainSection = brain
+        ? `\n*Brain*\n` +
+          `🎯 Focus: _${brain.focus?.slice(0, 100) ?? "—"}_\n` +
+          (latestInsights[0] ? `💡 Latest insight: _${latestInsights[0].insight.slice(0, 100)}_\n` : "") +
+          (brain.wins ? `✅ What's working: _${brain.wins.slice(0, 80)}_\n` : "")
+        : "";
 
       await send(chatId,
         `*📊 Phantom Dashboard*\n\n` +
@@ -695,9 +760,19 @@ export async function POST(req: NextRequest) {
         `*Automation Stats*\n` +
         `📮 Posts sent: ${totalPosted}\n` +
         `💬 Replies sent: ${totalReplied}\n` +
-        `⚡ Engagements: ${statsRes.engagements ?? "—"}\n\n` +
-        `*Last action:* ${lastAct ? `${lastAct.icon} ${lastAct.action}` : "None"} at ${lastTime}\n\n` +
-        `_All systems running on autopilot._`
+        `⚡ Engagements: ${statsRes.engagements ?? "—"}\n` +
+        brainSection +
+        `\n*Last action:* ${lastAct ? `${lastAct.icon} ${lastAct.action}` : "None"} at ${lastTime}\n\n` +
+        `_All systems running on autopilot._`,
+        {
+          reply_markup: {
+            inline_keyboard: [[
+              { text: "🎯 Edit focus",  callback_data: "brain_edit:focus" },
+              { text: "🚫 Edit avoid",  callback_data: "brain_edit:avoid" },
+              { text: "📝 Notes",       callback_data: "brain_edit:notes" },
+            ]],
+          },
+        }
       );
     } catch (e) {
       await send(chatId, `❌ Error fetching status: ${String(e).slice(0, 100)}`);
@@ -881,6 +956,7 @@ export async function POST(req: NextRequest) {
     } else {
       await send(chatId, "⚡ Posting now...");
       try {
+        await humanPause();
         const result = await postTweet(args);
         await prisma.activity.create({
           data: { action: "Manual tweet posted", detail: args.slice(0, 80), icon: "🐦" },
@@ -1434,11 +1510,11 @@ export async function POST(req: NextRequest) {
       );
     } else {
       const username = args.replace("@", "").trim().toLowerCase();
-      await prisma.blockedAccount.upsert({
-        where: { username },
-        update: {},
-        create: { username },
-      });
+      // userId null = legacy system-wide block (Varun's account)
+      const existingBlock = await prisma.blockedAccount.findFirst({ where: { userId: null, username } });
+      if (!existingBlock) {
+        await prisma.blockedAccount.create({ data: { username } });
+      }
       await prisma.activity.create({
         data: { action: `Blacklisted: @${username}`, detail: "Active immediately", icon: "🚫" },
       });
@@ -1528,6 +1604,24 @@ export async function POST(req: NextRequest) {
 
   // ── Edit response / custom mention reply: non-command text ───────────────
   else if (!cmd.startsWith("/")) {
+    // Priority 0: pending brain field edit
+    const pendingBrainEdit = await prisma.queueItem.findFirst({
+      where: { type: "BrainEdit", status: "PENDING", metadata: { path: ["awaitingBrainEdit"], equals: true } },
+      orderBy: { createdAt: "desc" },
+    });
+    if (pendingBrainEdit) {
+      const meta = (pendingBrainEdit.metadata as Record<string, unknown>) ?? {};
+      const field = String(meta.field ?? "notes");
+      try {
+        await setBrainField(field, raw);
+        await prisma.queueItem.update({ where: { id: pendingBrainEdit.id }, data: { status: "POSTED" } });
+        await send(chatId, `✅ *Brain updated* — \`${field}\` saved.\n\n_${raw.slice(0, 200)}_`);
+      } catch (e) {
+        await send(chatId, `❌ Failed: ${String(e).slice(0, 100)}`);
+      }
+      return NextResponse.json({ ok: true });
+    }
+
     // Priority 1: pending tweet edit
     const pendingEdit = await prisma.queueItem.findFirst({
       where: { status: "PENDING", metadata: { path: ["awaitingEdit"], equals: true } },
@@ -1535,6 +1629,7 @@ export async function POST(req: NextRequest) {
     if (pendingEdit) {
       await send(chatId, "⚡ Posting your edited version...");
       try {
+        await humanPause();
         await postQueueItem({ ...pendingEdit, content: raw });
         await prisma.activity.create({
           data: { action: "Edited content posted", detail: raw.slice(0, 250), icon: "✏️" },
@@ -1554,11 +1649,23 @@ export async function POST(req: NextRequest) {
       const meta = (pendingMentionReply.metadata as Record<string, unknown>) ?? {};
       await send(chatId, "⚡ Sending your reply...");
       try {
+        await humanPause();
         await replyToTweet(String(meta.tweetId), raw);
         await prisma.queueItem.update({ where: { id: pendingMentionReply.id }, data: { status: "POSTED" } });
         await prisma.activity.create({
           data: { action: "Replied to mention", detail: `mid:${meta.tweetId}|${raw.slice(0, 70)}`, icon: "💬" },
         });
+        // Record to thread memory — custom typed replies are still real exchanges
+        if (meta.authorId) {
+          if (meta.originalText) {
+            await appendToThread(String(meta.authorId), String(meta.authorUsername ?? ""), {
+              role: "them", content: String(meta.originalText), tweetId: String(meta.tweetId), at: new Date().toISOString(),
+            });
+          }
+          await appendToThread(String(meta.authorId), String(meta.authorUsername ?? ""), {
+            role: "us", content: raw, tweetId: String(meta.tweetId), at: new Date().toISOString(),
+          });
+        }
         await send(chatId, `✅ *Reply sent!*\n\n↩ ${raw.slice(0, 280)}`);
       } catch (e) {
         await send(chatId, `❌ Failed: ${String(e).slice(0, 120)}`);

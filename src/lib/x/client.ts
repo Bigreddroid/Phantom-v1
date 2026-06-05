@@ -42,40 +42,40 @@ export const xRO: XRO = new Proxy({} as XRO, {
 let _scraper: Scraper | null = null;
 let _lastCheck = 0;
 
+// Shared: apply cookies to a scraper instance and prime the guest token.
+async function primeScraper(scraper: Scraper, cookieStrings: string[]) {
+  const normalized = cookieStrings.map(c => c.replace(/Domain=\.?twitter\.com/gi, "Domain=.x.com"));
+  await scraper.setCookies(normalized);
+  try {
+    const res = await fetch("https://api.x.com/1.1/guest/activate.json", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA`,
+        "Content-Type": "application/x-www-form-urlencoded",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+      },
+    });
+    if (res.ok) {
+      const { guest_token } = await res.json() as { guest_token: string };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (scraper as unknown as any).auth.guestToken = guest_token;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (scraper as unknown as any).authTrends.guestToken = guest_token;
+    }
+  } catch { /* ok */ }
+}
+
+// Varun's singleton scraper — reads X_COOKIES env var (or XSession DB fallback).
+// Untouched: all existing automation continues to use this.
 export async function getXClient(): Promise<Scraper> {
   const now = Date.now();
   if (_scraper && now - _lastCheck < 300_000) return _scraper;
 
   const scraper = new Scraper();
 
-  function toXDomain(strings: string[]): string[] {
-    return strings.map(c => c.replace(/Domain=\.?twitter\.com/gi, "Domain=.x.com"));
-  }
-
-  async function setCookiesAndPrime(strings: string[]) {
-    await scraper.setCookies(toXDomain(strings));
-    try {
-      const res = await fetch("https://api.x.com/1.1/guest/activate.json", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA`,
-          "Content-Type": "application/x-www-form-urlencoded",
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
-        },
-      });
-      if (res.ok) {
-        const { guest_token } = await res.json() as { guest_token: string };
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (scraper as unknown as any).auth.guestToken = guest_token;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (scraper as unknown as any).authTrends.guestToken = guest_token;
-      }
-    } catch { /* ok */ }
-  }
-
   if (process.env.X_COOKIES) {
     const cookieStrings: string[] = JSON.parse(process.env.X_COOKIES);
-    await setCookiesAndPrime(cookieStrings);
+    await primeScraper(scraper, cookieStrings);
     _scraper = scraper;
     _lastCheck = now;
     return scraper;
@@ -84,7 +84,7 @@ export async function getXClient(): Promise<Scraper> {
   const session = await prisma.xSession.findUnique({ where: { id: "singleton" } });
   if (session?.cookies) {
     const cookieStrings: string[] = JSON.parse(session.cookies);
-    await setCookiesAndPrime(cookieStrings);
+    await primeScraper(scraper, cookieStrings);
     _scraper = scraper;
     _lastCheck = now;
     return scraper;
@@ -112,6 +112,39 @@ export async function getXClient(): Promise<Scraper> {
   _scraper = scraper;
   _lastCheck = now;
   return scraper;
+}
+
+// ── Per-user clients (multi-tenant) ──────────────────────────────────────────
+// These are NOT cached — each call creates a fresh client for the given user.
+// Used by per-user cron dispatch (not yet wired) and credential validation.
+
+// Cookie-based scraper for a specific SaaS user.
+export async function getXClientForUser(userId: string): Promise<Scraper> {
+  const cred = await prisma.xCredential.findUnique({ where: { userId } });
+  if (!cred || cred.authMethod !== "cookies" || !cred.cookies) {
+    throw new Error(`User ${userId} does not have cookie-based X auth configured`);
+  }
+  const scraper = new Scraper();
+  const cookieStrings: string[] = JSON.parse(cred.cookies);
+  await primeScraper(scraper, cookieStrings);
+  return scraper;
+}
+
+// Official API client for a specific SaaS user (authMethod="api").
+export async function getApiClientForUser(userId: string): Promise<TwitterApi> {
+  const cred = await prisma.xCredential.findUnique({ where: { userId } });
+  if (!cred || cred.authMethod !== "api") {
+    throw new Error(`User ${userId} does not have API-based X auth configured`);
+  }
+  if (!cred.apiKey || !cred.apiSecret || !cred.accessToken || !cred.accessSecret) {
+    throw new Error(`Incomplete API credentials for user ${userId}`);
+  }
+  return new TwitterApi({
+    appKey: cred.apiKey,
+    appSecret: cred.apiSecret,
+    accessToken: cred.accessToken,
+    accessSecret: cred.accessSecret,
+  });
 }
 
 // ── @the-convocation/twitter-scraper (reads — up-to-date GraphQL endpoints) ─

@@ -26,6 +26,7 @@ export type AggregateQueueItem = {
 
 export type QueueItemMinAggregateOutputType = {
   id: string | null
+  userId: string | null
   type: string | null
   content: string | null
   status: $Enums.QueueStatus | null
@@ -35,6 +36,7 @@ export type QueueItemMinAggregateOutputType = {
 
 export type QueueItemMaxAggregateOutputType = {
   id: string | null
+  userId: string | null
   type: string | null
   content: string | null
   status: $Enums.QueueStatus | null
@@ -44,6 +46,7 @@ export type QueueItemMaxAggregateOutputType = {
 
 export type QueueItemCountAggregateOutputType = {
   id: number
+  userId: number
   type: number
   content: number
   metadata: number
@@ -56,6 +59,7 @@ export type QueueItemCountAggregateOutputType = {
 
 export type QueueItemMinAggregateInputType = {
   id?: true
+  userId?: true
   type?: true
   content?: true
   status?: true
@@ -65,6 +69,7 @@ export type QueueItemMinAggregateInputType = {
 
 export type QueueItemMaxAggregateInputType = {
   id?: true
+  userId?: true
   type?: true
   content?: true
   status?: true
@@ -74,6 +79,7 @@ export type QueueItemMaxAggregateInputType = {
 
 export type QueueItemCountAggregateInputType = {
   id?: true
+  userId?: true
   type?: true
   content?: true
   metadata?: true
@@ -157,6 +163,7 @@ export type QueueItemGroupByArgs<ExtArgs extends runtime.Types.Extensions.Intern
 
 export type QueueItemGroupByOutputType = {
   id: string
+  userId: string | null
   type: string
   content: string
   metadata: runtime.JsonValue | null
@@ -188,6 +195,7 @@ export type QueueItemWhereInput = {
   OR?: Prisma.QueueItemWhereInput[]
   NOT?: Prisma.QueueItemWhereInput | Prisma.QueueItemWhereInput[]
   id?: Prisma.StringFilter<"QueueItem"> | string
+  userId?: Prisma.StringNullableFilter<"QueueItem"> | string | null
   type?: Prisma.StringFilter<"QueueItem"> | string
   content?: Prisma.StringFilter<"QueueItem"> | string
   metadata?: Prisma.JsonNullableFilter<"QueueItem">
@@ -198,6 +206,7 @@ export type QueueItemWhereInput = {
 
 export type QueueItemOrderByWithRelationInput = {
   id?: Prisma.SortOrder
+  userId?: Prisma.SortOrderInput | Prisma.SortOrder
   type?: Prisma.SortOrder
   content?: Prisma.SortOrder
   metadata?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -211,6 +220,7 @@ export type QueueItemWhereUniqueInput = Prisma.AtLeast<{
   AND?: Prisma.QueueItemWhereInput | Prisma.QueueItemWhereInput[]
   OR?: Prisma.QueueItemWhereInput[]
   NOT?: Prisma.QueueItemWhereInput | Prisma.QueueItemWhereInput[]
+  userId?: Prisma.StringNullableFilter<"QueueItem"> | string | null
   type?: Prisma.StringFilter<"QueueItem"> | string
   content?: Prisma.StringFilter<"QueueItem"> | string
   metadata?: Prisma.JsonNullableFilter<"QueueItem">
@@ -221,6 +231,7 @@ export type QueueItemWhereUniqueInput = Prisma.AtLeast<{
 
 export type QueueItemOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
+  userId?: Prisma.SortOrderInput | Prisma.SortOrder
   type?: Prisma.SortOrder
   content?: Prisma.SortOrder
   metadata?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -237,6 +248,7 @@ export type QueueItemScalarWhereWithAggregatesInput = {
   OR?: Prisma.QueueItemScalarWhereWithAggregatesInput[]
   NOT?: Prisma.QueueItemScalarWhereWithAggregatesInput | Prisma.QueueItemScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"QueueItem"> | string
+  userId?: Prisma.StringNullableWithAggregatesFilter<"QueueItem"> | string | null
   type?: Prisma.StringWithAggregatesFilter<"QueueItem"> | string
   content?: Prisma.StringWithAggregatesFilter<"QueueItem"> | string
   metadata?: Prisma.JsonNullableWithAggregatesFilter<"QueueItem">
@@ -247,6 +259,7 @@ export type QueueItemScalarWhereWithAggregatesInput = {
 
 export type QueueItemCreateInput = {
   id?: string
+  userId?: string | null
   type: string
   content: string
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
@@ -257,6 +270,7 @@ export type QueueItemCreateInput = {
 
 export type QueueItemUncheckedCreateInput = {
   id?: string
+  userId?: string | null
   type: string
   content: string
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
@@ -267,6 +281,7 @@ export type QueueItemUncheckedCreateInput = {
 
 export type QueueItemUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?: Prisma.StringFieldUpdateOperationsInput | string
   content?: Prisma.StringFieldUpdateOperationsInput | string
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
@@ -277,6 +292,7 @@ export type QueueItemUpdateInput = {
 
 export type QueueItemUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?: Prisma.StringFieldUpdateOperationsInput | string
   content?: Prisma.StringFieldUpdateOperationsInput | string
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
@@ -287,6 +303,7 @@ export type QueueItemUncheckedUpdateInput = {
 
 export type QueueItemCreateManyInput = {
   id?: string
+  userId?: string | null
   type: string
   content: string
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
@@ -297,6 +314,7 @@ export type QueueItemCreateManyInput = {
 
 export type QueueItemUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?: Prisma.StringFieldUpdateOperationsInput | string
   content?: Prisma.StringFieldUpdateOperationsInput | string
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
@@ -307,6 +325,7 @@ export type QueueItemUpdateManyMutationInput = {
 
 export type QueueItemUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?: Prisma.StringFieldUpdateOperationsInput | string
   content?: Prisma.StringFieldUpdateOperationsInput | string
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
@@ -317,6 +336,7 @@ export type QueueItemUncheckedUpdateManyInput = {
 
 export type QueueItemCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  userId?: Prisma.SortOrder
   type?: Prisma.SortOrder
   content?: Prisma.SortOrder
   metadata?: Prisma.SortOrder
@@ -327,6 +347,7 @@ export type QueueItemCountOrderByAggregateInput = {
 
 export type QueueItemMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  userId?: Prisma.SortOrder
   type?: Prisma.SortOrder
   content?: Prisma.SortOrder
   status?: Prisma.SortOrder
@@ -336,6 +357,7 @@ export type QueueItemMaxOrderByAggregateInput = {
 
 export type QueueItemMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  userId?: Prisma.SortOrder
   type?: Prisma.SortOrder
   content?: Prisma.SortOrder
   status?: Prisma.SortOrder
@@ -343,22 +365,15 @@ export type QueueItemMinOrderByAggregateInput = {
   updatedAt?: Prisma.SortOrder
 }
 
-export type StringFieldUpdateOperationsInput = {
-  set?: string
-}
-
 export type EnumQueueStatusFieldUpdateOperationsInput = {
   set?: $Enums.QueueStatus
-}
-
-export type DateTimeFieldUpdateOperationsInput = {
-  set?: Date | string
 }
 
 
 
 export type QueueItemSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  userId?: boolean
   type?: boolean
   content?: boolean
   metadata?: boolean
@@ -369,6 +384,7 @@ export type QueueItemSelect<ExtArgs extends runtime.Types.Extensions.InternalArg
 
 export type QueueItemSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  userId?: boolean
   type?: boolean
   content?: boolean
   metadata?: boolean
@@ -379,6 +395,7 @@ export type QueueItemSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ext
 
 export type QueueItemSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  userId?: boolean
   type?: boolean
   content?: boolean
   metadata?: boolean
@@ -389,6 +406,7 @@ export type QueueItemSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ext
 
 export type QueueItemSelectScalar = {
   id?: boolean
+  userId?: boolean
   type?: boolean
   content?: boolean
   metadata?: boolean
@@ -397,13 +415,14 @@ export type QueueItemSelectScalar = {
   updatedAt?: boolean
 }
 
-export type QueueItemOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "type" | "content" | "metadata" | "status" | "createdAt" | "updatedAt", ExtArgs["result"]["queueItem"]>
+export type QueueItemOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "type" | "content" | "metadata" | "status" | "createdAt" | "updatedAt", ExtArgs["result"]["queueItem"]>
 
 export type $QueueItemPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "QueueItem"
   objects: {}
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
+    userId: string | null
     type: string
     content: string
     metadata: runtime.JsonValue | null
@@ -834,6 +853,7 @@ export interface Prisma__QueueItemClient<T, Null = never, ExtArgs extends runtim
  */
 export interface QueueItemFieldRefs {
   readonly id: Prisma.FieldRef<"QueueItem", 'String'>
+  readonly userId: Prisma.FieldRef<"QueueItem", 'String'>
   readonly type: Prisma.FieldRef<"QueueItem", 'String'>
   readonly content: Prisma.FieldRef<"QueueItem", 'String'>
   readonly metadata: Prisma.FieldRef<"QueueItem", 'Json'>

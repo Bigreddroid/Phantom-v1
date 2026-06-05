@@ -74,8 +74,9 @@ export async function GET(req: Request) {
       await humanPause();
 
       try {
-        // Pre-generate reply so user sees exactly what will be sent
-        const reply = await generateReply(mention.text, mention.author_username ?? "user");
+        // Pass authorId only when it's a real non-empty snowflake — avoids polluting thread memory with empty IDs
+        const safeAuthorId = mention.author_id?.trim() || undefined;
+        const reply = await generateReply(mention.text, mention.author_username ?? "user", safeAuthorId);
 
         const item = await prisma.queueItem.create({
           data: {

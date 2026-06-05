@@ -79,15 +79,25 @@ export async function notifyDailySummary(data: {
   engagements: number;
   mentions: number;
   dmsSent: number;
+  brainFocus?: string;
+  latestInsight?: string;
 }) {
+  const brainLine = data.brainFocus
+    ? `\n*Current focus:* _${data.brainFocus.slice(0, 120)}_`
+    : "";
+  const insightLine = data.latestInsight
+    ? `\n*Latest insight:* _${data.latestInsight.slice(0, 120)}_`
+    : "";
   await send(
     `*📊 Phantom Daily Summary*\n\n` +
     `*Followers:* ${data.followers} _(+${data.followerGain} today)_\n` +
     `*Tweets posted:* ${data.tweetsPosted}\n` +
     `*Engagements:* ${data.engagements}\n` +
     `*Mentions:* ${data.mentions}\n` +
-    `*DMs sent:* ${data.dmsSent}\n\n` +
-    `_Phantom is running._`
+    `*DMs sent:* ${data.dmsSent}` +
+    brainLine +
+    insightLine +
+    `\n\n_Phantom is running._`
   );
 }
 

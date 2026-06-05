@@ -58,7 +58,7 @@ function LoginForm() {
                 Demo mode — use password <code className="font-mono font-bold">demo</code>
               </p>
             )}
-            <p className="text-xs text-white/30 mb-4">Set via <code className="font-mono text-white/40">DASHBOARD_PASSWORD</code> env var</p>
+            <p className="text-xs text-white/30 mb-4">Or <a href="/signup" className="text-red-400 hover:text-red-300 transition-colors">create an account</a> to get your own Phantom instance.</p>
             <input
               type="password"
               value={password}

@@ -1,3 +1,4 @@
+export const maxDuration = 60;
 import { NextResponse } from "next/server";
 import { generateLinkedInPost } from "@/lib/claude/generate";
 import { postToLinkedIn } from "@/lib/linkedin/post";

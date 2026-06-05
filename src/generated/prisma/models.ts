@@ -8,6 +8,10 @@
  *
  * 🟢 You can import this file directly.
  */
+export type * from './models/User'
+export type * from './models/XCredential'
+export type * from './models/TelegramSetup'
+export type * from './models/UserSettings'
 export type * from './models/QueueItem'
 export type * from './models/Activity'
 export type * from './models/Stats'
@@ -15,4 +19,7 @@ export type * from './models/BlockedAccount'
 export type * from './models/LinkedInAuth'
 export type * from './models/XSession'
 export type * from './models/Waitlist'
+export type * from './models/BrainMemory'
+export type * from './models/ConversationThread'
+export type * from './models/PerformanceInsight'
 export type * from './commonInputTypes'
