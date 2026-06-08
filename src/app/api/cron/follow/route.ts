@@ -1,13 +1,11 @@
 import { NextResponse } from "next/server";
 import { searchTweets, followUser, likeTweet, getMyProfile } from "@/lib/x/engage";
-import { generateReply } from "@/lib/claude/generate";
-import { replyToTweet } from "@/lib/x/post";
 import { prisma } from "@/lib/db";
 import { sendMessage } from "@/lib/telegram/notify";
 import { randomDelay } from "@/lib/scheduler/humanize";
 import { loadBlocklist } from "@/lib/blocklist";
 import { NICHE_KEYWORDS } from "@/lib/config";
-import { getRepliedTweetIds, buildReplyDetail } from "@/lib/reply-dedup";
+import { getUserCtx, getStatsPaused } from "@/lib/user-context";
 
 export const maxDuration = 60;
 
@@ -17,28 +15,33 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const userId = new URL(req.url).searchParams.get("userId") ?? null;
+  const userCtx = await getUserCtx(userId).catch(() => null);
+  if (userId && !userCtx) return NextResponse.json({ error: "User context unavailable" }, { status: 404 });
+
+  const tg = userCtx?.telegram;
+  const wOpts = userCtx ? { wClient: userCtx.scraperW } : undefined;
+  const rOpts = userCtx ? { rClient: userCtx.scraperR, username: userCtx.username } : undefined;
+
   try {
-    const pauseState = await prisma.stats.findUnique({ where: { id: "singleton" }, select: { paused: true } });
-    if (pauseState?.paused) return NextResponse.json({ skipped: true, reason: "paused" });
+    const paused = await getStatsPaused(userId);
+    if (paused) return NextResponse.json({ skipped: true, reason: "paused" });
 
     const isBlocked = await loadBlocklist();
-    const me = await getMyProfile();
+    const me = await getMyProfile(rOpts);
     const keyword = NICHE_KEYWORDS[Math.floor(Math.random() * NICHE_KEYWORDS.length)];
-    const repliedTweetIds = await getRepliedTweetIds();
 
-    // Load accounts followed in the last 24h to avoid re-following
     const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const userFilter = userId ? { userId } : { userId: null };
     const recentFollows = await prisma.activity.findMany({
-      where: { action: "Followed", createdAt: { gte: since24h } },
+      where: { ...userFilter, action: "Followed", createdAt: { gte: since24h } },
       select: { detail: true },
     });
     const recentlyFollowed = new Set(recentFollows.map((a) => a.detail ?? ""));
 
-    // Only verified — reduces automation signal vs scraping normal accounts
     const verifiedTweets = await searchTweets(`${keyword} -is:retweet lang:en is:verified`, 15);
     const tweets = verifiedTweets;
 
-    // Hard cap: max 3 follows per cron run to stay well under X's limits
     const MAX_FOLLOWS = 3;
     let followed = 0, liked = 0, replied = 0;
     const seen = new Set<string>();
@@ -49,41 +52,23 @@ export async function GET(req: Request) {
       if (recentlyFollowed.has(tweet.author_username ?? tweet.author_id)) continue;
       seen.add(tweet.author_id);
 
+      const username = tweet.author_username ?? tweet.author_id;
       try {
-        await followUser(tweet.author_id, me.id);
+        await followUser(username, me.id, wOpts);
         followed++;
-        // Record follow with username for 24h dedup
         await prisma.activity.create({
-          data: { action: "Followed", detail: tweet.author_username ?? tweet.author_id, icon: "👤" },
+          data: { userId: userId ?? null, action: "Followed", detail: username, icon: "👤" },
         });
       } catch { /* already following or rate limited */ }
-      // 8-18s human-paced delay between follows
-      await randomDelay(8000, 18000);
+      await randomDelay(600, 1200);
 
-      try { await likeTweet(tweet.id, me.id); liked++; } catch { /* skip */ }
-      await randomDelay(3000, 7000);
-
-      // Reply to ~30% of followed accounts — skip if already replied to this tweet
-      if (Math.random() < 0.3 && !repliedTweetIds.has(tweet.id)) {
-        try {
-          const reply = await generateReply(tweet.text, tweet.author_username || tweet.author_id);
-          await replyToTweet(tweet.id, reply);
-          replied++;
-          await prisma.activity.create({
-            data: { action: "Replied to tweet", detail: buildReplyDetail(tweet.id, tweet.author_id ?? "", reply), icon: "💬" },
-          });
-          await sendMessage(
-            `💬 *Commented on new follow*\n\n` +
-            `_Their tweet:_ "${tweet.text.slice(0, 100)}"\n\n` +
-            `*Reply:* ${reply.slice(0, 200)}`
-          );
-          await randomDelay(5000, 12000);
-        } catch { /* skip */ }
-      }
+      try { await likeTweet(tweet.id, me.id, wOpts); liked++; } catch { /* skip */ }
+      await randomDelay(400, 800);
     }
 
     await prisma.activity.create({
       data: {
+        userId: userId ?? null,
         action: `Follow run`,
         detail: `👤 ${followed} followed · ❤️ ${liked} liked · 💬 ${replied} replied · "${keyword}"`,
         icon: "🤝",
@@ -95,7 +80,8 @@ export async function GET(req: Request) {
       `👤 Followed: *${followed}*\n` +
       `❤️ Liked: *${liked}*\n` +
       `💬 Replied: *${replied}*\n` +
-      `_Topic: "${keyword}"_`
+      `_Topic: "${keyword}"_`,
+      tg
     );
 
     return NextResponse.json({ ok: true, followed, liked, replied, keyword });

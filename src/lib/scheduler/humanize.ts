@@ -26,7 +26,7 @@ export function isPeakHour(): boolean {
   return (hour >= 8 && hour <= 10) || (hour >= 12 && hour <= 14) || (hour >= 18 && hour <= 21);
 }
 
-// Human-like wait before posting (3–12 seconds)
+// Human-like wait before posting (8–28 seconds)
 export function humanPause(): Promise<void> {
-  return randomDelay(3000, 12000);
+  return randomDelay(8000, 28000);
 }

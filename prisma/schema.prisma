@@ -183,3 +183,73 @@ enum QueueStatus {
   REJECTED
   POSTED
 }
+
+// ── V2: Lead Generation ───────────────────────────────────────────────────────
+
+enum LeadStage {
+  DISCOVERED
+  WARMING
+  DM_SENT
+  RESPONDED
+  CONVERTED
+  REMOVED
+}
+
+model ICPConfig {
+  id                String   @id @default(cuid())
+  userId            String?  @unique
+  keywords          String[]
+  competitorHandles String[]
+  hashtags          String[]
+  minFollowers      Int      @default(500)
+  maxFollowers      Int      @default(100000)
+  warmthThreshold   Int      @default(60)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model LeadProfile {
+  id            String       @id @default(cuid())
+  userId        String?
+  twitterUserId String
+  username      String
+  bio           String?
+  recentTweets  Json?
+  aiSummary     String?
+  warmthScore   Int          @default(0)
+  dmHistory     Json?
+  notes         String?
+  stage         LeadStage    @default(DISCOVERED)
+  sourceKeyword String?
+  discoveredAt  DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  activities    LeadActivity[]
+
+  @@unique([userId, twitterUserId])
+  @@index([userId, stage])
+}
+
+model LeadActivity {
+  id        String      @id @default(cuid())
+  leadId    String
+  lead      LeadProfile @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  type      String
+  detail    String?
+  createdAt DateTime    @default(now())
+
+  @@index([leadId])
+}
+
+model OutreachTemplate {
+  id        String   @id @default(cuid())
+  userId    String?
+  name      String
+  body      String
+  category  String?
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}

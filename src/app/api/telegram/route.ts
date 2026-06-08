@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const maxDuration = 60;
 import { prisma } from "@/lib/db";
-import { postTweet, postTweetWithImage, postThread, quoteTweet, replyToTweet } from "@/lib/x/post";
-import { generateTweet, generateThread, generateArticleThread, generateDM, generateQuoteTweet, generateLinkedInPost, generateReply, generateLongTweet } from "@/lib/claude/generate";
+import { postTweet, postTweetWithImage, postThread, quoteTweet, replyToTweet, isDailyLimitError } from "@/lib/x/post";
+import { generateTweet, generateThread, generateDM, generateQuoteTweet, generateLinkedInPost, generateReply, generateLongTweet } from "@/lib/claude/generate";
 import { notifyPosted, requestApproval, sendMessage } from "@/lib/telegram/notify";
 import { ensureWebhook, ensureCommands } from "@/lib/telegram/setup";
 import { humanPause } from "@/lib/scheduler/humanize";
@@ -13,10 +13,10 @@ import { sendDM, getDMConversations } from "@/lib/x/dm";
 import { searchTweets, getMyProfile, retweet, getMyTweets, getMentions } from "@/lib/x/engage";
 import { getLinkedInAuth } from "@/lib/linkedin/client";
 import { postToLinkedIn } from "@/lib/linkedin/post";
-import { CONTENT_TOPICS, THREAD_TOPICS, ARTICLE_TOPICS } from "@/lib/config";
+import { CONTENT_TOPICS, THREAD_TOPICS } from "@/lib/config";
 
-const BOT = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
-const CHAT = process.env.TELEGRAM_CHAT_ID!;
+const DEFAULT_BOT = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
+const DEFAULT_CHAT = process.env.TELEGRAM_CHAT_ID!;
 const APP = process.env.NEXTAUTH_URL!;
 
 // Internal job fetches must carry CRON_SECRET so middleware allows them through
@@ -28,16 +28,16 @@ function cronFetch(path: string, options?: RequestInit) {
   return fetch(`${APP}${path}`, { ...options, headers });
 }
 
-async function send(chatId: string, text: string, extra?: object) {
-  await fetch(`${BOT}/sendMessage`, {
+async function _send(botUrl: string, chatId: string, text: string, extra?: object) {
+  await fetch(`${botUrl}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ chat_id: chatId, text, parse_mode: "Markdown", ...extra }),
   });
 }
 
-async function answerCallback(id: string) {
-  await fetch(`${BOT}/answerCallbackQuery`, {
+async function _answerCallback(botUrl: string, id: string) {
+  await fetch(`${botUrl}/answerCallbackQuery`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ callback_query_id: id }),
@@ -71,6 +71,25 @@ async function postQueueItem(item: { id: string; type: string; content: string; 
 
 export async function POST(req: NextRequest) {
   try {
+  // ── Per-user bot resolution ───────────────────────────────────────────────
+  // SaaS users register their own bot webhook with ?userId=X appended to the URL.
+  // Varun's default bot uses env vars (userId=null).
+  const reqUserId = new URL(req.url).searchParams.get("userId") ?? null;
+  let activeBotUrl = DEFAULT_BOT;
+  let activeChatId = DEFAULT_CHAT;
+
+  if (reqUserId) {
+    const tgSetup = await prisma.telegramSetup.findUnique({ where: { userId: reqUserId } }).catch(() => null);
+    if (tgSetup) {
+      activeBotUrl = `https://api.telegram.org/bot${tgSetup.botToken}`;
+      activeChatId = tgSetup.chatId;
+    }
+  }
+
+  // Request-scoped helpers — shadow nothing, just capture bot/chat for this request
+  const send = (chatId: string, text: string, extra?: object) => _send(activeBotUrl, chatId, text, extra);
+  const answerCallback = (id: string) => _answerCallback(activeBotUrl, id);
+
   // Verify Telegram webhook secret — only reject if BOTH a secret is configured
   // AND Telegram sent a non-empty header that doesn't match (prevents lockout when
   // webhook was registered without a secret but env var still has an old value).
@@ -88,7 +107,7 @@ export async function POST(req: NextRequest) {
   if (body.callback_query) {
     const { data, from, id: cbId } = body.callback_query;
     const chatId = String(from.id);
-    if (CHAT && chatId !== CHAT) return NextResponse.json({ ok: true });
+    if (activeChatId && chatId !== activeChatId) return NextResponse.json({ ok: true });
 
     await answerCallback(cbId);
 
@@ -115,7 +134,16 @@ export async function POST(req: NextRequest) {
         await postQueueItem(item);
         await send(chatId, `✅ *Posted!*\n\n${item.content.slice(0, 280)}`);
       } catch (e) {
-        await send(chatId, `❌ Post failed: ${String(e).slice(0, 120)}`);
+        if (isDailyLimitError(e)) {
+          await prisma.queueItem.update({ where: { id: param }, data: { status: "PENDING" } });
+          await send(chatId,
+            `⛔ *Daily tweet limit hit (X error 344)*\n\n` +
+            `Item kept in queue — tap Approve again after midnight UTC.\n\n` +
+            `_Use /pause to stop automation for today, then /resume tomorrow._`
+          );
+        } else {
+          await send(chatId, `❌ Post failed: ${String(e).slice(0, 120)}`);
+        }
       }
     }
 
@@ -151,11 +179,15 @@ export async function POST(req: NextRequest) {
       const meta = (item.metadata as Record<string, unknown>) ?? {};
       await send(chatId, `✉️ Sending DM to @${meta.targetUsername}...`);
       try {
-        const { getUserByUsername } = await import("@/lib/x/engage");
         const { sendDM: xSendDM } = await import("@/lib/x/dm");
-        const user = await getUserByUsername(String(meta.targetUsername));
-        if (!user?.id) throw new Error(`@${meta.targetUsername} not found`);
-        await xSendDM(user.id, item.content);
+        let targetId = String(meta.targetId ?? "");
+        if (!targetId) {
+          const { getUserByUsername } = await import("@/lib/x/engage");
+          const user = await getUserByUsername(String(meta.targetUsername));
+          if (!user?.id) throw new Error(`@${meta.targetUsername} not found`);
+          targetId = user.id;
+        }
+        await xSendDM(targetId, item.content);
         await prisma.queueItem.update({ where: { id: param }, data: { status: "POSTED" } });
         await prisma.activity.create({
           data: { action: `Auto DM sent to @${meta.targetUsername}`, detail: item.content.slice(0, 80), icon: "✉️" },
@@ -187,7 +219,16 @@ export async function POST(req: NextRequest) {
         });
         await send(chatId, `✅ *Also posted to LinkedIn!*\n\n${liContent.slice(0, 300)}`);
       } catch (e) {
-        await send(chatId, `❌ Cross-post error: ${String(e).slice(0, 150)}`);
+        if (isDailyLimitError(e)) {
+          await prisma.queueItem.update({ where: { id: param }, data: { status: "PENDING" } });
+          await send(chatId,
+            `⛔ *Daily tweet limit hit (X error 344)*\n\n` +
+            `Item kept in queue — tap Approve again after midnight UTC.\n\n` +
+            `_Use /pause to stop automation for today, then /resume tomorrow._`
+          );
+        } else {
+          await send(chatId, `❌ Cross-post error: ${String(e).slice(0, 150)}`);
+        }
       }
     }
 
@@ -584,6 +625,58 @@ export async function POST(req: NextRequest) {
       await send(chatId, "⏭️ Skipped.");
     }
 
+    // ── Lead pipeline callbacks ──────────────────────────────────────────────
+    if (action === "leads_stage") {
+      const leads = await prisma.leadProfile.findMany({
+        where: { userId: reqUserId, stage: param as never },
+        orderBy: { warmthScore: "desc" },
+        take: 8,
+        select: { username: true, warmthScore: true, aiSummary: true },
+      });
+      if (!leads.length) {
+        await send(chatId, `No leads in *${param}* stage.`);
+      } else {
+        const lines = leads.map(l =>
+          `@${l.username} · score ${l.warmthScore}${l.aiSummary ? `\n_${l.aiSummary.slice(0, 70)}_` : ""}`
+        ).join("\n\n");
+        await send(chatId, `*${param} (${leads.length}):*\n\n${lines}`);
+      }
+    }
+
+    if (action === "lead_dm") {
+      const lead = await prisma.leadProfile.findUnique({ where: { id: param } });
+      if (!lead) { await send(chatId, "Lead not found."); return NextResponse.json({ ok: true }); }
+      await send(chatId, `📩 Generating DM for @${lead.username}...`);
+      try {
+        const { appendDmHistory, logLeadActivity } = await import("@/lib/leads/profile");
+        const { generateDM: genDM } = await import("@/lib/claude/generate");
+        const { sendDM: xSendDM } = await import("@/lib/x/dm");
+        const { getUserCtx: getCtx } = await import("@/lib/user-context");
+        const ctx = await getCtx(reqUserId);
+        const context = lead.aiSummary ?? lead.bio ?? `@${lead.username}`;
+        const dmText = await genDM(lead.username, context);
+        await xSendDM(lead.twitterUserId, dmText, { wClient: ctx.scraperW });
+        await appendDmHistory(lead.id, { sent: dmText, at: new Date().toISOString() });
+        await logLeadActivity(lead.id, "dm_sent", dmText.slice(0, 100));
+        await prisma.leadProfile.update({ where: { id: lead.id }, data: { stage: "DM_SENT" } });
+        await send(chatId, `✅ *DM sent to @${lead.username}!*\n\n_"${dmText.slice(0, 200)}"_`);
+      } catch (e) {
+        await send(chatId, `❌ DM failed: ${String(e).slice(0, 120)}`);
+      }
+    }
+
+    if (action === "lead_convert") {
+      await prisma.leadProfile.update({ where: { id: param }, data: { stage: "CONVERTED" } });
+      const lead = await prisma.leadProfile.findUnique({ where: { id: param }, select: { username: true } });
+      await send(chatId, `✅ @${lead?.username ?? param} marked as *CONVERTED*!`);
+    }
+
+    if (action === "lead_remove") {
+      await prisma.leadProfile.update({ where: { id: param }, data: { stage: "REMOVED" } });
+      const lead = await prisma.leadProfile.findUnique({ where: { id: param }, select: { username: true } });
+      await send(chatId, `🗑️ @${lead?.username ?? param} removed from pipeline.`);
+    }
+
     if (action === "dm_send") {
       await send(chatId,
         `📨 *Send a DM*\n\nReply with this format:\n\n` +
@@ -666,7 +759,7 @@ export async function POST(req: NextRequest) {
   if (!msg?.text) return NextResponse.json({ ok: true });
 
   const chatId = String(msg.chat.id);
-  if (CHAT && chatId !== CHAT) return NextResponse.json({ ok: true });
+  if (activeChatId && chatId !== activeChatId) return NextResponse.json({ ok: true });
 
   const raw = msg.text.trim();
   const cmd = raw.toLowerCase().split(" ")[0];
@@ -680,7 +773,6 @@ export async function POST(req: NextRequest) {
       `*𝕏 Content*\n` +
       `/tweet — preview tweet before posting\n` +
       `/thread — preview thread before posting\n` +
-      `/article [topic] — generate educational thread\n` +
       `/longpost [topic] — Premium+ long-form post (up to 2000 chars)\n` +
       `/post <text> — post your own tweet instantly\n\n` +
       `*LinkedIn*\n` +
@@ -697,6 +789,11 @@ export async function POST(req: NextRequest) {
       `/inbox — see unread mentions, reply or skip each one\n` +
       `/mentions — auto-reply to all mentions instantly\n` +
       `/dm @username [context] — send a feedback-ask DM\n\n` +
+      `*Lead Generation*\n` +
+      `/leads — pipeline overview (discovered/warming/DM'd/responded/converted)\n` +
+      `/leads warming — drill into a stage\n` +
+      `/lead @username — full prospect profile + action buttons\n` +
+      `/icp — view ICP targeting config\n\n` +
       `*Dashboard*\n` +
       `/status — live stats (both platforms)\n` +
       `/today — what Phantom did since midnight\n` +
@@ -781,7 +878,9 @@ export async function POST(req: NextRequest) {
 
   // ── /activity ─────────────────────────────────────────────────────────────
   else if (cmd === "/activity") {
+    const actFilter = reqUserId ? { userId: reqUserId } : { userId: null };
     const items = await prisma.activity.findMany({
+      where: actFilter,
       orderBy: { createdAt: "desc" },
       take: 10,
     });
@@ -881,38 +980,6 @@ export async function POST(req: NextRequest) {
         },
       }
     );
-  }
-
-  // ── /article ──────────────────────────────────────────────────────────────
-  else if (cmd === "/article") {
-    await send(chatId, "📝 Generating article thread...");
-    try {
-      const [postedItems, pendingItems] = await Promise.all([
-        prisma.queueItem.findMany({ where: { status: "POSTED", type: { in: ["Tweet", "Thread", "Article"] } }, orderBy: { updatedAt: "desc" }, take: 30, select: { content: true } }),
-        prisma.queueItem.findMany({ where: { status: "PENDING" }, select: { content: true }, take: 10 }),
-      ]);
-      const recentTweets = [...postedItems.map(q => q.content), ...pendingItems.map(q => q.content)];
-      const topic = args || ARTICLE_TOPICS[Math.floor(Math.random() * ARTICLE_TOPICS.length)];
-      const tweets = await generateArticleThread(topic, recentTweets);
-      const content = tweets.join("\n---\n");
-      const item = await prisma.queueItem.create({
-        data: { type: "Thread", content, metadata: { imageMode: "none", article: true, topic } },
-      });
-      await send(chatId,
-        `*📝 Article Thread — ${tweets.length} tweets*\n\n_Topic: ${topic}_\n\n${tweets.map((t, i) => `*${i + 1}.* ${t}`).join("\n\n")}`,
-        {
-          reply_markup: {
-            inline_keyboard: [[
-              { text: "✅ Post thread", callback_data: `approve:${item.id}` },
-              { text: "🖼️ Post with images", callback_data: `thread_img_first:${item.id}` },
-              { text: "❌ Skip", callback_data: `reject:${item.id}` },
-            ]],
-          },
-        }
-      );
-    } catch (e) {
-      await send(chatId, `❌ Article generation failed: ${String(e).slice(0, 120)}`);
-    }
   }
 
   // ── /longpost [topic] ────────────────────────────────────────────────────
@@ -1091,12 +1158,12 @@ export async function POST(req: NextRequest) {
 
   // ── /pause ────────────────────────────────────────────────────────────────
   else if (cmd === "/pause") {
-    await prisma.stats.upsert({
-      where: { id: "singleton" },
-      update: { paused: true },
-      create: { paused: true },
-    });
-    await prisma.activity.create({ data: { action: "Automation paused", icon: "⏸️" } });
+    if (reqUserId) {
+      await prisma.stats.upsert({ where: { userId: reqUserId }, update: { paused: true }, create: { id: reqUserId, userId: reqUserId, paused: true } });
+    } else {
+      await prisma.stats.upsert({ where: { id: "singleton" }, update: { paused: true }, create: { paused: true } });
+    }
+    await prisma.activity.create({ data: { userId: reqUserId, action: "Automation paused", icon: "⏸️" } });
     await send(chatId,
       "⏸️ *Paused.*\n\nAll cron jobs will skip until you /resume.\nQueue and existing content untouched.\n\n_Use /kill to also wipe the pending queue._"
     );
@@ -1107,21 +1174,22 @@ export async function POST(req: NextRequest) {
     await send(chatId, "🛑 Shutting everything down...");
     try {
       // 1. Pause all automation
-      await prisma.stats.upsert({
-        where: { id: "singleton" },
-        update: { paused: true },
-        create: { paused: true },
-      });
+      if (reqUserId) {
+        await prisma.stats.upsert({ where: { userId: reqUserId }, update: { paused: true }, create: { id: reqUserId, userId: reqUserId, paused: true } });
+      } else {
+        await prisma.stats.upsert({ where: { id: "singleton" }, update: { paused: true }, create: { paused: true } });
+      }
 
       // 2. Reject all pending queue items so nothing fires on resume
+      const wipeFilter = reqUserId ? { status: "PENDING" as const, userId: reqUserId } : { status: "PENDING" as const, userId: null };
       const wiped = await prisma.queueItem.updateMany({
-        where: { status: "PENDING" },
+        where: wipeFilter,
         data: { status: "REJECTED" },
       });
 
       // 3. Log it
       await prisma.activity.create({
-        data: { action: "Hard stop — all automation killed", detail: `${wiped.count} pending items cleared`, icon: "🛑" },
+        data: { userId: reqUserId, action: "Hard stop — all automation killed", detail: `${wiped.count} pending items cleared`, icon: "🛑" },
       });
 
       await send(chatId,
@@ -1139,12 +1207,12 @@ export async function POST(req: NextRequest) {
 
   // ── /resume ───────────────────────────────────────────────────────────────
   else if (cmd === "/resume") {
-    await prisma.stats.upsert({
-      where: { id: "singleton" },
-      update: { paused: false },
-      create: { paused: false },
-    });
-    await prisma.activity.create({ data: { action: "Automation resumed", icon: "▶️" } });
+    if (reqUserId) {
+      await prisma.stats.upsert({ where: { userId: reqUserId }, update: { paused: false }, create: { id: reqUserId, userId: reqUserId, paused: false } });
+    } else {
+      await prisma.stats.upsert({ where: { id: "singleton" }, update: { paused: false }, create: { paused: false } });
+    }
+    await prisma.activity.create({ data: { userId: reqUserId, action: "Automation resumed", icon: "▶️" } });
     await send(chatId, "▶️ *Resumed.* Phantom is back on autopilot.");
   }
 
@@ -1258,17 +1326,27 @@ export async function POST(req: NextRequest) {
         "`/dm @janefoo she builds SaaS tools and tweets about growth`"
       );
     } else {
-      await send(chatId, `✉️ Sending DM to @${username}...`);
+      await send(chatId, `✍️ Generating DM for @${username}...`);
       try {
         const { getUserByUsername } = await import("@/lib/x/engage");
         const user = await getUserByUsername(username);
         if (!user?.id) throw new Error(`@${username} not found`);
         const dmText = await generateDM(username, context || `a creator in the ${NICHE_KEYWORDS[0]} space`);
-        await sendDM(user.id, dmText);
-        await prisma.activity.create({
-          data: { action: `DM sent to @${username}`, detail: dmText.slice(0, 80), icon: "✉️" },
+        const item = await prisma.queueItem.create({
+          data: {
+            type: "DM",
+            content: dmText,
+            metadata: { targetUsername: username, targetId: user.id },
+          },
         });
-        await send(chatId, `✅ *DM sent to @${username}*\n\n_"${dmText}"_`);
+        await send(chatId,
+          `*📨 Send this DM?*\n\nTo: @${username}\n\n\`\`\`\n${dmText}\n\`\`\``,
+          { reply_markup: { inline_keyboard: [[
+            { text: "✅ Send DM",  callback_data: `approve_dm:${item.id}` },
+            { text: "✏️ Edit",    callback_data: `edit:${item.id}` },
+            { text: "❌ Skip",    callback_data: `reject:${item.id}` },
+          ]] } }
+        );
       } catch (e) {
         await send(chatId, `❌ DM failed: ${String(e).slice(0, 150)}`);
       }
@@ -1417,8 +1495,9 @@ export async function POST(req: NextRequest) {
 
   // ── /queue ────────────────────────────────────────────────────────────────
   else if (cmd === "/queue") {
+    const queueFilter = reqUserId ? { status: "PENDING" as const, userId: reqUserId } : { status: "PENDING" as const, userId: null };
     const items = await prisma.queueItem.findMany({
-      where: { status: "PENDING" },
+      where: queueFilter,
       orderBy: { createdAt: "asc" },
       take: 8,
     });
@@ -1602,6 +1681,124 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // ── /leads ───────────────────────────────────────────────────────────────
+  else if (cmd === "/leads") {
+    try {
+      const { prisma: db } = await import("@/lib/db");
+      const stage = args.trim().toUpperCase() || null;
+      const validStages = ["DISCOVERED", "WARMING", "DM_SENT", "RESPONDED", "CONVERTED"];
+
+      if (stage && validStages.includes(stage)) {
+        const leads = await db.leadProfile.findMany({
+          where: { userId: reqUserId, stage: stage as never },
+          orderBy: { warmthScore: "desc" },
+          take: 10,
+          select: { username: true, warmthScore: true, aiSummary: true, discoveredAt: true },
+        });
+        if (!leads.length) {
+          await send(chatId, `No leads in *${stage}* stage.`);
+        } else {
+          const lines = leads.map(l =>
+            `@${l.username} · score ${l.warmthScore}${l.aiSummary ? `\n_${l.aiSummary.slice(0, 80)}_` : ""}`
+          ).join("\n\n");
+          await send(chatId, `*${stage} leads (${leads.length}):*\n\n${lines}`);
+        }
+      } else {
+        const groups = await db.leadProfile.groupBy({
+          by: ["stage"],
+          where: { userId: reqUserId },
+          _count: { id: true },
+        });
+        const counts: Record<string, number> = {};
+        for (const g of groups) counts[g.stage] = g._count.id;
+        await send(chatId,
+          `*🎯 Lead Pipeline*\n\n` +
+          `🔍 Discovered: ${counts.DISCOVERED ?? 0}\n` +
+          `🔥 Warming: ${counts.WARMING ?? 0}\n` +
+          `📩 DM sent: ${counts.DM_SENT ?? 0}\n` +
+          `💬 Responded: ${counts.RESPONDED ?? 0}\n` +
+          `✅ Converted: ${counts.CONVERTED ?? 0}\n\n` +
+          `_Use /leads warming, /leads dm\_sent, etc. to drill down_\n` +
+          `_Use /lead @username for full profile_`,
+          {
+            reply_markup: {
+              inline_keyboard: [[
+                { text: "🔥 Warming", callback_data: "leads_stage:WARMING" },
+                { text: "📩 DM'd", callback_data: "leads_stage:DM_SENT" },
+                { text: "💬 Responded", callback_data: "leads_stage:RESPONDED" },
+              ]],
+            },
+          }
+        );
+      }
+    } catch (e) {
+      await send(chatId, `❌ Error: ${String(e).slice(0, 100)}`);
+    }
+  }
+
+  // ── /lead @username ──────────────────────────────────────────────────────
+  else if (cmd === "/lead") {
+    const username = args.replace(/^@/, "").trim();
+    if (!username) {
+      await send(chatId, "Usage: `/lead @username`");
+    } else {
+      try {
+        const { prisma: db } = await import("@/lib/db");
+        const lead = await db.leadProfile.findFirst({
+          where: { userId: reqUserId, username },
+          include: { activities: { orderBy: { createdAt: "desc" }, take: 8 } },
+        });
+        if (!lead) {
+          await send(chatId, `No lead found for @${username}`);
+        } else {
+          const dmHistory = (lead.dmHistory as Array<{ sent: string; at: string; replied?: boolean }> | null) ?? [];
+          const actLines = lead.activities.slice(0, 5).map(a =>
+            `  • ${a.type.replace(/_/g, " ")}${a.detail ? `: _${a.detail.slice(0, 50)}_` : ""}`
+          ).join("\n");
+          await send(chatId,
+            `*@${lead.username}* · ${lead.stage} · score ${lead.warmthScore}\n\n` +
+            (lead.aiSummary ? `_${lead.aiSummary}_\n\n` : "") +
+            (lead.bio ? `Bio: ${lead.bio.slice(0, 150)}\n` : "") +
+            (lead.notes ? `Notes: ${lead.notes}\n` : "") +
+            `Source: ${lead.sourceKeyword ?? "—"} · Found ${lead.discoveredAt.toISOString().slice(0,10)}\n` +
+            (actLines ? `\nActivity:\n${actLines}\n` : "") +
+            (dmHistory.length ? `\nDMs sent: ${dmHistory.length}` : "\nNo DMs sent yet"),
+            {
+              reply_markup: {
+                inline_keyboard: [[
+                  { text: "📩 Send DM", callback_data: `lead_dm:${lead.id}` },
+                  { text: "✅ Converted", callback_data: `lead_convert:${lead.id}` },
+                  { text: "🗑️ Remove", callback_data: `lead_remove:${lead.id}` },
+                ]],
+              },
+            }
+          );
+        }
+      } catch (e) {
+        await send(chatId, `❌ Error: ${String(e).slice(0, 100)}`);
+      }
+    }
+  }
+
+  // ── /icp ─────────────────────────────────────────────────────────────────
+  else if (cmd === "/icp") {
+    try {
+      const { getICP } = await import("@/lib/leads/icp");
+      const icp = await getICP(reqUserId);
+      await send(chatId,
+        `*🎯 ICP Config*\n\n` +
+        `*Keywords:* ${icp.keywords.join(", ") || "(none)"}\n` +
+        `*Competitors:* ${icp.competitorHandles.join(", ") || "(none)"}\n` +
+        `*Hashtags:* ${icp.hashtags.join(", ") || "(none)"}\n` +
+        `*Followers:* ${icp.minFollowers}–${icp.maxFollowers}\n` +
+        `*DM threshold:* ${icp.warmthThreshold}\n\n` +
+        `_To edit, just tell the Secretary: "add 'indie hacker' to my ICP keywords"_`
+      );
+    } catch (e) {
+      await send(chatId, `❌ Error: ${String(e).slice(0, 100)}`);
+    }
+  }
+
   // ── Edit response / custom mention reply: non-command text ───────────────
   else if (!cmd.startsWith("/")) {
     // Priority 0: pending brain field edit
@@ -1670,18 +1867,29 @@ export async function POST(req: NextRequest) {
       } catch (e) {
         await send(chatId, `❌ Failed: ${String(e).slice(0, 120)}`);
       }
+    } else {
+      // ── Secretary: natural language catch-all ────────────────────────────
+      // Reached only when no priority handler matched (no pending edit/reply/brain edit).
+      try {
+        const { handleSecretary } = await import("@/lib/secretary");
+        await send(chatId, "_thinking..._");
+        const reply = await handleSecretary(raw, reqUserId);
+        await send(chatId, reply);
+      } catch (e) {
+        await send(chatId, `❌ Secretary error: ${String(e).slice(0, 120)}`);
+      }
     }
   }
 
   return NextResponse.json({ ok: true });
   } catch (e) {
-    // Surface any uncaught handler error back to the user in Telegram
-    const chatId = process.env.TELEGRAM_CHAT_ID ?? "";
-    if (chatId) {
-      await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+    // activeChatId/activeBotUrl are inside the try block so fall back to defaults here
+    const errChatId = process.env.TELEGRAM_CHAT_ID ?? "";
+    if (errChatId) {
+      await fetch(`${DEFAULT_BOT}/sendMessage`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chat_id: chatId, text: `⚠️ Bot error: ${String(e).slice(0, 200)}` }),
+        body: JSON.stringify({ chat_id: errChatId, text: `⚠️ Bot error: ${String(e).slice(0, 200)}` }),
       }).catch(() => null);
     }
     return NextResponse.json({ ok: true });

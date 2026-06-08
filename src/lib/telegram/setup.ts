@@ -46,7 +46,6 @@ export async function ensureCommands(): Promise<boolean> {
         { command: "activity",  description: "Last 10 actions Phantom took" },
         { command: "tweet",     description: "Preview & approve a tweet before posting" },
         { command: "thread",    description: "Preview & approve a 5-tweet thread" },
-        { command: "article",   description: "Generate an educational article thread on AI or tools" },
         { command: "longpost",  description: "Premium+ long-form post (800–2000 chars)" },
         { command: "post",      description: "Post your own tweet instantly" },
         { command: "queue",     description: "Pending approvals with live Approve/Reject/Regenerate buttons" },

@@ -87,3 +87,23 @@ export type ConversationThread = Prisma.ConversationThreadModel
  * 
  */
 export type PerformanceInsight = Prisma.PerformanceInsightModel
+/**
+ * Model ICPConfig
+ * 
+ */
+export type ICPConfig = Prisma.ICPConfigModel
+/**
+ * Model LeadProfile
+ * 
+ */
+export type LeadProfile = Prisma.LeadProfileModel
+/**
+ * Model LeadActivity
+ * 
+ */
+export type LeadActivity = Prisma.LeadActivityModel
+/**
+ * Model OutreachTemplate
+ * 
+ */
+export type OutreachTemplate = Prisma.OutreachTemplateModel

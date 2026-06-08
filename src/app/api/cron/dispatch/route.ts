@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
 
 export const maxDuration = 60;
 
@@ -14,6 +15,12 @@ function hit(path: string) {
     method: "GET",
     headers: { Authorization: `Bearer ${SECRET}` },
   }).catch(() => null);
+}
+
+// Fire a job for a specific SaaS user by appending ?userId=X
+function hitForUser(path: string, userId: string) {
+  const sep = path.includes("?") ? "&" : "?";
+  return hit(`${path}${sep}userId=${userId}`);
 }
 
 // Weighted random pick — weights don't need to sum to 1, just relative
@@ -49,12 +56,24 @@ export async function GET(req: Request) {
   const daySeed = now.getDate() + now.getMonth() * 31;
 
   // ── Every 15 min, 24/7 ──────────────────────────────────────────────────────
-  jobs.push(hit("/api/cron/mentions")); fired.push("mentions");
-  jobs.push(hit("/api/cron/engage"));  fired.push("engage");
+  jobs.push(hit("/api/cron/mentions"));     fired.push("mentions");
+  jobs.push(hit("/api/cron/engage"));       fired.push("engage");
+  jobs.push(hit("/api/cron/trending-rt"));  fired.push("trending-rt");
 
-  // ── Hourly watchdog ─────────────────────────────────────────────────────────
+  // ── Hourly watchdog + warmth scorer ─────────────────────────────────────────
   if (minute < 20) {
-    jobs.push(hit("/api/cron/watchdog")); fired.push("watchdog");
+    jobs.push(hit("/api/cron/watchdog"));       fired.push("watchdog");
+    jobs.push(hit("/api/cron/warmth-scorer")); fired.push("warmth-scorer");
+  }
+
+  // ── Lead gen: prospect discovery 3×/day ─────────────────────────────────────
+  if (at(8, 28) || at(13, 28) || at(19, 28)) {
+    jobs.push(hit("/api/cron/prospect-discovery")); fired.push("prospect-discovery");
+  }
+
+  // ── Lead gen: DM warm leads 3×/day ───────────────────────────────────────────
+  if (at(9, 28) || at(14, 28) || at(20, 28)) {
+    jobs.push(hit("/api/cron/lead-dm")); fired.push("lead-dm");
   }
 
   // ── Posting slots — 4×/day: 7:30, 12:30, 18:30, 21:30 IST ─────────────────
@@ -73,11 +92,6 @@ export async function GET(req: Request) {
   // ── Bonus thread — Mon & Thu 14:30 IST (on top of whatever the slot picked) ─
   if ((dow === 1 || dow === 4) && at(14, 28)) {
     jobs.push(hit("/api/cron/thread")); fired.push("bonus-thread");
-  }
-
-  // ── Article thread + cover image — Wed & Sat 9:28 IST ───────────────────────
-  if ((dow === 3 || dow === 6) && at(9, 28)) {
-    jobs.push(hit("/api/cron/article")); fired.push("article");
   }
 
   // ── Follow — 8×/day weekdays, 9×/day weekends IST (max 3 follows per run)
@@ -107,8 +121,8 @@ export async function GET(req: Request) {
     jobs.push(hit("/api/cron/longpost")); fired.push("longpost");
   }
 
-  // ── Niche RT — daily 16:30 IST ───────────────────────────────────────────────
-  if (at(16, 28)) {
+  // ── Niche RT — 11:28 + 16:28 IST daily (2×/day for consistent RT presence) ──
+  if (at(11, 28) || at(16, 28)) {
     jobs.push(hit("/api/cron/niche-rt")); fired.push("niche-rt");
   }
 
@@ -146,9 +160,71 @@ export async function GET(req: Request) {
     jobs.push(hit("/api/cron/brain")); fired.push("brain");
   }
 
-  // Fire all sub-jobs without waiting — each is its own Vercel function invocation.
-  // Awaiting causes dispatch to hit the 60s timeout since engage alone takes ~50s.
-  void Promise.allSettled(jobs);
+  // ── Per-SaaS-user jobs ──────────────────────────────────────────────────────
+  // Fire the core automation for every active/trialing SaaS user with completed onboarding.
+  const saasUsers = await prisma.user.findMany({
+    where: {
+      onboardingDone: true,
+      subscriptionStatus: { in: ["active", "trialing"] },
+      xCredential: { isNot: null },
+      telegramSetup: { isNot: null },
+    },
+    select: { id: true },
+  });
 
-  return NextResponse.json({ ok: true, hour, minute, dow, fired });
+  for (const u of saasUsers) {
+    const uid = u.id;
+    // Always-on: mentions + engage + trending RT
+    jobs.push(hitForUser("/api/cron/mentions", uid));
+    jobs.push(hitForUser("/api/cron/engage", uid));
+    jobs.push(hitForUser("/api/cron/trending-rt", uid));
+
+    if (minute < 20) jobs.push(hitForUser("/api/cron/watchdog", uid));
+
+    if (at(7, 28) || at(12, 28) || at(18, 28) || at(21, 28)) {
+      const contentType = pick([
+        { weight: 35, value: "/api/cron/tweet?image=false" },
+        { weight: 30, value: "/api/cron/tweet?image=true"  },
+        { weight: 20, value: "/api/cron/thread"             },
+        { weight: 15, value: "/api/cron/resurface"          },
+      ]);
+      jobs.push(hitForUser(contentType, uid));
+    }
+
+    if ((dow === 1 || dow === 4) && at(14, 28)) jobs.push(hitForUser("/api/cron/thread", uid));
+
+    if (followHours.some((h, i) => { const j = (daySeed * (i + 3)) % 15; return at(h, j); })) {
+      jobs.push(hitForUser("/api/cron/follow", uid));
+    }
+
+    if (dmHours.some((h, i) => { const j = (daySeed * (i + 7)) % 15; return at(h, j); })) {
+      jobs.push(hitForUser("/api/cron/dm", uid));
+    }
+
+    if (at(10, 28)) jobs.push(hitForUser("/api/cron/longpost", uid));
+    if (at(11, 28) || at(16, 28)) jobs.push(hitForUser("/api/cron/niche-rt", uid));
+    if (at(23, 28)) jobs.push(hitForUser("/api/cron/summary", uid));
+
+    if (gooutHours.some((h, i) => { const j = (daySeed * (i + 11)) % 15; return at(h, j); })) {
+      jobs.push(hitForUser("/api/cron/goout", uid));
+    }
+
+    if (dow === 0 && at(23, 0)) jobs.push(hitForUser("/api/cron/brain", uid));
+
+    // Lead gen
+    if (minute < 20) jobs.push(hitForUser("/api/cron/warmth-scorer", uid));
+    if (at(8, 28) || at(13, 28) || at(19, 28)) jobs.push(hitForUser("/api/cron/prospect-discovery", uid));
+    if (at(9, 28) || at(14, 28) || at(20, 28)) jobs.push(hitForUser("/api/cron/lead-dm", uid));
+  }
+
+  // Await all sub-jobs in parallel. Each is its own Vercel function invocation — once
+  // the HTTP request is received by Vercel, the sub-job runs independently. We stay alive
+  // here to ensure every fetch connection is established before this function exits.
+  // 55s safety cap keeps us within maxDuration=60 if a job hangs.
+  await Promise.race([
+    Promise.allSettled(jobs),
+    new Promise(r => setTimeout(r, 55000)),
+  ]);
+
+  return NextResponse.json({ ok: true, hour, minute, dow, fired, saasUsers: saasUsers.length });
 }

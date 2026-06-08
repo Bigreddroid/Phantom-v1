@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { analyzePerformance } from "@/lib/brain/performance";
 import { sendMessage } from "@/lib/telegram/notify";
+import { getUserCtx } from "@/lib/user-context";
 
 export const maxDuration = 300;
 
@@ -10,8 +11,13 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const userId = new URL(req.url).searchParams.get("userId") ?? null;
+
   try {
-    const { insights, diff } = await analyzePerformance();
+    const ctx = userId ? await getUserCtx(userId) : null;
+    const tgCtx = ctx?.telegram;
+
+    const { insights, diff } = await analyzePerformance(userId);
 
     if (insights.length === 0) {
       return NextResponse.json({ ok: true, skipped: true, reason: "not enough activity data" });
@@ -26,7 +32,8 @@ export async function GET(req: Request) {
       `🧠 *Weekly Brain Analysis*\n\n` +
       `_Opus extended thinking ran on last 30 days of data._\n\n` +
       insightLines +
-      diffLine
+      diffLine,
+      tgCtx
     );
 
     return NextResponse.json({ ok: true, insights, diff });

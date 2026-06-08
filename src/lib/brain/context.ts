@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 // ── Brand memory defaults ─────────────────────────────────────────────────────
 const DEFAULTS: Record<string, string> = {
   purpose:
-    "Phantom is an AI system that automates X/Twitter presence for @BigRedDr0id — posting, engaging, replying, DMs — 24/7 via Telegram. Part of BigRedDroid, a solo deep-tech lab building 92 products.",
+    "Phantom is an AI system that automates X/Twitter presence for @BigRedDr0id — posting, engaging, replying, DMs — 24/7 via Telegram. Part of BigRedDroid, a solo product lab building in public.",
   voice:
     "Direct, confident, no fluff. Solo founder thinking out loud. Technical but not academic. Varies sentence length. Never sounds like a bot or a marketing post. Occasionally dry humour.",
   focus:

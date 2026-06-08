@@ -15,7 +15,7 @@ const LONG_POST_TOPICS = [
   "why automating your X presence is table stakes for solo founders in 2025",
   "the 3 decisions that defined how I build BigRedDroid",
   "what 90 days of building in public actually taught me",
-  "why I chose to build 92 products instead of going deep on one",
+  "why I chose to build and ship in public instead of staying in stealth",
   "the honest cost of building Phantom — time, money, and what I'd do differently",
   "how I keep shipping when motivation is low",
 ];

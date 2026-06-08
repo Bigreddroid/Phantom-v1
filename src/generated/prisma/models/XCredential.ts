@@ -27,9 +27,14 @@ export type AggregateXCredential = {
 export type XCredentialMinAggregateOutputType = {
   id: string | null
   userId: string | null
+  authMethod: string | null
   cookies: string | null
   username: string | null
   xUserId: string | null
+  apiKey: string | null
+  apiSecret: string | null
+  accessToken: string | null
+  accessSecret: string | null
   updatedAt: Date | null
   createdAt: Date | null
 }
@@ -37,9 +42,14 @@ export type XCredentialMinAggregateOutputType = {
 export type XCredentialMaxAggregateOutputType = {
   id: string | null
   userId: string | null
+  authMethod: string | null
   cookies: string | null
   username: string | null
   xUserId: string | null
+  apiKey: string | null
+  apiSecret: string | null
+  accessToken: string | null
+  accessSecret: string | null
   updatedAt: Date | null
   createdAt: Date | null
 }
@@ -47,9 +57,14 @@ export type XCredentialMaxAggregateOutputType = {
 export type XCredentialCountAggregateOutputType = {
   id: number
   userId: number
+  authMethod: number
   cookies: number
   username: number
   xUserId: number
+  apiKey: number
+  apiSecret: number
+  accessToken: number
+  accessSecret: number
   updatedAt: number
   createdAt: number
   _all: number
@@ -59,9 +74,14 @@ export type XCredentialCountAggregateOutputType = {
 export type XCredentialMinAggregateInputType = {
   id?: true
   userId?: true
+  authMethod?: true
   cookies?: true
   username?: true
   xUserId?: true
+  apiKey?: true
+  apiSecret?: true
+  accessToken?: true
+  accessSecret?: true
   updatedAt?: true
   createdAt?: true
 }
@@ -69,9 +89,14 @@ export type XCredentialMinAggregateInputType = {
 export type XCredentialMaxAggregateInputType = {
   id?: true
   userId?: true
+  authMethod?: true
   cookies?: true
   username?: true
   xUserId?: true
+  apiKey?: true
+  apiSecret?: true
+  accessToken?: true
+  accessSecret?: true
   updatedAt?: true
   createdAt?: true
 }
@@ -79,9 +104,14 @@ export type XCredentialMaxAggregateInputType = {
 export type XCredentialCountAggregateInputType = {
   id?: true
   userId?: true
+  authMethod?: true
   cookies?: true
   username?: true
   xUserId?: true
+  apiKey?: true
+  apiSecret?: true
+  accessToken?: true
+  accessSecret?: true
   updatedAt?: true
   createdAt?: true
   _all?: true
@@ -162,9 +192,14 @@ export type XCredentialGroupByArgs<ExtArgs extends runtime.Types.Extensions.Inte
 export type XCredentialGroupByOutputType = {
   id: string
   userId: string
-  cookies: string
+  authMethod: string
+  cookies: string | null
   username: string
   xUserId: string | null
+  apiKey: string | null
+  apiSecret: string | null
+  accessToken: string | null
+  accessSecret: string | null
   updatedAt: Date
   createdAt: Date
   _count: XCredentialCountAggregateOutputType | null
@@ -193,9 +228,14 @@ export type XCredentialWhereInput = {
   NOT?: Prisma.XCredentialWhereInput | Prisma.XCredentialWhereInput[]
   id?: Prisma.StringFilter<"XCredential"> | string
   userId?: Prisma.StringFilter<"XCredential"> | string
-  cookies?: Prisma.StringFilter<"XCredential"> | string
+  authMethod?: Prisma.StringFilter<"XCredential"> | string
+  cookies?: Prisma.StringNullableFilter<"XCredential"> | string | null
   username?: Prisma.StringFilter<"XCredential"> | string
   xUserId?: Prisma.StringNullableFilter<"XCredential"> | string | null
+  apiKey?: Prisma.StringNullableFilter<"XCredential"> | string | null
+  apiSecret?: Prisma.StringNullableFilter<"XCredential"> | string | null
+  accessToken?: Prisma.StringNullableFilter<"XCredential"> | string | null
+  accessSecret?: Prisma.StringNullableFilter<"XCredential"> | string | null
   updatedAt?: Prisma.DateTimeFilter<"XCredential"> | Date | string
   createdAt?: Prisma.DateTimeFilter<"XCredential"> | Date | string
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
@@ -204,9 +244,14 @@ export type XCredentialWhereInput = {
 export type XCredentialOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   userId?: Prisma.SortOrder
-  cookies?: Prisma.SortOrder
+  authMethod?: Prisma.SortOrder
+  cookies?: Prisma.SortOrderInput | Prisma.SortOrder
   username?: Prisma.SortOrder
   xUserId?: Prisma.SortOrderInput | Prisma.SortOrder
+  apiKey?: Prisma.SortOrderInput | Prisma.SortOrder
+  apiSecret?: Prisma.SortOrderInput | Prisma.SortOrder
+  accessToken?: Prisma.SortOrderInput | Prisma.SortOrder
+  accessSecret?: Prisma.SortOrderInput | Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   user?: Prisma.UserOrderByWithRelationInput
@@ -218,9 +263,14 @@ export type XCredentialWhereUniqueInput = Prisma.AtLeast<{
   AND?: Prisma.XCredentialWhereInput | Prisma.XCredentialWhereInput[]
   OR?: Prisma.XCredentialWhereInput[]
   NOT?: Prisma.XCredentialWhereInput | Prisma.XCredentialWhereInput[]
-  cookies?: Prisma.StringFilter<"XCredential"> | string
+  authMethod?: Prisma.StringFilter<"XCredential"> | string
+  cookies?: Prisma.StringNullableFilter<"XCredential"> | string | null
   username?: Prisma.StringFilter<"XCredential"> | string
   xUserId?: Prisma.StringNullableFilter<"XCredential"> | string | null
+  apiKey?: Prisma.StringNullableFilter<"XCredential"> | string | null
+  apiSecret?: Prisma.StringNullableFilter<"XCredential"> | string | null
+  accessToken?: Prisma.StringNullableFilter<"XCredential"> | string | null
+  accessSecret?: Prisma.StringNullableFilter<"XCredential"> | string | null
   updatedAt?: Prisma.DateTimeFilter<"XCredential"> | Date | string
   createdAt?: Prisma.DateTimeFilter<"XCredential"> | Date | string
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
@@ -229,9 +279,14 @@ export type XCredentialWhereUniqueInput = Prisma.AtLeast<{
 export type XCredentialOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   userId?: Prisma.SortOrder
-  cookies?: Prisma.SortOrder
+  authMethod?: Prisma.SortOrder
+  cookies?: Prisma.SortOrderInput | Prisma.SortOrder
   username?: Prisma.SortOrder
   xUserId?: Prisma.SortOrderInput | Prisma.SortOrder
+  apiKey?: Prisma.SortOrderInput | Prisma.SortOrder
+  apiSecret?: Prisma.SortOrderInput | Prisma.SortOrder
+  accessToken?: Prisma.SortOrderInput | Prisma.SortOrder
+  accessSecret?: Prisma.SortOrderInput | Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   _count?: Prisma.XCredentialCountOrderByAggregateInput
@@ -245,18 +300,28 @@ export type XCredentialScalarWhereWithAggregatesInput = {
   NOT?: Prisma.XCredentialScalarWhereWithAggregatesInput | Prisma.XCredentialScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"XCredential"> | string
   userId?: Prisma.StringWithAggregatesFilter<"XCredential"> | string
-  cookies?: Prisma.StringWithAggregatesFilter<"XCredential"> | string
+  authMethod?: Prisma.StringWithAggregatesFilter<"XCredential"> | string
+  cookies?: Prisma.StringNullableWithAggregatesFilter<"XCredential"> | string | null
   username?: Prisma.StringWithAggregatesFilter<"XCredential"> | string
   xUserId?: Prisma.StringNullableWithAggregatesFilter<"XCredential"> | string | null
+  apiKey?: Prisma.StringNullableWithAggregatesFilter<"XCredential"> | string | null
+  apiSecret?: Prisma.StringNullableWithAggregatesFilter<"XCredential"> | string | null
+  accessToken?: Prisma.StringNullableWithAggregatesFilter<"XCredential"> | string | null
+  accessSecret?: Prisma.StringNullableWithAggregatesFilter<"XCredential"> | string | null
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"XCredential"> | Date | string
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"XCredential"> | Date | string
 }
 
 export type XCredentialCreateInput = {
   id?: string
-  cookies: string
+  authMethod?: string
+  cookies?: string | null
   username: string
   xUserId?: string | null
+  apiKey?: string | null
+  apiSecret?: string | null
+  accessToken?: string | null
+  accessSecret?: string | null
   updatedAt?: Date | string
   createdAt?: Date | string
   user: Prisma.UserCreateNestedOneWithoutXCredentialInput
@@ -265,18 +330,28 @@ export type XCredentialCreateInput = {
 export type XCredentialUncheckedCreateInput = {
   id?: string
   userId: string
-  cookies: string
+  authMethod?: string
+  cookies?: string | null
   username: string
   xUserId?: string | null
+  apiKey?: string | null
+  apiSecret?: string | null
+  accessToken?: string | null
+  accessSecret?: string | null
   updatedAt?: Date | string
   createdAt?: Date | string
 }
 
 export type XCredentialUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  cookies?: Prisma.StringFieldUpdateOperationsInput | string
+  authMethod?: Prisma.StringFieldUpdateOperationsInput | string
+  cookies?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   username?: Prisma.StringFieldUpdateOperationsInput | string
   xUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  apiKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  apiSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  accessToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  accessSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user?: Prisma.UserUpdateOneRequiredWithoutXCredentialNestedInput
@@ -285,9 +360,14 @@ export type XCredentialUpdateInput = {
 export type XCredentialUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   userId?: Prisma.StringFieldUpdateOperationsInput | string
-  cookies?: Prisma.StringFieldUpdateOperationsInput | string
+  authMethod?: Prisma.StringFieldUpdateOperationsInput | string
+  cookies?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   username?: Prisma.StringFieldUpdateOperationsInput | string
   xUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  apiKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  apiSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  accessToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  accessSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -295,18 +375,28 @@ export type XCredentialUncheckedUpdateInput = {
 export type XCredentialCreateManyInput = {
   id?: string
   userId: string
-  cookies: string
+  authMethod?: string
+  cookies?: string | null
   username: string
   xUserId?: string | null
+  apiKey?: string | null
+  apiSecret?: string | null
+  accessToken?: string | null
+  accessSecret?: string | null
   updatedAt?: Date | string
   createdAt?: Date | string
 }
 
 export type XCredentialUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  cookies?: Prisma.StringFieldUpdateOperationsInput | string
+  authMethod?: Prisma.StringFieldUpdateOperationsInput | string
+  cookies?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   username?: Prisma.StringFieldUpdateOperationsInput | string
   xUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  apiKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  apiSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  accessToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  accessSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -314,9 +404,14 @@ export type XCredentialUpdateManyMutationInput = {
 export type XCredentialUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   userId?: Prisma.StringFieldUpdateOperationsInput | string
-  cookies?: Prisma.StringFieldUpdateOperationsInput | string
+  authMethod?: Prisma.StringFieldUpdateOperationsInput | string
+  cookies?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   username?: Prisma.StringFieldUpdateOperationsInput | string
   xUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  apiKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  apiSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  accessToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  accessSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -329,9 +424,14 @@ export type XCredentialNullableScalarRelationFilter = {
 export type XCredentialCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   userId?: Prisma.SortOrder
+  authMethod?: Prisma.SortOrder
   cookies?: Prisma.SortOrder
   username?: Prisma.SortOrder
   xUserId?: Prisma.SortOrder
+  apiKey?: Prisma.SortOrder
+  apiSecret?: Prisma.SortOrder
+  accessToken?: Prisma.SortOrder
+  accessSecret?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
@@ -339,9 +439,14 @@ export type XCredentialCountOrderByAggregateInput = {
 export type XCredentialMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   userId?: Prisma.SortOrder
+  authMethod?: Prisma.SortOrder
   cookies?: Prisma.SortOrder
   username?: Prisma.SortOrder
   xUserId?: Prisma.SortOrder
+  apiKey?: Prisma.SortOrder
+  apiSecret?: Prisma.SortOrder
+  accessToken?: Prisma.SortOrder
+  accessSecret?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
@@ -349,9 +454,14 @@ export type XCredentialMaxOrderByAggregateInput = {
 export type XCredentialMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   userId?: Prisma.SortOrder
+  authMethod?: Prisma.SortOrder
   cookies?: Prisma.SortOrder
   username?: Prisma.SortOrder
   xUserId?: Prisma.SortOrder
+  apiKey?: Prisma.SortOrder
+  apiSecret?: Prisma.SortOrder
+  accessToken?: Prisma.SortOrder
+  accessSecret?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
@@ -390,18 +500,28 @@ export type XCredentialUncheckedUpdateOneWithoutUserNestedInput = {
 
 export type XCredentialCreateWithoutUserInput = {
   id?: string
-  cookies: string
+  authMethod?: string
+  cookies?: string | null
   username: string
   xUserId?: string | null
+  apiKey?: string | null
+  apiSecret?: string | null
+  accessToken?: string | null
+  accessSecret?: string | null
   updatedAt?: Date | string
   createdAt?: Date | string
 }
 
 export type XCredentialUncheckedCreateWithoutUserInput = {
   id?: string
-  cookies: string
+  authMethod?: string
+  cookies?: string | null
   username: string
   xUserId?: string | null
+  apiKey?: string | null
+  apiSecret?: string | null
+  accessToken?: string | null
+  accessSecret?: string | null
   updatedAt?: Date | string
   createdAt?: Date | string
 }
@@ -424,18 +544,28 @@ export type XCredentialUpdateToOneWithWhereWithoutUserInput = {
 
 export type XCredentialUpdateWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  cookies?: Prisma.StringFieldUpdateOperationsInput | string
+  authMethod?: Prisma.StringFieldUpdateOperationsInput | string
+  cookies?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   username?: Prisma.StringFieldUpdateOperationsInput | string
   xUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  apiKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  apiSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  accessToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  accessSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type XCredentialUncheckedUpdateWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  cookies?: Prisma.StringFieldUpdateOperationsInput | string
+  authMethod?: Prisma.StringFieldUpdateOperationsInput | string
+  cookies?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   username?: Prisma.StringFieldUpdateOperationsInput | string
   xUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  apiKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  apiSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  accessToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  accessSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -445,9 +575,14 @@ export type XCredentialUncheckedUpdateWithoutUserInput = {
 export type XCredentialSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   userId?: boolean
+  authMethod?: boolean
   cookies?: boolean
   username?: boolean
   xUserId?: boolean
+  apiKey?: boolean
+  apiSecret?: boolean
+  accessToken?: boolean
+  accessSecret?: boolean
   updatedAt?: boolean
   createdAt?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -456,9 +591,14 @@ export type XCredentialSelect<ExtArgs extends runtime.Types.Extensions.InternalA
 export type XCredentialSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   userId?: boolean
+  authMethod?: boolean
   cookies?: boolean
   username?: boolean
   xUserId?: boolean
+  apiKey?: boolean
+  apiSecret?: boolean
+  accessToken?: boolean
+  accessSecret?: boolean
   updatedAt?: boolean
   createdAt?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -467,9 +607,14 @@ export type XCredentialSelectCreateManyAndReturn<ExtArgs extends runtime.Types.E
 export type XCredentialSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   userId?: boolean
+  authMethod?: boolean
   cookies?: boolean
   username?: boolean
   xUserId?: boolean
+  apiKey?: boolean
+  apiSecret?: boolean
+  accessToken?: boolean
+  accessSecret?: boolean
   updatedAt?: boolean
   createdAt?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -478,14 +623,19 @@ export type XCredentialSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.E
 export type XCredentialSelectScalar = {
   id?: boolean
   userId?: boolean
+  authMethod?: boolean
   cookies?: boolean
   username?: boolean
   xUserId?: boolean
+  apiKey?: boolean
+  apiSecret?: boolean
+  accessToken?: boolean
+  accessSecret?: boolean
   updatedAt?: boolean
   createdAt?: boolean
 }
 
-export type XCredentialOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "cookies" | "username" | "xUserId" | "updatedAt" | "createdAt", ExtArgs["result"]["xCredential"]>
+export type XCredentialOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "authMethod" | "cookies" | "username" | "xUserId" | "apiKey" | "apiSecret" | "accessToken" | "accessSecret" | "updatedAt" | "createdAt", ExtArgs["result"]["xCredential"]>
 export type XCredentialInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }
@@ -504,9 +654,14 @@ export type $XCredentialPayload<ExtArgs extends runtime.Types.Extensions.Interna
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     userId: string
-    cookies: string
+    authMethod: string
+    cookies: string | null
     username: string
     xUserId: string | null
+    apiKey: string | null
+    apiSecret: string | null
+    accessToken: string | null
+    accessSecret: string | null
     updatedAt: Date
     createdAt: Date
   }, ExtArgs["result"]["xCredential"]>
@@ -935,9 +1090,14 @@ export interface Prisma__XCredentialClient<T, Null = never, ExtArgs extends runt
 export interface XCredentialFieldRefs {
   readonly id: Prisma.FieldRef<"XCredential", 'String'>
   readonly userId: Prisma.FieldRef<"XCredential", 'String'>
+  readonly authMethod: Prisma.FieldRef<"XCredential", 'String'>
   readonly cookies: Prisma.FieldRef<"XCredential", 'String'>
   readonly username: Prisma.FieldRef<"XCredential", 'String'>
   readonly xUserId: Prisma.FieldRef<"XCredential", 'String'>
+  readonly apiKey: Prisma.FieldRef<"XCredential", 'String'>
+  readonly apiSecret: Prisma.FieldRef<"XCredential", 'String'>
+  readonly accessToken: Prisma.FieldRef<"XCredential", 'String'>
+  readonly accessSecret: Prisma.FieldRef<"XCredential", 'String'>
   readonly updatedAt: Prisma.FieldRef<"XCredential", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"XCredential", 'DateTime'>
 }

@@ -1,7 +1,12 @@
 import { getXClient, getConvoScraper, ConvoSearchMode } from "./client";
+import type { Scraper } from "agent-twitter-client";
+import type { Scraper as ConvoScraper } from "@the-convocation/twitter-scraper";
 
-export async function likeTweet(tweetId: string, _userId?: string) {
-  const scraper = await getXClient();
+interface WOpts { wClient?: Scraper }
+interface ROpts { rClient?: ConvoScraper; username?: string }
+
+export async function likeTweet(tweetId: string, _userId?: string, opts?: WOpts) {
+  const scraper = opts?.wClient ?? await getXClient();
   return scraper.likeTweet(tweetId);
 }
 
@@ -9,26 +14,25 @@ export async function unlikeTweet(_tweetId: string, _userId?: string) {
   // Not available in agent-twitter-client — no-op
 }
 
-export async function retweet(tweetId: string, _userId?: string) {
-  const scraper = await getXClient();
+export async function retweet(tweetId: string, _userId?: string, opts?: WOpts) {
+  const scraper = opts?.wClient ?? await getXClient();
   return scraper.retweet(tweetId);
 }
 
-export async function followUser(targetUsername: string, _sourceUserId?: string) {
-  const scraper = await getXClient();
+export async function followUser(targetUsername: string, _sourceUserId?: string, opts?: WOpts) {
+  const scraper = opts?.wClient ?? await getXClient();
   return scraper.followUser(targetUsername);
 }
 
-export async function getMentions(_userId?: string, sinceId?: string) {
-  const s = await getConvoScraper();
-  const username = process.env.X_USERNAME!;
+export async function getMentions(_userId?: string, sinceId?: string, opts?: ROpts) {
+  const s = opts?.rClient ?? await getConvoScraper();
+  const username = opts?.username ?? process.env.X_USERNAME!;
   const tweets: Awaited<ReturnType<typeof searchTweets>> = [];
   for await (const t of s.searchTweets(
     `@${username} -from:${username} -is:retweet`,
     20,
     ConvoSearchMode.Latest
   )) {
-    // Snowflake IDs are monotonically increasing — stop once we reach already-seen tweets
     if (sinceId && t.id) {
       try { if (BigInt(t.id) <= BigInt(sinceId)) break; } catch { /* malformed ID, skip check */ }
     }
@@ -67,9 +71,9 @@ export async function searchTweets(query: string, maxResults = 10) {
   return tweets;
 }
 
-export async function getMyProfile() {
-  const username = process.env.X_USERNAME!;
-  const s = await getConvoScraper();
+export async function getMyProfile(opts?: ROpts) {
+  const username = opts?.username ?? process.env.X_USERNAME!;
+  const s = opts?.rClient ?? await getConvoScraper();
   const profile = await s.getProfile(username);
   if (!profile) throw new Error("Failed to fetch own X profile");
   return {
@@ -83,9 +87,9 @@ export async function getMyProfile() {
   };
 }
 
-export async function getMyTweets(_userId: string, maxResults = 20) {
-  const scraper = await getXClient();
-  const username = process.env.X_USERNAME!;
+export async function getMyTweets(_userId: string, maxResults = 20, opts?: WOpts & ROpts) {
+  const scraper = opts?.wClient ?? await getXClient();
+  const username = opts?.username ?? process.env.X_USERNAME!;
   const tweets: Array<{
     id: string;
     text: string;

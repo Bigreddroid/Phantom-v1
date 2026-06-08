@@ -3,6 +3,7 @@ import { DEMO } from "@/lib/demo-data";
 import { searchTweets, likeTweet, retweet, getMyProfile } from "@/lib/x/engage";
 import { replyToTweet } from "@/lib/x/post";
 import { generateReply } from "@/lib/claude/generate";
+import { appendToThread } from "@/lib/brain/context";
 import { prisma } from "@/lib/db";
 import { notifyPosted, sendMessage } from "@/lib/telegram/notify";
 import { randomDelay } from "@/lib/scheduler/humanize";
@@ -10,6 +11,7 @@ import { loadBlocklist } from "@/lib/blocklist";
 import { ensureWebhook } from "@/lib/telegram/setup";
 import { NICHE_KEYWORDS } from "@/lib/config";
 import { getRepliedTweetIds, getRepliedAuthorIds, buildReplyDetail } from "@/lib/reply-dedup";
+import { getUserCtx, getStatsPaused } from "@/lib/user-context";
 
 function getISTHour(): number {
   return parseInt(
@@ -46,10 +48,10 @@ type EngageMode = "like-spree" | "reply-focus" | "mixed" | "retweet-mix";
 function pickMode(isDay: boolean): EngageMode {
   if (!isDay) return "like-spree"; // night window: silent likes only
   const r = Math.random();
-  if (r < 0.15) return "like-spree";   // 15% — fast likes (reduced)
-  if (r < 0.50) return "reply-focus";  // 35% — high reply rate (increased — builds connections)
-  if (r < 0.85) return "mixed";        // 35% — like + reply balanced (increased)
-  return "retweet-mix";                // 15% — retweet mix (reduced)
+  if (r < 0.10) return "like-spree";   // 10% — fast likes
+  if (r < 0.40) return "reply-focus";  // 30% — high reply rate
+  if (r < 0.75) return "mixed";        // 35% — like + reply + occasional RT
+  return "retweet-mix";                // 25% — retweet mix (increased from 15%)
 }
 
 export async function GET(req: Request) {
@@ -60,23 +62,30 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const userId = new URL(req.url).searchParams.get("userId") ?? null;
+  const userCtx = await getUserCtx(userId).catch(() => null);
+  if (userId && !userCtx) return NextResponse.json({ error: "User context unavailable" }, { status: 404 });
+
+  const tg = userCtx?.telegram;
+  const wOpts = userCtx ? { wClient: userCtx.scraperW } : undefined;
+  const rOpts = userCtx ? { rClient: userCtx.scraperR, username: userCtx.username } : undefined;
+
   const hour = getISTHour();
   const isDay = hour >= 7 && hour < 22;
   const mode = pickMode(isDay);
 
-  // Per-mode tuning
   const maxTweets   = mode === "like-spree" ? 20 : mode === "reply-focus" ? 6 : 10;
   const replyChance = mode === "reply-focus" ? 0.65 : mode === "mixed" ? 0.40 : mode === "retweet-mix" ? 0.25 : 0;
-  const rtChance    = mode === "retweet-mix" ? 0.40 : 0;
+  const rtChance    = mode === "retweet-mix" ? 0.50 : mode === "mixed" ? 0.15 : 0;
 
   try {
     void ensureWebhook();
 
-    const pauseState = await prisma.stats.findUnique({ where: { id: "singleton" }, select: { paused: true } });
-    if (pauseState?.paused) return NextResponse.json({ skipped: true, reason: "paused" });
+    const paused = await getStatsPaused(userId);
+    if (paused) return NextResponse.json({ skipped: true, reason: "paused" });
 
     const isBlocked = await loadBlocklist();
-    const me = await getMyProfile();
+    const me = await getMyProfile(rOpts);
     const keyword = NICHE_KEYWORDS[Math.floor(Math.random() * NICHE_KEYWORDS.length)];
 
     // Shared dedup — covers tweets replied to by engage, mentions, AND goout
@@ -104,48 +113,56 @@ export async function GET(req: Request) {
       if (tweet.author_id && repliedAuthorIds.has(tweet.author_id)) continue;
       seen.add(tweet.author_id);
 
-      try { await likeTweet(tweet.id, me.id); liked++; } catch { /* skip */ }
+      try { await likeTweet(tweet.id, me.id, wOpts); liked++; } catch { /* skip */ }
       await randomDelay(800, 2000);
 
-      // Only retweet if content is clearly on-topic
       if (rtChance > 0 && Math.random() < rtChance && isRelevant(tweet.text)) {
-        try { await retweet(tweet.id, me.id); retweeted++; } catch { /* skip */ }
+        try { await retweet(tweet.id, me.id, wOpts); retweeted++; } catch { /* skip */ }
         await randomDelay(500, 1500);
       }
 
       if (isDay && replyChance > 0 && Math.random() < replyChance) {
         try {
-          const reply = await generateReply(tweet.text, tweet.author_username || tweet.author_id);
+          const authorId = tweet.author_id ?? undefined;
+          const reply = await generateReply(tweet.text, tweet.author_username || tweet.author_id, authorId);
+          await randomDelay(8000, 20000);
           await replyToTweet(tweet.id, reply);
           replied++;
           await prisma.activity.create({
-            data: { action: "Replied to tweet", detail: buildReplyDetail(tweet.id, tweet.author_id ?? "", reply), icon: "💬" },
+            data: { userId: userId ?? null, action: "Replied to tweet", detail: buildReplyDetail(tweet.id, tweet.author_id ?? "", reply), icon: "💬" },
           });
+          if (authorId) {
+            await appendToThread(authorId, tweet.author_username || "", {
+              role: "them", content: tweet.text, tweetId: tweet.id, at: new Date().toISOString(),
+            });
+            await appendToThread(authorId, tweet.author_username || "", {
+              role: "us", content: reply, tweetId: tweet.id, at: new Date().toISOString(),
+            });
+          }
           await sendMessage(
             `💬 *Comment posted on X*\n\n` +
             `_In reply to:_ "${tweet.text.slice(0, 100)}"\n\n` +
-            `*Reply:* ${reply.slice(0, 200)}`
+            `*Reply:* ${reply.slice(0, 200)}`,
+            tg
           );
           await randomDelay(2000, 5000);
         } catch (e) {
           const msg = String(e);
-          // 344 = tweet deleted before reply landed — not an error worth logging
           if (msg.includes("344") || msg.includes("No status found")) continue;
-          // 403/501 = tweet restricted or not replyable — note in summary but skip DB write
           if (msg.includes("403") || msg.includes("501")) {
             replyErrors.push(`restricted:${tweet.id}`);
             continue;
           }
           replyErrors.push(msg.slice(0, 80));
           await prisma.activity.create({
-            data: { action: "Reply failed", detail: msg.slice(0, 80), icon: "❌" },
+            data: { userId: userId ?? null, action: "Reply failed", detail: msg.slice(0, 80), icon: "❌" },
           });
         }
       }
     }
 
     if (replyErrors.length > 0) {
-      await sendMessage(`⚠️ *Engage: ${replyErrors.length} reply(s) failed*\n\`${replyErrors[0]}\``);
+      await sendMessage(`⚠️ *Engage: ${replyErrors.length} reply(s) failed*\n\`${replyErrors[0]}\``, tg);
     }
 
     const modeLabel: Record<EngageMode, string> = {
@@ -157,6 +174,7 @@ export async function GET(req: Request) {
 
     await prisma.activity.create({
       data: {
+        userId: userId ?? null,
         action: `Engage — ${modeLabel[mode]}`,
         detail: `❤️ ${liked} · 💬 ${replied}${retweeted > 0 ? ` · 🔁 ${retweeted}` : ""} · "${keyword}"`,
         icon: "⚡",
@@ -166,7 +184,8 @@ export async function GET(req: Request) {
     if (liked > 0) {
       await notifyPosted(
         `Engage: ${modeLabel[mode]}`,
-        `❤️ ${liked} likes · 💬 ${replied} replies${retweeted > 0 ? ` · 🔁 ${retweeted} RTs` : ""}\n"${keyword}"`
+        `❤️ ${liked} likes · 💬 ${replied} replies${retweeted > 0 ? ` · 🔁 ${retweeted} RTs` : ""}\n"${keyword}"`,
+        tg
       );
     }
 

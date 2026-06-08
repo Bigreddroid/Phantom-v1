@@ -294,6 +294,23 @@ export type JsonWithAggregatesFilterBase<$PrismaModel = never> = {
   _max?: Prisma.NestedJsonFilter<$PrismaModel>
 }
 
+export type EnumLeadStageFilter<$PrismaModel = never> = {
+  equals?: $Enums.LeadStage | Prisma.EnumLeadStageFieldRefInput<$PrismaModel>
+  in?: $Enums.LeadStage[] | Prisma.ListEnumLeadStageFieldRefInput<$PrismaModel>
+  notIn?: $Enums.LeadStage[] | Prisma.ListEnumLeadStageFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumLeadStageFilter<$PrismaModel> | $Enums.LeadStage
+}
+
+export type EnumLeadStageWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.LeadStage | Prisma.EnumLeadStageFieldRefInput<$PrismaModel>
+  in?: $Enums.LeadStage[] | Prisma.ListEnumLeadStageFieldRefInput<$PrismaModel>
+  notIn?: $Enums.LeadStage[] | Prisma.ListEnumLeadStageFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumLeadStageWithAggregatesFilter<$PrismaModel> | $Enums.LeadStage
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumLeadStageFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumLeadStageFilter<$PrismaModel>
+}
+
 export type NestedStringFilter<$PrismaModel = never> = {
   equals?: string | Prisma.StringFieldRefInput<$PrismaModel>
   in?: string[] | Prisma.ListStringFieldRefInput<$PrismaModel>
@@ -531,6 +548,23 @@ export type NestedJsonFilterBase<$PrismaModel = never> = {
   gt?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel>
   gte?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel>
   not?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel> | Prisma.JsonNullValueFilter
+}
+
+export type NestedEnumLeadStageFilter<$PrismaModel = never> = {
+  equals?: $Enums.LeadStage | Prisma.EnumLeadStageFieldRefInput<$PrismaModel>
+  in?: $Enums.LeadStage[] | Prisma.ListEnumLeadStageFieldRefInput<$PrismaModel>
+  notIn?: $Enums.LeadStage[] | Prisma.ListEnumLeadStageFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumLeadStageFilter<$PrismaModel> | $Enums.LeadStage
+}
+
+export type NestedEnumLeadStageWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.LeadStage | Prisma.EnumLeadStageFieldRefInput<$PrismaModel>
+  in?: $Enums.LeadStage[] | Prisma.ListEnumLeadStageFieldRefInput<$PrismaModel>
+  notIn?: $Enums.LeadStage[] | Prisma.ListEnumLeadStageFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumLeadStageWithAggregatesFilter<$PrismaModel> | $Enums.LeadStage
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumLeadStageFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumLeadStageFilter<$PrismaModel>
 }
 
 

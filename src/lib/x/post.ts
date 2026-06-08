@@ -1,5 +1,6 @@
 import { getXClient } from "./client";
 import { xRW } from "./client";
+import type { Scraper } from "agent-twitter-client";
 import { EUploadMimeType } from "twitter-api-v2";
 import { pickTemplate, pickTemplateByStyle } from "./templates";
 import { randomDelay } from "@/lib/scheduler/humanize";
@@ -30,6 +31,10 @@ async function extractTweetId(res: Response): Promise<string> {
   // X sometimes returns create_tweet without tweet_results at all — still success
   if (createTweet !== undefined) return "";
   throw new Error(`Unexpected tweet response: ${JSON.stringify(json).slice(0, 200)}`);
+}
+
+export function isDailyLimitError(err: unknown): boolean {
+  return String(err).includes("Twitter API error 344");
 }
 
 export async function postTweet(text: string): Promise<{ id: string }> {
@@ -93,9 +98,9 @@ function smartTruncate(text: string, limit = 275): string {
   return (lastSpace > 0 ? text.slice(0, lastSpace) : cut).trim();
 }
 
-export async function replyToTweet(tweetId: string, text: string): Promise<{ id: string }> {
+export async function replyToTweet(tweetId: string, text: string, opts?: { wClient?: Scraper }): Promise<{ id: string }> {
   const safe = smartTruncate(text, 275);
-  const client = await getXClient();
+  const client = opts?.wClient ?? await getXClient();
   const res = await client.sendTweet(safe, tweetId);
   const id = await extractTweetId(res);
   return { id };
@@ -151,7 +156,7 @@ export async function postThread(
 
     const mediaData = imgBuffer ? [{ data: imgBuffer, mediaType: mimeType }] : undefined;
     // Wait between thread tweets so X doesn't flag the burst as automated
-    if (i > 0) await randomDelay(4000, 9000);
+    if (i > 0) await randomDelay(12000, 22000);
     const res = await client.sendTweet(text, lastId, mediaData);
     const id = await extractTweetId(res);
     posted.push({ id, hasImage: !!imgBuffer });

@@ -1,15 +1,14 @@
 import { NextResponse } from "next/server";
 
 export const maxDuration = 55;
-import { getMentions, getMyProfile } from "@/lib/x/engage";
+import { getMentions } from "@/lib/x/engage";
 import { generateReply } from "@/lib/claude/generate";
 import { prisma } from "@/lib/db";
 import { sendMessage } from "@/lib/telegram/notify";
 import { humanPause, randomDelay } from "@/lib/scheduler/humanize";
 import { loadBlocklist } from "@/lib/blocklist";
 import { getRepliedTweetIds } from "@/lib/reply-dedup";
-
-const BOT = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
+import { getUserCtx, getStatsPaused, upsertStats } from "@/lib/user-context";
 
 function isSpam(text: string): boolean {
   const t = text.toLowerCase();
@@ -25,33 +24,34 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const userId = new URL(req.url).searchParams.get("userId") ?? null;
+  const ctx = await getUserCtx(userId).catch(() => null);
+  if (userId && !ctx) return NextResponse.json({ error: "User context unavailable" }, { status: 404 });
+
+  const tg = ctx?.telegram;
+
   try {
-    const [statsRow, isBlocked, me] = await Promise.all([
-      prisma.stats.findUnique({ where: { id: "singleton" } }),
+    const [paused, isBlocked, statsRow] = await Promise.all([
+      getStatsPaused(userId),
       loadBlocklist(),
-      getMyProfile(),
+      getStatsRow(userId),
     ]);
 
-    if (statsRow?.paused) return NextResponse.json({ skipped: true, reason: "paused" });
+    if (paused) return NextResponse.json({ skipped: true, reason: "paused" });
 
     const sinceId = statsRow?.lastMentionId ?? undefined;
     const [mentions, repliedTweetIds] = await Promise.all([
-      getMentions(me.id, sinceId),
-      getRepliedTweetIds(true), // permanent — never queue a mention we already replied to
+      getMentions(undefined, sinceId, ctx ? { rClient: ctx.scraperR, username: ctx.username } : undefined),
+      getRepliedTweetIds(true),
     ]);
 
     if (!mentions.length) {
       return NextResponse.json({ ok: true, mentions: 0 });
     }
 
-    // Only advance cursor if newestId is a valid non-empty snowflake
     const newestId = mentions[0].id;
     if (newestId) {
-      await prisma.stats.upsert({
-        where:  { id: "singleton" },
-        update: { lastMentionId: newestId },
-        create: { id: "singleton", lastMentionId: newestId },
-      });
+      await upsertStats(userId, { lastMentionId: newestId });
     }
 
     let queued = 0;
@@ -59,11 +59,11 @@ export async function GET(req: Request) {
     for (const mention of mentions) {
       if (isBlocked(mention.author_id)) continue;
       if (isSpam(mention.text)) continue;
-      if (repliedTweetIds.has(mention.id)) continue; // already replied — permanent dedup
+      if (repliedTweetIds.has(mention.id)) continue;
 
-      // Skip if already in queue waiting for approval
       const alreadyQueued = await prisma.queueItem.findFirst({
         where: {
+          userId: userId ?? null,
           type: "Mention",
           status: { in: ["PENDING", "APPROVED"] },
           metadata: { path: ["tweetId"], equals: mention.id },
@@ -74,12 +74,12 @@ export async function GET(req: Request) {
       await humanPause();
 
       try {
-        // Pass authorId only when it's a real non-empty snowflake — avoids polluting thread memory with empty IDs
         const safeAuthorId = mention.author_id?.trim() || undefined;
         const reply = await generateReply(mention.text, mention.author_username ?? "user", safeAuthorId);
 
         const item = await prisma.queueItem.create({
           data: {
+            userId: userId ?? null,
             type: "Mention",
             content: reply,
             metadata: {
@@ -91,12 +91,13 @@ export async function GET(req: Request) {
           },
         });
 
-        // Send to Telegram for approval — user must tap Send before it posts
-        await fetch(`${BOT}/sendMessage`, {
+        const botUrl = tg?.botUrl ?? `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
+        const chatId = tg?.chatId ?? process.env.TELEGRAM_CHAT_ID;
+        await fetch(`${botUrl}/sendMessage`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            chat_id: process.env.TELEGRAM_CHAT_ID,
+            chat_id: chatId,
             text:
               `💬 *Mention from @${mention.author_username || mention.author_id}*\n\n` +
               `_"${mention.text.slice(0, 280)}"_\n\n` +
@@ -116,16 +117,22 @@ export async function GET(req: Request) {
         queued++;
         await randomDelay(1500, 3000);
       } catch (e) {
-        await sendMessage(`⚠️ *Mention queue failed*\n\`${String(e).slice(0, 80)}\``);
+        await sendMessage(`⚠️ *Mention queue failed*\n\`${String(e).slice(0, 80)}\``, tg);
       }
     }
 
     if (queued > 0) {
-      await sendMessage(`📬 *${queued} new mention${queued > 1 ? "s" : ""} waiting for your approval.*`);
+      await sendMessage(`📬 *${queued} new mention${queued > 1 ? "s" : ""} waiting for your approval.*`, tg);
     }
 
     return NextResponse.json({ ok: true, queued, sinceId, newestId });
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }
+}
+
+async function getStatsRow(userId: string | null) {
+  return userId
+    ? prisma.stats.findFirst({ where: { userId } })
+    : prisma.stats.findUnique({ where: { id: "singleton" } });
 }

@@ -73,7 +73,7 @@ export async function POST(req: Request) {
       }))
       .filter(t => t.score >= 5)             // only engage with posts that have some traction
       .sort((a, b) => b.score - a.score)
-      .slice(0, 6); // hard cap — keeps total runtime well under 60s
+      .slice(0, 4); // hard cap — keeps total runtime well under 60s
 
     // ── Phase 1: like all tweets quickly ────────────────────────────────────
     let liked = 0;
@@ -104,7 +104,8 @@ export async function POST(req: Request) {
     }
 
     // ── Phase 2: pick reply targets + generate all in parallel ──────────────
-    const replyTargets = tweets.filter(() => Math.random() < 0.7); // higher rate
+    // Cap at 2 replies per run — X's 226 block triggers fast with higher volumes
+    const replyTargets = tweets.filter(() => Math.random() < 0.5).slice(0, 2);
 
     const generatedReplies = await Promise.all(
       replyTargets.map(t =>
@@ -133,10 +134,11 @@ export async function POST(req: Request) {
           `_In reply to:_ "${tweet.text.slice(0, 100)}"\n\n` +
           `*Reply:* ${reply.slice(0, 200)}`
         );
-        await randomDelay(800, 1500);
+        await randomDelay(5000, 10000);
       } catch (e) {
         const msg = String(e);
         if (msg.includes("403")) continue; // reply restricted on that tweet — skip silently
+        if (msg.includes("226")) break;    // automated block — stop replying for this run
         const hint = msg.includes("429") ? " (rate limit)" : "";
         errors.push(`reply: ${msg.slice(0, 60)}${hint}`);
         await prisma.activity.create({

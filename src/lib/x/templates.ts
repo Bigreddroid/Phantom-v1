@@ -68,7 +68,7 @@ const TOPIC_TEMPLATES: Array<{ keywords: string[]; files: string[] }> = [
     ],
   },
   {
-    keywords: ["building in public", "project z", "92 products", "indie builder", "solo founder", "bigreddroid", "shipping"],
+    keywords: ["building in public", "project z", "phantom", "indie builder", "solo founder", "bigreddroid", "shipping"],
     files: [
       "BigRedDroid_branding_code_snippet.jpg",
       "Red_robot_connecting_information….jpg",

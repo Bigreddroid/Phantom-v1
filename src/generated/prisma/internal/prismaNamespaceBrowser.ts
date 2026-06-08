@@ -64,7 +64,11 @@ export const ModelName = {
   Waitlist: 'Waitlist',
   BrainMemory: 'BrainMemory',
   ConversationThread: 'ConversationThread',
-  PerformanceInsight: 'PerformanceInsight'
+  PerformanceInsight: 'PerformanceInsight',
+  ICPConfig: 'ICPConfig',
+  LeadProfile: 'LeadProfile',
+  LeadActivity: 'LeadActivity',
+  OutreachTemplate: 'OutreachTemplate'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -105,9 +109,14 @@ export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof User
 export const XCredentialScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
+  authMethod: 'authMethod',
   cookies: 'cookies',
   username: 'username',
   xUserId: 'xUserId',
+  apiKey: 'apiKey',
+  apiSecret: 'apiSecret',
+  accessToken: 'accessToken',
+  accessSecret: 'accessSecret',
   updatedAt: 'updatedAt',
   createdAt: 'createdAt'
 } as const
@@ -263,6 +272,67 @@ export const PerformanceInsightScalarFieldEnum = {
 } as const
 
 export type PerformanceInsightScalarFieldEnum = (typeof PerformanceInsightScalarFieldEnum)[keyof typeof PerformanceInsightScalarFieldEnum]
+
+
+export const ICPConfigScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  keywords: 'keywords',
+  competitorHandles: 'competitorHandles',
+  hashtags: 'hashtags',
+  minFollowers: 'minFollowers',
+  maxFollowers: 'maxFollowers',
+  warmthThreshold: 'warmthThreshold',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ICPConfigScalarFieldEnum = (typeof ICPConfigScalarFieldEnum)[keyof typeof ICPConfigScalarFieldEnum]
+
+
+export const LeadProfileScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  twitterUserId: 'twitterUserId',
+  username: 'username',
+  bio: 'bio',
+  recentTweets: 'recentTweets',
+  aiSummary: 'aiSummary',
+  warmthScore: 'warmthScore',
+  dmHistory: 'dmHistory',
+  notes: 'notes',
+  stage: 'stage',
+  sourceKeyword: 'sourceKeyword',
+  discoveredAt: 'discoveredAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type LeadProfileScalarFieldEnum = (typeof LeadProfileScalarFieldEnum)[keyof typeof LeadProfileScalarFieldEnum]
+
+
+export const LeadActivityScalarFieldEnum = {
+  id: 'id',
+  leadId: 'leadId',
+  type: 'type',
+  detail: 'detail',
+  createdAt: 'createdAt'
+} as const
+
+export type LeadActivityScalarFieldEnum = (typeof LeadActivityScalarFieldEnum)[keyof typeof LeadActivityScalarFieldEnum]
+
+
+export const OutreachTemplateScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  name: 'name',
+  body: 'body',
+  category: 'category',
+  isDefault: 'isDefault',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type OutreachTemplateScalarFieldEnum = (typeof OutreachTemplateScalarFieldEnum)[keyof typeof OutreachTemplateScalarFieldEnum]
 
 
 export const SortOrder = {

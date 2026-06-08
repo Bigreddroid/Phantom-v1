@@ -32,14 +32,14 @@ export async function POST() {
     const errors: string[] = [];
     const seen = new Set<string>();
 
-    for (const tweet of tweets.slice(0, 5)) {
+    for (const tweet of tweets.slice(0, 1)) {
       if (!tweet.author_id || tweet.author_id === me.id || seen.has(tweet.author_id) || isBlocked(tweet.author_id, tweet.author_username)) continue;
       if (gooutIds.has(tweet.id)) continue; // already commented on this tweet
       seen.add(tweet.author_id);
 
       try {
         await likeTweet(tweet.id, me.id);
-        await randomDelay(600, 1800);
+        await randomDelay(8000, 20000); // human-paced gap before commenting
 
         const reply = await generateGoOutComment(tweet.text);
         await replyToTweet(tweet.id, reply);
@@ -53,9 +53,11 @@ export async function POST() {
           `_"${tweet.text.slice(0, 100)}"_\n\n` +
           `↩ ${reply}`
         );
-        await randomDelay(2000, 4000);
+        await randomDelay(6000, 12000);
       } catch (e) {
-        errors.push(`tweet ${tweet.id}: ${String(e).slice(0, 80)}`);
+        const msg = String(e);
+        if (msg.includes("226")) break; // automated block — stop for this run
+        errors.push(`tweet ${tweet.id}: ${msg.slice(0, 80)}`);
       }
     }
 

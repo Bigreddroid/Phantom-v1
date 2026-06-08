@@ -48,6 +48,9 @@ scripts/patch-agent-twitter.js
 # vercel
 .vercel
 
+# accidental global npm paths (Windows)
+%USERPROFILE%/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

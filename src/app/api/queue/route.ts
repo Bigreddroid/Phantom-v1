@@ -4,11 +4,14 @@ import { postTweet, postThread } from "@/lib/x/post";
 import { notifyPosted } from "@/lib/telegram/notify";
 import { DEMO, DEMO_QUEUE } from "@/lib/demo-data";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   if (DEMO) return NextResponse.json(DEMO_QUEUE);
 
+  const userId = req.headers.get("x-phantom-user-id") ?? null;
+  const userFilter = userId ? { userId } : { userId: null };
+
   const items = await prisma.queueItem.findMany({
-    where: { status: "PENDING" },
+    where: { ...userFilter, status: "PENDING" },
     orderBy: { createdAt: "desc" },
     take: 20,
   });

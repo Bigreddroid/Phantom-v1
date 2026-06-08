@@ -17,16 +17,16 @@ interface AnalysisResult {
   diff: string[]; // human-readable list of what changed
 }
 
-export async function analyzePerformance(): Promise<AnalysisResult> {
+export async function analyzePerformance(userId: string | null = null): Promise<AnalysisResult> {
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
   const [activities, currentBrain] = await Promise.all([
     prisma.activity.findMany({
-      where: { createdAt: { gte: since } },
+      where: { userId, createdAt: { gte: since } },
       orderBy: { createdAt: "desc" },
       take: 300,
     }),
-    getBrainFields(),
+    getBrainFields(userId),
   ]);
 
   if (activities.length < 10) {
@@ -129,15 +129,15 @@ Be specific and evidence-based. No generic advice. If a field doesn't need chang
   // Apply updates to DB and bust cache
   if (Object.keys(updates).length > 0) {
     await Promise.all(
-      Object.entries(updates).map(([k, v]) => setBrainField(k, v as string))
+      Object.entries(updates).map(([k, v]) => setBrainField(k, v as string, userId))
     );
-    invalidateBrainCache();
+    if (userId === null) invalidateBrainCache();
   }
 
   // Store insights
   if (insights.length > 0) {
     await prisma.performanceInsight.createMany({
-      data: insights.map(insight => ({ insight })),
+      data: insights.map(insight => ({ userId, insight })),
     });
   }
 

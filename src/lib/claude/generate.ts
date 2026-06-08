@@ -173,6 +173,15 @@ Hard limit: 180 characters.`,
   );
 }
 
+async function linkedInSystemPrompt(base: string): Promise<string> {
+  try {
+    const ctx = await getBrainContext();
+    return `${ctx}\n\n${base}`;
+  } catch {
+    return base;
+  }
+}
+
 export async function generateLinkedInPost(topic: string) {
   return generate(
     `Write a LinkedIn post about: ${topic}
@@ -186,11 +195,11 @@ Format:
 - 2–3 relevant hashtags at the very end on their own line
 - No corporate buzzwords (leverage, synergy, circle back, excited to announce)
 - No "I'm humbled" or "Here's what I learned" openers`,
-    `You are a ghostwriter for a founder/creator (${X_HANDLE}).
+    await linkedInSystemPrompt(`You are a ghostwriter for a founder/creator (${X_HANDLE}).
 Write in their voice: direct, confident, no fluff, conversational but intelligent.
 LinkedIn tone: slightly more professional than Twitter, but still human and opinionated.
 The audience is other founders, operators, and professionals who are allergic to performative LinkedIn content.
-Sound like someone sharing a real lesson from building, not a motivational quote account.`,
+Sound like someone sharing a real lesson from building, not a motivational quote account.`),
     700
   );
 }
@@ -210,10 +219,10 @@ Format:
 - 1–2 hashtags max at the end
 - No "I'm proud to announce", no "humbled", no "excited to share"
 - Reads like a journal entry, not a press release`,
-    `You are a ghostwriter for a founder/creator (${X_HANDLE}).
+    await linkedInSystemPrompt(`You are a ghostwriter for a founder/creator (${X_HANDLE}).
 Write in first-person, personal, vulnerable but not dramatic.
 LinkedIn audience: other builders who respect honesty over polish.
-The goal is to feel real — not inspirational content.`,
+The goal is to feel real — not inspirational content.`),
     800
   );
 }
@@ -231,33 +240,11 @@ Format:
 - 2–3 hashtags at the end
 - No "game-changing", "revolutionary", or "this will blow your mind"
 - Make each point specific and actionable, not vague`,
-    `You are a ghostwriter for a founder/creator (${X_HANDLE}).
+    await linkedInSystemPrompt(`You are a ghostwriter for a founder/creator (${X_HANDLE}).
 Direct, intelligent, no buzzwords. LinkedIn list posts that feel like real advice,
-not growth-hacker tips. Each point should make someone think, not just nod.`,
+not growth-hacker tips. Each point should make someone think, not just nod.`),
     900
   );
-}
-
-export async function generateArticleThread(topic: string, recentTweets?: string[]) {
-  const avoidBlock = recentTweets?.length
-    ? `\n\nSTRICTLY FORBIDDEN — do not repeat the topic, angle, or opening of any of these:\n${recentTweets.map((t, i) => `${i + 1}. ${t}`).join("\n")}`
-    : "";
-  const raw = await generate(
-    `Write a 6-tweet educational thread about: "${topic}"${avoidBlock}
-
-This should read like a genuinely useful article broken into tweets. Format:
-- Tweet 1: Hook. One punchy sentence that stops the scroll. No "Thread:" or "1/".
-- Tweets 2–5: The meat. Each tweet = one clear insight, tip, or step. Specific, not vague.
-- Tweet 6: The honest takeaway or CTA. What to do next or why it matters.
-
-Each tweet separated by "---"
-Each tweet under 280 chars.
-Write as ${X_HANDLE} — direct, confident, sounds like earned experience not generic advice.
-Reference your own tools (Phantom, BigRedDroid) only where it fits naturally.`,
-    await voicePrompt(),
-    2000,
-  );
-  return raw.split("---").map(t => t.trim()).filter(Boolean);
 }
 
 export async function generateBuildUpdate(product: string, context?: string, recentTweets?: string[]) {

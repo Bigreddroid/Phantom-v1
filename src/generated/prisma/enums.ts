@@ -17,3 +17,15 @@ export const QueueStatus = {
 } as const
 
 export type QueueStatus = (typeof QueueStatus)[keyof typeof QueueStatus]
+
+
+export const LeadStage = {
+  DISCOVERED: 'DISCOVERED',
+  WARMING: 'WARMING',
+  DM_SENT: 'DM_SENT',
+  RESPONDED: 'RESPONDED',
+  CONVERTED: 'CONVERTED',
+  REMOVED: 'REMOVED'
+} as const
+
+export type LeadStage = (typeof LeadStage)[keyof typeof LeadStage]
